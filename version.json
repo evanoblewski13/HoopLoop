@@ -1,0 +1,14 @@
+{
+  "name": "HoopLoop",
+  "version": "4.0.0",
+  "buildDate": "2026-08-02",
+  "databasePlayers": 5108,
+  "aliases": 14,
+  "requiredRootFiles": [
+    "index.html",
+    "styles.css",
+    "script.js",
+    "players-data.js",
+    "verify.html"
+  ]
+}
