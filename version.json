@@ -1,11 +1,12 @@
 {
-  "version": "7.0.0",
+  "version": "7.1.0",
   "features": [
     "Supabase email/password accounts",
     "online daily leaderboards",
     "practice difficulties and session lengths",
     "friend requests and friend leaderboards",
     "friend challenges and random head-to-head races",
-    "progressive race hints every 30 seconds"
+    "20-second hint unlocks in daily, practice, and races",
+    "complete post-game accepted-answer review for every mode"
   ]
 }

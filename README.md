@@ -32,7 +32,7 @@ Complete `ONLINE-SETUP.md` once before publishing. Until `config.js` contains yo
 - One official score per account and date
 - Shared global and friends-only leaderboards
 - Archive generated from the August 1, 2026 launch date
-- One standard hint after 30 seconds
+- One standard hint after 20 seconds
 - Give Up ends the run without a ranked score
 
 ## Practice Mode
@@ -53,7 +53,7 @@ Difficulty is currently estimated using the number of valid answers and the numb
 - Same three initials for both competitors
 - First database-confirmed completion wins
 - No Give Up button
-- An additional hint level becomes available every 30 seconds
+- An additional hint level becomes available every 20 seconds
 - Leaving an active race forfeits to the opponent
 - Realtime opponent progress bars
 
@@ -63,4 +63,13 @@ The database enforces account ownership, one daily score per user/date, friendsh
 
 ## Version
 
-7.0.0
+7.1.0
+
+
+## Version 7.1 Name Rush polish
+
+- Daily and practice hints now unlock after 20 seconds per round.
+- Race hints unlock progressively every 20 seconds.
+- Every completed daily, practice, saved daily, and race result includes expandable answer reviews for all initials.
+- The player name you submitted is highlighted in orange in the review.
+- No Supabase SQL changes are required for this update.

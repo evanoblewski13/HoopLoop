@@ -28,7 +28,7 @@ Use two separate browser sessions. Label them Player A and Player B.
 - [ ] Starter, All-Star, and MVP use different pools.
 - [ ] Five, ten, and twenty-five round sessions end at the correct length.
 - [ ] Endless Mode continues beyond the original set of rounds.
-- [ ] Hints unlock after 30 seconds when enabled.
+- [ ] Hints unlock after 20 seconds when enabled.
 - [ ] Hints remain hidden when disabled.
 - [ ] Skip Round moves forward without ending a fixed session.
 - [ ] Practice results appear in Practice Records.
@@ -54,8 +54,8 @@ Use two separate browser sessions. Label them Player A and Player B.
 - [ ] Correct names advance only the player who submitted them.
 - [ ] Opponent progress pips update live.
 - [ ] Give Up is not available.
-- [ ] First hint becomes usable after 30 seconds in the current round.
-- [ ] More letters become available after another 30 seconds.
+- [ ] First hint becomes usable after 20 seconds in the current round.
+- [ ] More letters become available after another 20 seconds.
 - [ ] The first player to finish all three is recorded as the winner.
 - [ ] Leaving an active race awards the win to the opponent.
 
@@ -71,3 +71,12 @@ Use two separate browser sessions. Label them Player A and Player B.
 - [ ] Daily, practice, account modal, friends, and race interfaces fit the screen.
 - [ ] The keyboard does not hide the answer input or Submit button.
 - [ ] Closing a race asks before forfeiting.
+
+
+## Version 7.1 answer-review checks
+
+- Finish a Daily game and open each round under Other valid answers.
+- Reopen a saved Daily result and confirm the same review remains available.
+- Finish and skip rounds in Practice; confirm every played initial appears in the final review.
+- Finish a head-to-head race; confirm all three race initials can be expanded after the result.
+- Confirm the submitted name is highlighted when that answer is available locally.

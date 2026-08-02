@@ -1,7 +1,8 @@
 'use strict';
 
 const CONFIG = window.HOOPLOOP_CONFIG || {};
-const BUILD_VERSION = CONFIG.BUILD_VERSION || '7.0.0';
+const BUILD_VERSION = '7.1.0';
+const HINT_INTERVAL_MS = 20000;
 const LAUNCH_DATE = CONFIG.LAUNCH_DATE || '2026-08-01';
 const DAILY_TIME_ZONE = CONFIG.DAILY_TIME_ZONE || 'America/Chicago';
 const ONLINE_CONFIGURED = Boolean(
@@ -159,6 +160,27 @@ function buildHint(name, visibleCount = 2) {
     return `${punctuation}${core.slice(0, visible).toUpperCase()}${'_'.repeat(Math.max(0, core.length - visible))}`;
   }).join(' ');
 }
+function answerReviewMarkup(rounds, heading = 'Other valid answers') {
+  const items = (rounds || []).map((round, index) => {
+    const key = Array.isArray(round.initials) ? round.initials.join('') : String(round.initials || round.key || '').toUpperCase();
+    if (!key) return '';
+    const names = PLAYER_DB.namesFor(key);
+    const submitted = normalizeName(round.answer || '');
+    const chips = names.map(name => {
+      const used = submitted && normalizeName(name) === submitted;
+      return `<span class="answer-chip${used ? ' answer-chip--used' : ''}"${used ? ' title="Your answer"' : ''}>${escapeHtml(name)}</span>`;
+    }).join('');
+    return `<details class="answer-review-item"><summary><span><small>Round ${String(index + 1).padStart(2,'0')}</small><strong>${escapeHtml(key)}</strong></span><span>${names.length} valid name${names.length === 1 ? '' : 's'}</span><span class="answer-review-chevron" aria-hidden="true">⌄</span></summary><div class="answer-chips">${chips}</div></details>`;
+  }).filter(Boolean).join('');
+  if (!items) return '';
+  return `<div class="answer-review-header"><h4>${escapeHtml(heading)}</h4><p>Open any round to see every accepted NBA name for those initials. Your submitted answer is highlighted.</p></div><div class="answer-review-list">${items}</div>`;
+}
+function renderAnswerReview(target, rounds, heading) {
+  if (!target) return;
+  const markup = answerReviewMarkup(rounds, heading);
+  target.innerHTML = markup;
+  target.classList.toggle('hidden', !markup);
+}
 function generateDailyPuzzle(dateKey) {
   const rng = seededRandom(`hooploop-daily-v7:${dateKey}`);
   const candidates = shuffle(PLAYER_DB.groups(5), rng);
@@ -204,7 +226,7 @@ const els = {
   resultKicker: $('result-kicker'), resultTime: $('result-time'), resultMessage: $('result-message'), splitList: $('split-list'), sessionSummary: $('session-summary'), revealedAnswers: $('revealed-answers'), resultPrimary: $('result-primary-button'), resultReplay: $('result-replay-button'),
   leaderboardRows: $('leaderboard-rows'), archiveGrid: $('archive-grid'), archiveMore: $('archive-more-button'), practiceStats: $('practice-stats'), practiceNote: $('practice-record-note'),
   modalBackdrop: $('modal-backdrop'), modalContent: $('modal-content'), toastRegion: $('toast-region'),
-  raceOverlay: $('race-overlay'), raceStatus: $('race-status'), raceCountdown: $('race-countdown'), raceGame: $('race-game'), raceFinish: $('race-finish'), raceYouName: $('race-you-name'), raceYouAvatar: $('race-you-avatar'), raceOpponentName: $('race-opponent-name'), raceOpponentAvatar: $('race-opponent-avatar'), raceYouPips: $('race-you-pips'), raceOpponentPips: $('race-opponent-pips'), raceRoundLabel: $('race-round-label'), raceRoundTime: $('race-round-time'), raceInitials: $('race-initials'), raceHintPattern: $('race-hint-pattern'), raceAnswerForm: $('race-answer-form'), raceAnswer: $('race-answer'), raceFeedback: $('race-feedback'), raceHint: $('race-hint-button'), raceResultKicker: $('race-result-kicker'), raceResultTitle: $('race-result-title'), raceResultCopy: $('race-result-copy'), inviteCount: $('invite-count')
+  raceOverlay: $('race-overlay'), raceStatus: $('race-status'), raceCountdown: $('race-countdown'), raceGame: $('race-game'), raceFinish: $('race-finish'), raceYouName: $('race-you-name'), raceYouAvatar: $('race-you-avatar'), raceOpponentName: $('race-opponent-name'), raceOpponentAvatar: $('race-opponent-avatar'), raceYouPips: $('race-you-pips'), raceOpponentPips: $('race-opponent-pips'), raceRoundLabel: $('race-round-label'), raceRoundTime: $('race-round-time'), raceInitials: $('race-initials'), raceHintPattern: $('race-hint-pattern'), raceAnswerForm: $('race-answer-form'), raceAnswer: $('race-answer'), raceFeedback: $('race-feedback'), raceHint: $('race-hint-button'), raceResultKicker: $('race-result-kicker'), raceResultTitle: $('race-result-title'), raceResultCopy: $('race-result-copy'), raceAnswerReview: $('race-answer-review'), inviteCount: $('invite-count')
 };
 
 const state = {
@@ -337,7 +359,7 @@ function renderRound() {
   els.hintPattern.classList.add('hidden');
   els.hint.disabled = true;
   els.hint.classList.toggle('hidden', !session.hintsEnabled);
-  els.hint.innerHTML = '<span aria-hidden="true">◔</span> Hint in 30s';
+  els.hint.innerHTML = '<span aria-hidden="true">◔</span> Hint in 20s';
   renderProgress();
   requestAnimationFrame(() => els.input.focus());
 }
@@ -349,7 +371,7 @@ function tickSession(now) {
   els.totalTimer.textContent = formatTime(session.elapsedMs);
   els.roundTimer.textContent = `${formatTime(session.roundMs)}s`;
   if (session.hintsEnabled && !session.hintUsedThisRound) {
-    const remaining = Math.max(0, Math.ceil((30000 - session.roundMs) / 1000));
+    const remaining = Math.max(0, Math.ceil((HINT_INTERVAL_MS - session.roundMs) / 1000));
     els.hint.disabled = remaining > 0;
     els.hint.innerHTML = remaining > 0 ? `<span aria-hidden="true">◔</span> Hint in ${remaining}s` : '<span aria-hidden="true">◔</span> Use hint';
   }
@@ -357,7 +379,7 @@ function tickSession(now) {
 }
 function useSessionHint() {
   const session = state.session;
-  if (!session || session.roundMs < 30000 || session.hintUsedThisRound) return;
+  if (!session || session.roundMs < HINT_INTERVAL_MS || session.hintUsedThisRound) return;
   session.hintUsedThisRound = true;
   session.hintsUsed += 1;
   els.hintPattern.textContent = buildHint(currentRound().hintAnswer, 2);
@@ -418,13 +440,10 @@ function sessionGiveUp() {
     if (session.correctCount === 0 || window.confirm('End this endless practice session?')) finishSession();
     return;
   }
-  const names = PLAYER_DB.namesFor(currentRound().initials);
   session.skippedCount += 1;
   session.splits.push({ initials: currentRound().initials.join(''), answer: null, timeMs: Math.round(session.roundMs), hinted: session.hintUsedThisRound, skipped: true });
-  els.revealedAnswers.innerHTML = `<h4>Possible answers for ${currentRound().initials.join('')}</h4><div class="answer-chips">${names.slice(0,60).map(name => `<span class="answer-chip">${escapeHtml(name)}</span>`).join('')}</div>`;
-  els.revealedAnswers.classList.remove('hidden');
-  flashAnswer(false, 'Round skipped. Moving on…');
-  setTimeout(() => { els.revealedAnswers.classList.add('hidden'); advanceSessionRound(); }, 1300);
+  flashAnswer(false, 'Round skipped. All valid answers will be available in your review.');
+  setTimeout(advanceSessionRound, 650);
 }
 async function finishSession(gaveUp = false) {
   stopAnimation();
@@ -441,12 +460,7 @@ async function finishSession(gaveUp = false) {
   if (session.mode === 'daily') {
     els.resultKicker.textContent = gaveUp ? 'Daily ended' : 'Daily complete';
     if (gaveUp || session.invalid) {
-      const all = currentRound() ? PLAYER_DB.namesFor(currentRound().initials) : [];
-      els.resultMessage.textContent = 'Giving up ends the official attempt without a leaderboard score.';
-      if (all.length) {
-        els.revealedAnswers.innerHTML = `<h4>Possible answers for ${currentRound().initials.join('')}</h4><div class="answer-chips">${all.slice(0,80).map(name => `<span class="answer-chip">${escapeHtml(name)}</span>`).join('')}</div>`;
-        els.revealedAnswers.classList.remove('hidden');
-      }
+      els.resultMessage.textContent = 'Giving up ends the official attempt without a leaderboard score. You can review every accepted answer below.';
     } else {
       const run = {
         puzzleDate: state.selectedDate,
@@ -478,6 +492,7 @@ async function finishSession(gaveUp = false) {
     els.resultReplay.textContent = 'Run it back';
     els.resultReplay.onclick = startPracticeFromConfig;
   }
+  renderAnswerReview(els.revealedAnswers, session.splits);
 }
 async function saveDailyRun(run) {
   const { data, error } = await db.rpc('submit_daily_score', {
@@ -514,7 +529,7 @@ function showSavedDaily(score) {
   els.resultReplay.textContent = 'Play practice';
   els.resultReplay.onclick = () => document.querySelector('#practice').scrollIntoView({ behavior:'smooth' });
   els.sessionSummary.classList.add('hidden');
-  els.revealedAnswers.classList.add('hidden');
+  renderAnswerReview(els.revealedAnswers, splits);
 }
 
 function renderLeaderboardRows(entries, target = els.leaderboardRows, limit = 8) {
@@ -622,7 +637,7 @@ function openSetupHelp() {
   openModal(`<span class="overline">ONE-TIME ONLINE SETUP</span><h2>Connect Supabase.</h2><p>The code is ready, but GitHub Pages cannot create a database by itself.</p><ol class="setup-list"><li>Create a free Supabase project.</li><li>Run <code>supabase/setup.sql</code> in its SQL Editor.</li><li>Paste the Project URL and anon key into <code>config.js</code>.</li><li>Push the changed files to GitHub.</li></ol><p class="modal-note">The detailed screenshots and checks are in ONLINE-SETUP.md.</p>`);
 }
 function openHowTo() {
-  openModal(`<span class="overline">HOW NAME RUSH WORKS</span><h2>Any matching player counts.</h2><p>Type the full official NBA name of any player matching the displayed first and last initials. Capitalization, spacing, punctuation, and accent marks are normalized; misspellings are not.</p><div class="account-benefits light-benefits"><div><span>01</span><strong>Daily</strong><p>Three shared initials and one official leaderboard score per account.</p></div><div><span>02</span><strong>Practice</strong><p>Custom difficulty, session length, hints, and personal records.</p></div><div><span>03</span><strong>Race</strong><p>First player through the same three initials wins. Hints grow every 30 seconds and give-up is disabled.</p></div></div>`);
+  openModal(`<span class="overline">HOW NAME RUSH WORKS</span><h2>Any matching player counts.</h2><p>Type the full official NBA name of any player matching the displayed first and last initials. Capitalization, spacing, punctuation, and accent marks are normalized; misspellings are not.</p><div class="account-benefits light-benefits"><div><span>01</span><strong>Daily</strong><p>Three shared initials and one official leaderboard score per account.</p></div><div><span>02</span><strong>Practice</strong><p>Custom difficulty, session length, hints, and personal records.</p></div><div><span>03</span><strong>Race</strong><p>First player through the same three initials wins. Hints grow every 20 seconds and give-up is disabled.</p></div></div>`);
 }
 
 async function loadProfile() {
@@ -840,7 +855,7 @@ async function openRaceRoom(matchInput) {
   closeModal();
   let match = await fetchRaceDetails(matchInput.id || matchInput);
   const rounds = (match.rounds || []).map(item => ({ initials:String(item.initials).split(''), key:String(item.initials), hintAnswer:item.hintAnswer, answerCount:item.answerCount }));
-  state.race = { match, rounds, roundIndex:0, roundStartedAt:null, hintsUsed:0, hintLevel:0, raf:null, started:false, progress:[] };
+  state.race = { match, rounds, roundIndex:0, roundStartedAt:null, hintsUsed:0, hintLevel:0, raf:null, started:false, progress:[], answers:[] };
   els.raceOverlay.classList.remove('hidden');
   els.raceFinish.classList.add('hidden');
   els.raceGame.classList.add('hidden');
@@ -917,7 +932,7 @@ function renderRaceRound() {
   els.raceInitials.children[1].textContent = round.initials[1];
   els.raceAnswer.value = ''; els.raceFeedback.textContent = '';
   els.raceHintPattern.classList.add('hidden'); els.raceHintPattern.textContent = '';
-  els.raceHint.disabled = true; els.raceHint.textContent = 'Hint in 30s';
+  els.raceHint.disabled = true; els.raceHint.textContent = 'Hint in 20s';
   requestAnimationFrame(() => els.raceAnswer.focus());
 }
 function tickRace(now) {
@@ -925,12 +940,12 @@ function tickRace(now) {
   if (!race || race.match.status !== 'active' || race.roundIndex >= 3) return;
   const roundMs = now - race.roundStartedAt;
   els.raceRoundTime.textContent = `${formatTime(roundMs)}s`;
-  const available = Math.floor(roundMs / 30000);
+  const available = Math.floor(roundMs / HINT_INTERVAL_MS);
   if (available > race.hintLevel) {
     els.raceHint.disabled = false;
     els.raceHint.textContent = `Use hint ${race.hintLevel + 1}${available > race.hintLevel + 1 ? ` of ${available}` : ''}`;
   } else {
-    const next = 30 - Math.floor((roundMs % 30000) / 1000);
+    const next = Math.ceil((HINT_INTERVAL_MS - (roundMs % HINT_INTERVAL_MS)) / 1000);
     els.raceHint.disabled = true;
     els.raceHint.textContent = `Next hint in ${next}s`;
   }
@@ -939,7 +954,7 @@ function tickRace(now) {
 function useRaceHint() {
   const race = state.race;
   if (!race) return;
-  const available = Math.floor((performance.now() - race.roundStartedAt) / 30000);
+  const available = Math.floor((performance.now() - race.roundStartedAt) / HINT_INTERVAL_MS);
   if (available <= race.hintLevel) return;
   race.hintLevel += 1; race.hintsUsed += 1;
   els.raceHintPattern.textContent = buildHint(race.rounds[race.roundIndex].hintAnswer, 1 + race.hintLevel);
@@ -953,6 +968,7 @@ async function submitRaceAnswer(event) {
   if (!match) { els.raceFeedback.textContent = 'That name does not match.'; return; }
   els.raceFeedback.classList.add('correct');
   els.raceFeedback.textContent = `Correct — ${match.displayName}`;
+  race.answers.push({ initials: race.rounds[race.roundIndex].initials.join(''), answer: match.displayName });
   race.roundIndex += 1;
   const elapsed = Math.max(0, Date.now() - Date.parse(race.match.starts_at));
   const finished = race.roundIndex >= 3;
@@ -975,10 +991,16 @@ function showRaceFinished(match, progress) {
   els.raceResultKicker.textContent = won ? 'Victory' : 'Race complete';
   els.raceResultTitle.textContent = won ? 'You win!' : `${winner} wins`;
   els.raceResultCopy.textContent = winnerProgress?.elapsed_ms ? `Winning time: ${formatTime(winnerProgress.elapsed_ms)} seconds.` : 'The first verified finish reached the database first.';
+  const reviewRounds = state.race.rounds.map(round => {
+    const own = state.race.answers.find(answer => answer.initials === round.initials.join(''));
+    return { initials: round.initials.join(''), answer: own?.answer || null };
+  });
+  renderAnswerReview(els.raceAnswerReview, reviewRounds, 'Race answer review');
 }
 function showRaceCancelled() {
   els.raceGame.classList.add('hidden'); els.raceCountdown.classList.add('hidden'); els.raceFinish.classList.remove('hidden');
   els.raceResultKicker.textContent = 'Race cancelled'; els.raceResultTitle.textContent = 'No result'; els.raceResultCopy.textContent = 'This room is no longer active.';
+  if (els.raceAnswerReview) { els.raceAnswerReview.innerHTML = ''; els.raceAnswerReview.classList.add('hidden'); }
 }
 async function closeRaceRoom() {
   if (!state.race) { els.raceOverlay.classList.add('hidden'); return; }

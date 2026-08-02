@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#ff5a1f" />
   <meta name="description" content="HoopLoop — clean, competitive basketball knowledge games." />
   <title>HoopLoop — Name Rush Online</title>
-  <link rel="stylesheet" href="styles.css?v=7.0.0" />
+  <link rel="stylesheet" href="styles.css?v=7.1.0" />
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
@@ -50,7 +50,7 @@
 
         <div class="hero-facts" aria-label="Game facts">
           <div><strong>3</strong><span>daily rounds</span></div>
-          <div><strong>30s</strong><span>until hint</span></div>
+          <div><strong>20s</strong><span>until hint</span></div>
           <div><strong>1v1</strong><span>live races</span></div>
         </div>
       </div>
@@ -96,7 +96,7 @@
 
           <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
           <div class="game-controls">
-            <button class="secondary-button" id="hint-button" type="button" disabled><span aria-hidden="true">◔</span> Hint in 30s</button>
+            <button class="secondary-button" id="hint-button" type="button" disabled><span aria-hidden="true">◔</span> Hint in 20s</button>
             <button class="danger-text-button" id="give-up-button" type="button">Give up</button>
           </div>
         </div>
@@ -148,7 +148,7 @@
             </div>
           </fieldset>
 
-          <label class="toggle-row"><input id="practice-hints" type="checkbox" checked /><span><strong>Hints enabled</strong><small>A hint unlocks after 30 seconds on each round.</small></span></label>
+          <label class="toggle-row"><input id="practice-hints" type="checkbox" checked /><span><strong>Hints enabled</strong><small>A hint unlocks after 20 seconds on each round.</small></span></label>
           <button class="primary-button wide" id="start-practice-button" type="button">Start practice</button>
         </div>
 
@@ -171,7 +171,7 @@
         <div>
           <span class="overline">LIVE NAME RUSH</span>
           <h2>First through three wins.</h2>
-          <p>Race a friend or match with another online player. Both players receive the same three initials. There is no give-up button; another hint level unlocks every 30 seconds.</p>
+          <p>Race a friend or match with another online player. Both players receive the same three initials. There is no give-up button; another hint level unlocks every 20 seconds.</p>
         </div>
         <div class="race-actions">
           <button class="primary-button" id="quick-match-button" type="button">Find quick match</button>
@@ -242,7 +242,7 @@
   <footer>
     <a class="brand footer-brand" href="#top" aria-label="HoopLoop home"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a>
     <p>Clean competition for basketball fans.</p>
-    <span id="build-status">Version 7.0.0 · loading database…</span>
+    <span id="build-status">Version 7.1.0 · loading database…</span>
     <span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span>
   </footer>
 
@@ -279,21 +279,22 @@
           <div class="answer-entry"><input id="race-answer" autocomplete="off" spellcheck="false" placeholder="Type the exact name…" /><button class="primary-button" type="submit">Submit</button></div>
         </form>
         <div class="feedback" id="race-feedback" role="status"></div>
-        <button class="secondary-button wide" id="race-hint-button" type="button" disabled>Hint in 30s</button>
+        <button class="secondary-button wide" id="race-hint-button" type="button" disabled>Hint in 20s</button>
       </div>
 
       <div class="race-finish hidden" id="race-finish">
         <span class="result-kicker" id="race-result-kicker">Race complete</span>
         <h3 id="race-result-title">You win!</h3>
         <p id="race-result-copy">Final result loading…</p>
+        <div class="revealed-answers race-answer-review hidden" id="race-answer-review"></div>
         <button class="primary-button" id="race-rematch-button" type="button">Race again</button>
       </div>
     </section>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="players-data.js?v=7.0.0"></script>
-  <script src="config.js?v=7.0.0"></script>
-  <script src="script.js?v=7.0.0"></script>
+  <script src="players-data.js?v=7.1.0"></script>
+  <script src="config.js?v=7.1.0"></script>
+  <script src="script.js?v=7.1.0"></script>
 </body>
 </html>
