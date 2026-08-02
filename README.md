@@ -1,75 +1,58 @@
-# HoopLoop Version 7 — Online Platform Build
+# HoopLoop Version 8 — Start, Bench, Cut
 
-This package combines the planned Versions 5, 6, and 7 into one foundation build:
+Version 8 adds HoopLoop's second complete game while preserving the working Name Rush accounts, friends, leaderboards, practice records, and races from Version 7.1.
 
-- Version 5: real email/password accounts and online daily leaderboards
-- Version 6: a separate, configurable Name Rush Practice Mode
-- Version 7: friends, friend-only leaderboards, direct challenges, random matchmaking, and live head-to-head races
+## What is new
 
-## Important
+- `start-bench-cut.html` — the complete second game
+- Daily Start, Bench, Cut with a permanent archive
+- Anonymous community role percentages and exact-lineup percentage
+- One official saved lineup per account and date
+- Unlimited Playground generation
+- Modern, All-Stars, and Random player pools
+- All Positions, Guards, Forwards, and Bigs filters
+- Player cards with headshots, position, career span, games, PPG, RPG, APG, active status, and All-Star selections
+- Homepage navigation and a live Game 02 card
+- Version 8 deployment verification
 
-GitHub Pages can host the website files, but it cannot provide accounts or a shared database by itself. This build uses Supabase for authentication, Postgres data, Row Level Security, and Realtime updates.
+## Player-pool rules
 
-Complete `ONLINE-SETUP.md` once before publishing. Until `config.js` contains your Supabase Project URL and publishable/anon key, the site intentionally displays an Online Setup Required banner. Daily and practice play still work locally, but online saves and races remain disabled.
+### Modern
+Players marked active in the HoopLoop player source used for this release.
 
-## Main files
+### All-Stars
+Players verified as having been selected to at least one NBA All-Star Game.
 
-- `index.html` — site structure and all Version 7 interfaces
-- `styles.css` — responsive visual design
-- `script.js` — game, account, leaderboard, friends, practice, and race logic
-- `players-data.js` — 5,108-player database plus official former names
-- `config.js` — your Supabase browser connection values
-- `verify.html` — live deployment verification page
-- `supabase/setup.sql` — database schema, Row Level Security, functions, and Realtime setup
-- `ONLINE-SETUP.md` — exact installation instructions
-- `TEST-CHECKLIST.md` — two-account test plan
+### Random
+Every active player plus retired players with at least 100 NBA games.
 
-## Name Rush Daily
+### Position filters
+- Guards: records containing a guard designation
+- Forwards: records containing a forward designation
+- Bigs: records containing a center designation
+- Hybrid players can appear in more than one position filter
+- Players without trustworthy position data remain available in All Positions only
 
-- Three deterministic initial combinations per date
-- Same puzzle for every user
-- All combinations contain at least five accepted NBA names
-- One official score per account and date
-- Shared global and friends-only leaderboards
-- Archive generated from the August 1, 2026 launch date
-- One standard hint after 20 seconds
-- Give Up ends the run without a ranked score
+Read `SBC-DATA-AUDIT.md` for counts and known limitations.
 
-## Practice Mode
+## Required installation order
 
-- Rookie, Starter, All-Star, and MVP pools
-- 3, 5, 10, 25, or Endless sessions
-- Hints can be enabled or disabled
-- Skipping a round does not end a fixed-length practice session
-- Endless Mode tracks solved names until the player ends the session
-- Local guest records and online account records
+1. Run `supabase/sbc-v8.sql` in the same Supabase project already used by HoopLoop.
+2. Copy the Version 8 update files into the root of the existing GitHub repository.
+3. Preserve the working `config.js` and `players-data.js` files already in the repository.
+4. Commit and push with GitHub Desktop.
+5. Open `verify.html`; Version 8 should show seven green checks.
 
-Difficulty is currently estimated using the number of valid answers and the number of active-player answers for an initials combination. It can be upgraded later with hand-curated player popularity ratings.
+Detailed instructions are in `V8-UPDATE-GUIDE.md`.
 
-## Head-to-head Race Mode
+## Important files
 
-- Random quick matchmaking
-- Direct friend challenges and invitations
-- Same three initials for both competitors
-- First database-confirmed completion wins
-- No Give Up button
-- An additional hint level becomes available every 20 seconds
-- Leaving an active race forfeits to the opponent
-- Realtime opponent progress bars
+- `sbc-player-data.js` — Start, Bench, Cut player cards and pool metadata
+- `sbc.js` — game generation, assignments, voting, results, archive, and authentication integration
+- `sbc.css` — dedicated responsive design
+- `supabase/sbc-v8.sql` — secure Daily vote table and aggregate-result functions
+- `verify.html` — deployment and backend verification
 
-## Current anti-cheat level
+## Data and image note
 
-The database enforces account ownership, one daily score per user/date, friendship access, race participation, and first-finish winner assignment. Player-name checking and displayed timing still occur in browser code. This is appropriate for an early public beta, but it is not tournament-grade anti-cheat. A later version should move answer validation and attempt timing into an Edge Function or server endpoint.
-
-## Version
-
-7.1.0
-
-
-## Version 7.1 Name Rush polish
-
-- Daily and practice hints now unlock after 20 seconds per round.
-- Race hints unlock progressively every 20 seconds.
-- Every completed daily, practice, saved daily, and race result includes expandable answer reviews for all initials.
-- The player name you submitted is highlighted in orange in the review.
-- No Supabase SQL changes are required for this update.
+This is an unofficial fan project. Player data should be periodically refreshed and audited. The prototype attempts to load player headshots from NBA-hosted image URLs and falls back to a clean initials card when an image is unavailable. Review the applicable data, trademark, and image-use terms before a commercial public launch.

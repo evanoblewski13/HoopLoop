@@ -1,12 +1,17 @@
 {
-  "version": "7.1.0",
+  "version": "8.0.0",
+  "games": [
+    "Name Rush",
+    "Start, Bench, Cut"
+  ],
   "features": [
-    "Supabase email/password accounts",
-    "online daily leaderboards",
-    "practice difficulties and session lengths",
-    "friend requests and friend leaderboards",
-    "friend challenges and random head-to-head races",
-    "20-second hint unlocks in daily, practice, and races",
-    "complete post-game accepted-answer review for every mode"
+    "Modern, All-Stars, and Random Start Bench Cut pools",
+    "Guards, Forwards, Bigs, and All Positions filters",
+    "player cards with headshots, career statistics, positions, games, and All-Star selections",
+    "one official daily lineup per account and date",
+    "archived daily Start Bench Cut puzzles",
+    "anonymous community role percentages and exact-lineup percentages",
+    "unlimited generated Start Bench Cut matchups",
+    "existing Name Rush accounts, leaderboards, practice, friends, and races"
   ]
 }

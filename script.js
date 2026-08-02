@@ -1,7 +1,7 @@
 'use strict';
 
 const CONFIG = window.HOOPLOOP_CONFIG || {};
-const BUILD_VERSION = '7.1.0';
+const BUILD_VERSION = '8.0.0';
 const HINT_INTERVAL_MS = 20000;
 const LAUNCH_DATE = CONFIG.LAUNCH_DATE || '2026-08-01';
 const DAILY_TIME_ZONE = CONFIG.DAILY_TIME_ZONE || 'America/Chicago';

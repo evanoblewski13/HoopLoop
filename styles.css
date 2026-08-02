@@ -640,3 +640,11 @@ footer { flex-wrap: wrap; gap: 10px 20px; }
   .row-actions { width: 100%; }
   .row-actions button { flex: 1; }
 }
+
+
+/* Version 8 live game card */
+.game-preview-grid article.live-game-card { border-color: #ff5a1f; background: linear-gradient(145deg, #fff, #fff6f1); }
+.game-preview-grid article.live-game-card::before { content: "LIVE"; position: absolute; top: 16px; right: 16px; padding: 5px 8px; border-radius: 999px; color: #fff; background: #ff5a1f; font-size: .6rem; font-weight: 950; letter-spacing: .1em; }
+.game-preview-grid article.live-game-card a { display: inline-flex; margin-top: auto; color: #df4510; font-size: .72rem; font-weight: 950; letter-spacing: .08em; }
+.game-preview-grid article.live-game-card a:hover { color: #101010; }
+.game-preview-grid article.live-game-card { position: relative; display: flex; flex-direction: column; }

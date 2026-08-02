@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#ff5a1f" />
+  <meta name="description" content="HoopLoop Start, Bench, Cut — make the call and compare your lineup with basketball fans." />
+  <title>Start, Bench, Cut — HoopLoop</title>
+  <link rel="stylesheet" href="sbc.css?v=8.0.0" />
+</head>
+<body>
+  <div class="page-noise" aria-hidden="true"></div>
+
+  <div id="setup-banner" class="setup-banner hidden" role="status">
+    <strong>Online voting is not connected.</strong>
+    <span>You can still generate and play matchups. Add the Supabase values to your existing <code>config.js</code> and run <code>supabase/sbc-v8.sql</code> to save Daily votes.</span>
+  </div>
+
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="HoopLoop home">
+      <span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span>
+    </a>
+
+    <nav class="desktop-nav" aria-label="Game navigation">
+      <a href="index.html">Name Rush</a>
+      <a class="active" href="start-bench-cut.html">Start, Bench, Cut</a>
+      <a href="#daily">Daily</a>
+      <a href="#playground">Playground</a>
+    </nav>
+
+    <button class="account-control" id="account-button" type="button">
+      <span class="account-dot" aria-hidden="true"></span>
+      <span id="account-label">Log in</span>
+    </button>
+  </header>
+
+  <main>
+    <section class="hero" id="daily">
+      <div class="hero-copy">
+        <div class="game-pill"><span></span> HoopLoop Game 02</div>
+        <h1>Make the <em>tough call.</em></h1>
+        <p>Three NBA players. One starter, one bench spot, and one cut. Lock in your Daily lineup, then see how the HoopLoop community voted.</p>
+        <div class="hero-actions">
+          <button class="primary-button" id="jump-daily" type="button">Play today <span aria-hidden="true">↘</span></button>
+          <button class="text-button" id="how-it-works" type="button">How it works</button>
+        </div>
+        <div class="hero-facts">
+          <div><strong id="active-count">535</strong><span>modern players</span></div>
+          <div><strong id="allstar-count">466</strong><span>NBA All-Stars</span></div>
+          <div><strong id="eligible-count">2,836</strong><span>random pool</span></div>
+        </div>
+      </div>
+
+      <aside class="hero-preview" aria-label="Start Bench Cut preview">
+        <div class="preview-label">TODAY'S DECISION</div>
+        <div class="preview-stack">
+          <div><span>S</span><strong>START</strong></div>
+          <div><span>B</span><strong>BENCH</strong></div>
+          <div><span>C</span><strong>CUT</strong></div>
+        </div>
+        <p>No correct answer. Just basketball arguments.</p>
+      </aside>
+    </section>
+
+    <section class="game-section section" aria-labelledby="daily-title">
+      <div class="section-heading">
+        <div>
+          <span class="overline">ONE OFFICIAL PICK</span>
+          <h2 id="daily-title">Daily Start, Bench, Cut</h2>
+          <p>Everyone receives the same trio. Your first saved lineup is final for that date.</p>
+        </div>
+        <div class="daily-toolbar">
+          <button class="icon-button" id="previous-day" type="button" aria-label="Previous daily puzzle">←</button>
+          <button class="date-button" id="daily-date-button" type="button"><strong id="daily-date">Today</strong><span id="daily-number">Daily #1</span></button>
+          <button class="icon-button" id="next-day" type="button" aria-label="Next daily puzzle">→</button>
+        </div>
+      </div>
+
+      <div class="daily-meta-card">
+        <div><span>MODE</span><strong id="daily-mode-label">Modern</strong></div>
+        <div><span>POSITION POOL</span><strong id="daily-position-label">All Positions</strong></div>
+        <div><span>COMMUNITY</span><strong id="daily-vote-count">0 votes</strong></div>
+        <button class="secondary-button" id="open-archive" type="button">Open archive</button>
+      </div>
+
+      <section class="decision-board" id="daily-board" aria-label="Daily Start Bench Cut decision">
+        <div class="board-message" id="daily-message">Choose a role beneath each player.</div>
+        <div class="player-grid" id="daily-player-grid"></div>
+        <div class="lineup-tray" id="daily-lineup-tray">
+          <div data-role="start"><span>S</span><small>START</small><strong>Unassigned</strong></div>
+          <div data-role="bench"><span>B</span><small>BENCH</small><strong>Unassigned</strong></div>
+          <div data-role="cut"><span>C</span><small>CUT</small><strong>Unassigned</strong></div>
+        </div>
+        <button class="primary-button lock-button" id="submit-daily" type="button" disabled>Lock in lineup</button>
+      </section>
+
+      <section class="results-panel hidden" id="daily-results" aria-live="polite">
+        <div class="results-heading">
+          <div><span class="overline">THE COMMUNITY CALL</span><h3 id="results-title">Here’s how everyone voted.</h3></div>
+          <div class="exact-match"><strong id="exact-match-percent">0%</strong><span>made your exact lineup</span></div>
+        </div>
+        <div class="community-results" id="community-results"></div>
+        <div class="results-actions">
+          <button class="secondary-button" id="share-daily" type="button">Share result</button>
+          <button class="text-button" id="change-daily-date" type="button">Play another Daily →</button>
+        </div>
+      </section>
+    </section>
+
+    <section class="section playground-section" id="playground">
+      <div class="section-heading">
+        <div>
+          <span class="overline">UNLIMITED DEBATES</span>
+          <h2>Build your own matchup.</h2>
+          <p>Choose a player pool and position group. Generate as many Start, Bench, Cuts as you want.</p>
+        </div>
+      </div>
+
+      <div class="generator-layout">
+        <aside class="generator-controls">
+          <fieldset>
+            <legend>Player pool</legend>
+            <div class="mode-options" id="mode-options">
+              <button class="mode-option active" data-mode="modern" type="button"><span>01</span><div><strong>Modern</strong><small>Current and active NBA players</small></div></button>
+              <button class="mode-option" data-mode="allstars" type="button"><span>02</span><div><strong>All-Stars</strong><small>Every player selected to an NBA All-Star Game</small></div></button>
+              <button class="mode-option" data-mode="random" type="button"><span>03</span><div><strong>Random</strong><small>100+ NBA games, plus active players</small></div></button>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Position filter</legend>
+            <div class="position-options" id="position-options">
+              <button class="active" data-position="all" type="button">All Positions</button>
+              <button data-position="guards" type="button">Guards</button>
+              <button data-position="forwards" type="button">Forwards</button>
+              <button data-position="bigs" type="button">Bigs</button>
+            </div>
+          </fieldset>
+
+          <button class="primary-button wide" id="generate-matchup" type="button">Generate matchup</button>
+          <p class="pool-note" id="pool-note">Loading player pool…</p>
+        </aside>
+
+        <section class="decision-board playground-board" aria-label="Generated Start Bench Cut decision">
+          <div class="board-topline">
+            <div><span class="overline" id="playground-mode-label">MODERN</span><h3>Who gets each role?</h3></div>
+            <button class="shuffle-button" id="shuffle-matchup" type="button" aria-label="Generate another matchup">↻</button>
+          </div>
+          <div class="player-grid" id="playground-player-grid"></div>
+          <div class="lineup-tray" id="playground-lineup-tray">
+            <div data-role="start"><span>S</span><small>START</small><strong>Unassigned</strong></div>
+            <div data-role="bench"><span>B</span><small>BENCH</small><strong>Unassigned</strong></div>
+            <div data-role="cut"><span>C</span><small>CUT</small><strong>Unassigned</strong></div>
+          </div>
+          <button class="primary-button lock-button" id="submit-playground" type="button" disabled>Lock in lineup</button>
+          <div class="playground-result hidden" id="playground-result">
+            <strong>Decision locked.</strong>
+            <span id="playground-result-copy"></span>
+            <div><button class="secondary-button" id="share-playground" type="button">Copy matchup</button><button class="text-button" id="next-matchup" type="button">Next matchup →</button></div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="section data-section">
+      <div class="data-card">
+        <div>
+          <span class="overline">MORE THAN A NAME</span>
+          <h2>Cards built for real debates.</h2>
+          <p>Each player card includes a headshot, position, career years, games played, career scoring, rebounding, assists, active status, and All-Star selections.</p>
+        </div>
+        <div class="data-points">
+          <div><span>PPG</span><strong>Career scoring</strong></div>
+          <div><span>RPG</span><strong>Career rebounding</strong></div>
+          <div><span>APG</span><strong>Career playmaking</strong></div>
+          <div><span>★</span><strong>All-Star history</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section future-section">
+      <div class="future-card">
+        <div>
+          <span class="overline">BUILT FOR SHARING</span>
+          <h2>Custom and creator challenges are next.</h2>
+          <p>A future update can let you send a custom trio to friends, publish challenges on your profile, and follow creator pages for community-made Start, Bench, Cuts.</p>
+        </div>
+        <div class="future-list">
+          <div><span>01</span><strong>Challenge a friend</strong><small>Pick any three players and send the matchup directly.</small></div>
+          <div><span>02</span><strong>Publish to your profile</strong><small>Build a collection other fans can answer.</small></div>
+          <div><span>03</span><strong>Creator hubs</strong><small>Play challenges from favorite basketball creators.</small></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="brand footer-brand" href="index.html" aria-label="HoopLoop home"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a>
+    <p>Clean competition for basketball fans.</p>
+    <span id="build-status">Version 8.0.0 · loading SBC database…</span>
+    <span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span>
+  </footer>
+
+  <div class="toast-region" id="toast-region" aria-live="polite"></div>
+
+  <div class="modal-backdrop hidden" id="modal-backdrop">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <button class="modal-close" id="modal-close" type="button" aria-label="Close dialog">×</button>
+      <div id="modal-content"></div>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js?v=8.0.0"></script>
+  <script src="sbc-player-data.js?v=8.0.0"></script>
+  <script src="sbc.js?v=8.0.0"></script>
+</body>
+</html>
