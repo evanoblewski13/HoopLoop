@@ -1,115 +1,96 @@
 'use strict';
 
-const PUZZLES = [
-  {
-    id: '2026-08-01', number: 1, date: 'August 1, 2026', shortDate: 'Aug 1',
-    rounds: [
-      { initials: ['D','W'], hintAnswer: 'Derrick White' },
-      { initials: ['L','J'], hintAnswer: 'LeBron James' },
-      { initials: ['M','B'], hintAnswer: 'Mike Bibby' }
-    ],
-    demoScores: [
-      { username: 'Evan1n0', timeMs: 23480, submittedAt: '2026-08-01T11:10:00Z', hints: 0 },
-      { username: 'ChetGPT', timeMs: 23590, submittedAt: '2026-08-01T11:15:00Z', hints: 0 },
-      { username: 'HoopMaster', timeMs: 24010, submittedAt: '2026-08-01T11:19:00Z', hints: 0 },
-      { username: 'BucketsOnly', timeMs: 26940, submittedAt: '2026-08-01T11:26:00Z', hints: 0 },
-      { username: 'StatSavant', timeMs: 31120, submittedAt: '2026-08-01T11:41:00Z', hints: 1 }
-    ]
-  },
-  {
-    id: '2026-07-31', number: 0, date: 'July 31, 2026', shortDate: 'Jul 31',
-    rounds: [
-      { initials: ['A','D'], hintAnswer: 'Anthony Davis' },
-      { initials: ['J','H'], hintAnswer: 'James Harden' },
-      { initials: ['B','W'], hintAnswer: 'Bill Walton' }
-    ],
-    demoScores: [
-      { username: 'StatSavant', timeMs: 20760, submittedAt: '2026-07-31T14:03:00Z', hints: 0 },
-      { username: 'Evan1n0', timeMs: 22620, submittedAt: '2026-07-31T14:08:00Z', hints: 0 },
-      { username: 'ChetGPT', timeMs: 25310, submittedAt: '2026-07-31T14:15:00Z', hints: 0 }
-    ]
-  },
-  {
-    id: '2026-07-30', number: -1, date: 'July 30, 2026', shortDate: 'Jul 30',
-    rounds: [
-      { initials: ['K','M'], hintAnswer: 'Karl Malone' },
-      { initials: ['C','P'], hintAnswer: 'Chris Paul' },
-      { initials: ['K','A'], hintAnswer: 'Kareem Abdul-Jabbar' }
-    ],
-    demoScores: [
-      { username: 'HoopMaster', timeMs: 28180, submittedAt: '2026-07-30T15:03:00Z', hints: 0 },
-      { username: 'BucketsOnly', timeMs: 30050, submittedAt: '2026-07-30T15:08:00Z', hints: 0 },
-      { username: 'ChetGPT', timeMs: 33330, submittedAt: '2026-07-30T15:13:00Z', hints: 1 }
-    ]
-  }
-];
+const CONFIG = window.HOOPLOOP_CONFIG || {};
+const BUILD_VERSION = CONFIG.BUILD_VERSION || '7.0.0';
+const LAUNCH_DATE = CONFIG.LAUNCH_DATE || '2026-08-01';
+const DAILY_TIME_ZONE = CONFIG.DAILY_TIME_ZONE || 'America/Chicago';
+const ONLINE_CONFIGURED = Boolean(
+  window.supabase &&
+  /^https:\/\/.+\.supabase\.co$/i.test(String(CONFIG.SUPABASE_URL || '')) &&
+  !String(CONFIG.SUPABASE_ANON_KEY || '').includes('PASTE_') &&
+  String(CONFIG.SUPABASE_ANON_KEY || '').length > 40
+);
+const db = ONLINE_CONFIGURED
+  ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    })
+  : null;
 
-const DEMO_USERS = [
-  { username: 'ChetGPT', best: '23.59s' },
-  { username: 'HoopMaster', best: '24.01s' },
-  { username: 'BucketsOnly', best: '26.94s' },
-  { username: 'StatSavant', best: '20.76s' },
-  { username: 'Evan1n0', best: '22.62s' }
-];
-
-const store = {
+const $ = id => document.getElementById(id);
+const qsa = selector => [...document.querySelectorAll(selector)];
+const localStore = {
   get(key, fallback = null) {
-    try { const raw = localStorage.getItem(`hooploop-v4-${key}`); return raw === null ? fallback : JSON.parse(raw); }
-    catch { return fallback; }
+    try {
+      const value = localStorage.getItem(`hooploop-v7-${key}`);
+      return value === null ? fallback : JSON.parse(value);
+    } catch { return fallback; }
   },
-  set(key, value) { localStorage.setItem(`hooploop-v4-${key}`, JSON.stringify(value)); },
-  clearAll() {
+  set(key, value) {
+    try { localStorage.setItem(`hooploop-v7-${key}`, JSON.stringify(value)); } catch { /* storage can be blocked */ }
+  },
+  remove(key) { try { localStorage.removeItem(`hooploop-v7-${key}`); } catch { /* ignore */ } },
+  clear() {
     Object.keys(localStorage)
-      .filter(key => key.startsWith('hooploop-v4-'))
+      .filter(key => key.startsWith('hooploop-v7-'))
       .forEach(key => localStorage.removeItem(key));
   }
 };
 
-const state = {
-  puzzleIndex: 0,
-  mode: 'daily',
-  started: false,
-  finished: false,
-  roundIndex: 0,
-  gameStart: 0,
-  roundStart: 0,
-  totalMs: 0,
-  roundMs: 0,
-  raf: null,
-  hintUsedThisRound: false,
-  hintsUsed: 0,
-  splits: [],
-  pendingRun: null,
-  gaveUp: false
-};
-
-const $ = (id) => document.getElementById(id);
-const els = {
-  totalTimer: $('total-timer'), roundTimer: $('round-timer'), roundLabel: $('round-label'), puzzleLabel: $('puzzle-label'),
-  modeBadge: $('mode-badge'), startScreen: $('start-screen'), playScreen: $('play-screen'), resultScreen: $('result-screen'),
-  startCopy: $('start-copy'), guestNote: $('guest-note'), startGame: $('start-game-button'), practice: $('practice-button'),
-  initials: $('initials'), progress: $('round-progress'), answerForm: $('answer-form'), input: $('player-answer'),
-  answerEntry: document.querySelector('.answer-entry'), feedback: $('feedback'), hint: $('hint-button'), hintPattern: $('hint-pattern'),
-  giveUp: $('give-up-button'), resultKicker: $('result-kicker'), resultTime: $('result-time'), resultMessage: $('result-message'),
-  splitList: $('split-list'), revealedAnswers: $('revealed-answers'), resultPrimary: $('result-primary-button'), resultReplay: $('result-replay-button'),
-  leaderboardRows: $('leaderboard-rows'), archiveGrid: $('archive-grid'), accountLabel: $('account-label'), accountButton: $('account-button'),
-  accountCta: $('account-cta'), modalBackdrop: $('modal-backdrop'), modal: $('modal'), modalContent: $('modal-content')
-};
-
-function currentPuzzle() { return PUZZLES[state.puzzleIndex]; }
-function currentUser() { return store.get('user'); }
-function getFriends() { return store.get('friends', []); }
-function getRuns() { return store.get('runs', []); }
-function formatTime(ms) { return (ms / 1000).toFixed(2); }
-function initialsFor(username) { return username.slice(0, 2).toUpperCase(); }
 function normalizeName(value) {
-  return String(value)
+  return String(value || '')
     .trim()
     .toLowerCase()
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/ß/g, 'ss')
     .replace(/[^a-z0-9]+/g, '');
+}
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[char]));
+}
+function formatTime(ms) { return (Math.max(0, Number(ms) || 0) / 1000).toFixed(2); }
+function initialsFor(username) { return String(username || '?').slice(0, 2).toUpperCase(); }
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+function siteBaseUrl() { return window.location.href.split('#')[0].split('?')[0].replace(/[^/]*$/, ''); }
+function dateFromKey(key) { return new Date(`${key}T12:00:00Z`); }
+function dateKeyFromDate(date) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: DAILY_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(date).reduce((acc, part) => { acc[part.type] = part.value; return acc; }, {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+function todayKey() { return dateKeyFromDate(new Date()); }
+function addDays(key, amount) {
+  const date = dateFromKey(key);
+  date.setUTCDate(date.getUTCDate() + amount);
+  return date.toISOString().slice(0, 10);
+}
+function daysBetween(start, end) { return Math.floor((dateFromKey(end) - dateFromKey(start)) / 86400000); }
+function prettyDate(key, options = {}) {
+  return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: options.short ? 'short' : 'long', day: 'numeric', year: options.year === false ? undefined : 'numeric' }).format(dateFromKey(key));
+}
+function hashString(input) {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i += 1) { h ^= input.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function seededRandom(seedText) {
+  let seed = hashString(seedText) || 1;
+  return () => {
+    seed += 0x6D2B79F5;
+    let t = seed;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function shuffle(items, rng = Math.random) {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 }
 
 const PLAYER_DB = (() => {
@@ -120,17 +101,13 @@ const PLAYER_DB = (() => {
     let first = String(firstName || '').trim();
     let last = String(lastName || '').trim();
     const words = String(displayName || '').trim().split(/\s+/).filter(Boolean);
-
-    // A couple of NBA records use a blank first-name field. Fall back to the
-    // displayed first and final words when the name has at least two words.
     if (!first && words.length >= 2) first = words[0];
     if (!last && words.length >= 2) last = words[words.length - 1];
     if (!first || !last) return null;
-
     const firstInitial = first.match(/[A-Za-zÀ-ÖØ-öø-ÿĀ-ž]/u)?.[0];
     const lastInitial = last.match(/[A-Za-zÀ-ÖØ-öø-ÿĀ-ž]/u)?.[0];
     if (!firstInitial || !lastInitial) return null;
-    return `${normalizeName(firstInitial).slice(0, 1).toUpperCase()}${normalizeName(lastInitial).slice(0, 1).toUpperCase()}`;
+    return `${normalizeName(firstInitial).slice(0,1).toUpperCase()}${normalizeName(lastInitial).slice(0,1).toUpperCase()}`;
   }
 
   function addName(playerId, firstName, lastName, displayName, active, isAlias = false) {
@@ -139,562 +116,979 @@ const PLAYER_DB = (() => {
     if (!key || !normalized) return;
     if (!byInitials.has(key)) byInitials.set(key, new Map());
     const bucket = byInitials.get(key);
-    if (!bucket.has(normalized)) {
-      bucket.set(normalized, { playerId, displayName, active: Boolean(active), isAlias });
-    }
+    if (!bucket.has(normalized)) bucket.set(normalized, { playerId, displayName, active: Boolean(active), isAlias });
   }
 
-  source.players.forEach(([id, first, last, display, active]) => addName(id, first, last, display, active, false));
+  source.players.forEach(([id, first, last, display, active]) => addName(id, first, last, display, active));
   source.officialAliases.forEach(alias => addName(alias.playerId, alias.first, alias.last, alias.name, false, true));
 
-  function keyFor(initials) { return `${initials[0]}${initials[1]}`.toUpperCase(); }
-  function entriesFor(initials) {
-    return [...(byInitials.get(keyFor(initials))?.values() || [])]
-      .sort((a, b) => Number(b.active) - Number(a.active) || a.displayName.localeCompare(b.displayName));
+  function entriesForKey(key) {
+    return [...(byInitials.get(key)?.values() || [])]
+      .sort((a,b) => Number(b.active) - Number(a.active) || a.displayName.localeCompare(b.displayName));
   }
+  const groups = [...byInitials.keys()].map(key => {
+    const entries = entriesForKey(key);
+    return { key, initials: [key[0], key[1]], entries, count: entries.length, activeCount: entries.filter(item => item.active).length };
+  });
 
   return {
     meta: source.meta,
-    namesFor(initials) { return entriesFor(initials).map(entry => entry.displayName); },
-    find(initials, submittedName) {
-      return byInitials.get(keyFor(initials))?.get(normalizeName(submittedName))?.displayName || null;
+    find(initials, submitted) {
+      const key = Array.isArray(initials) ? initials.join('').toUpperCase() : String(initials).toUpperCase();
+      return byInitials.get(key)?.get(normalizeName(submitted)) || null;
     },
-    count(initials) { return byInitials.get(keyFor(initials))?.size || 0; },
-    validCombinations(minimum = 3) {
-      return [...byInitials.entries()]
-        .filter(([, names]) => names.size >= minimum)
-        .map(([initials, names]) => ({ initials, count: names.size }))
-        .sort((a, b) => b.count - a.count || a.initials.localeCompare(b.initials));
-    }
+    namesFor(initials) {
+      const key = Array.isArray(initials) ? initials.join('').toUpperCase() : String(initials).toUpperCase();
+      return entriesForKey(key).map(item => item.displayName);
+    },
+    group(key) { return groups.find(group => group.key === key) || null; },
+    groups(minimum = 3) { return groups.filter(group => group.count >= minimum); }
   };
 })();
 
-function answersForRound(round) { return PLAYER_DB.namesFor(round.initials); }
-function buildHint(name) {
-  return name.split(' ').map(part => {
-    const visible = part.length <= 3 ? 1 : 2;
-    return `${part.slice(0, visible).toUpperCase()}${'_'.repeat(Math.max(0, part.length - visible))}`;
+function hintAnswerForGroup(group, rng = Math.random) {
+  const active = group.entries.filter(entry => entry.active && !entry.isAlias);
+  const pool = active.length ? active : group.entries.filter(entry => !entry.isAlias);
+  return (pool.length ? pool : group.entries)[Math.floor(rng() * (pool.length || group.entries.length))]?.displayName || group.entries[0]?.displayName;
+}
+function buildHint(name, visibleCount = 2) {
+  return String(name || '').split(' ').map(part => {
+    const punctuation = part.match(/^[^A-Za-z0-9]*/)?.[0] || '';
+    const core = part.slice(punctuation.length);
+    const visible = Math.min(core.length, Math.max(1, visibleCount));
+    return `${punctuation}${core.slice(0, visible).toUpperCase()}${'_'.repeat(Math.max(0, core.length - visible))}`;
   }).join(' ');
 }
-function scoreKey(puzzleId, username) { return `${puzzleId}:${username.toLowerCase()}`; }
-function userRunForPuzzle(puzzleId) {
-  const user = currentUser();
-  if (!user) return null;
-  return getRuns().find(run => run.key === scoreKey(puzzleId, user.username));
+function generateDailyPuzzle(dateKey) {
+  const rng = seededRandom(`hooploop-daily-v7:${dateKey}`);
+  const candidates = shuffle(PLAYER_DB.groups(5), rng);
+  const selected = candidates.slice(0, 3);
+  return {
+    dateKey,
+    number: daysBetween(LAUNCH_DATE, dateKey) + 1,
+    rounds: selected.map(group => ({ initials: group.initials, key: group.key, hintAnswer: hintAnswerForGroup(group, rng), answerCount: group.count })),
+    signature: selected.map(group => group.key).join('-')
+  };
 }
-
-function setScreen(name) {
-  els.startScreen.classList.toggle('hidden', name !== 'start');
-  els.playScreen.classList.toggle('hidden', name !== 'play');
-  els.resultScreen.classList.toggle('hidden', name !== 'result');
+function practicePool(difficulty) {
+  const all = PLAYER_DB.groups(3);
+  const filters = {
+    rookie: group => group.count >= 12 && group.activeCount >= 2,
+    starter: group => group.count >= 8 && group.activeCount >= 1,
+    allstar: group => group.count >= 5 && group.count <= 18,
+    mvp: group => group.count >= 3 && group.count <= 7
+  };
+  const pool = all.filter(filters[difficulty] || filters.starter);
+  return pool.length >= 25 ? pool : all;
 }
-
-function renderAccount() {
-  const user = currentUser();
-  els.accountLabel.textContent = user ? user.username : 'Log in';
-  els.accountCta.textContent = user ? 'Open your profile' : 'Create a free account';
-  els.guestNote.textContent = user ? `Signed in as ${user.username}. Your first daily completion is saved.` : 'Playing as guest. Create an account to save your result.';
-}
-
-function renderPuzzleHeader() {
-  const puzzle = currentPuzzle();
-  els.puzzleLabel.textContent = puzzle.number === 1 ? 'DAILY #1 · AUG 1' : `ARCHIVE · ${puzzle.shortDate.toUpperCase()}`;
-  const existing = userRunForPuzzle(puzzle.id);
-  if (existing) {
-    els.startCopy.textContent = `Your saved daily score is ${formatTime(existing.timeMs)} seconds. Replay it in practice mode anytime.`;
-    els.startGame.textContent = 'View saved result';
-    els.practice.classList.remove('hidden');
-  } else {
-    els.startCopy.textContent = puzzle.number === 1 ? 'Everyone receives the same three initial combinations.' : `Play the original ${puzzle.date} challenge and join its leaderboard.`;
-    els.startGame.textContent = puzzle.number === 1 ? 'Start daily' : 'Play archive puzzle';
-    els.practice.classList.add('hidden');
+function generatePracticeRounds(difficulty, count) {
+  const pool = shuffle(practicePool(difficulty));
+  const wanted = Math.max(1, Number(count) || 3);
+  const rounds = [];
+  for (let i = 0; i < wanted; i += 1) {
+    const group = pool[i % pool.length];
+    rounds.push({ initials: group.initials, key: group.key, hintAnswer: hintAnswerForGroup(group), answerCount: group.count });
   }
-  els.roundLabel.textContent = 'Ready when you are';
-  els.modeBadge.textContent = 'DAILY';
-  els.totalTimer.textContent = '0.00';
-  setScreen('start');
+  return rounds;
+}
+function generateRaceRounds() {
+  const pool = shuffle(PLAYER_DB.groups(5).filter(group => group.activeCount >= 1 || group.count >= 8));
+  return pool.slice(0,3).map(group => ({ initials: group.initials.join(''), hintAnswer: hintAnswerForGroup(group), answerCount: group.count }));
 }
 
-function renderArchive() {
-  els.archiveGrid.innerHTML = '';
-  PUZZLES.forEach((puzzle, index) => {
-    const run = userRunForPuzzle(puzzle.id);
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = `archive-card${index === state.puzzleIndex ? ' active' : ''}`;
-    button.innerHTML = `
-      <div class="archive-card__top">
-        <span class="archive-card__date">${puzzle.date}</span>
-        <span class="archive-card__status">${run ? `${formatTime(run.timeMs)}s` : index === 0 ? 'Today' : 'Open'}</span>
-      </div>
-      <h3>${puzzle.number === 1 ? 'Daily #1' : `Archive ${Math.abs(puzzle.number)}`}</h3>
-      <p>Three rounds · ${puzzle.rounds.reduce((sum, r) => sum + answersForRound(r).length, 0)} possible answers</p>
-      <span class="archive-card__arrow">↗</span>`;
-    button.addEventListener('click', () => selectPuzzle(index));
-    els.archiveGrid.appendChild(button);
-  });
-}
+const els = {
+  setupBanner: $('setup-banner'), setupHelp: $('setup-help-button'), accountButton: $('account-button'), accountLabel: $('account-label'), accountCta: $('account-cta'),
+  totalTimer: $('total-timer'), roundTimer: $('round-timer'), roundLabel: $('round-label'), puzzleLabel: $('puzzle-label'), gameTitle: $('game-title'), modeBadge: $('mode-badge'),
+  startScreen: $('start-screen'), playScreen: $('play-screen'), resultScreen: $('result-screen'), startTitle: $('start-title'), startCopy: $('start-copy'), guestNote: $('guest-note'), startGame: $('start-game-button'),
+  initials: $('initials'), progress: $('round-progress'), answerForm: $('answer-form'), input: $('player-answer'), answerEntry: document.querySelector('#answer-form .answer-entry'), feedback: $('feedback'), hint: $('hint-button'), hintPattern: $('hint-pattern'), giveUp: $('give-up-button'),
+  resultKicker: $('result-kicker'), resultTime: $('result-time'), resultMessage: $('result-message'), splitList: $('split-list'), sessionSummary: $('session-summary'), revealedAnswers: $('revealed-answers'), resultPrimary: $('result-primary-button'), resultReplay: $('result-replay-button'),
+  leaderboardRows: $('leaderboard-rows'), archiveGrid: $('archive-grid'), archiveMore: $('archive-more-button'), practiceStats: $('practice-stats'), practiceNote: $('practice-record-note'),
+  modalBackdrop: $('modal-backdrop'), modalContent: $('modal-content'), toastRegion: $('toast-region'),
+  raceOverlay: $('race-overlay'), raceStatus: $('race-status'), raceCountdown: $('race-countdown'), raceGame: $('race-game'), raceFinish: $('race-finish'), raceYouName: $('race-you-name'), raceYouAvatar: $('race-you-avatar'), raceOpponentName: $('race-opponent-name'), raceOpponentAvatar: $('race-opponent-avatar'), raceYouPips: $('race-you-pips'), raceOpponentPips: $('race-opponent-pips'), raceRoundLabel: $('race-round-label'), raceRoundTime: $('race-round-time'), raceInitials: $('race-initials'), raceHintPattern: $('race-hint-pattern'), raceAnswerForm: $('race-answer-form'), raceAnswer: $('race-answer'), raceFeedback: $('race-feedback'), raceHint: $('race-hint-button'), raceResultKicker: $('race-result-kicker'), raceResultTitle: $('race-result-title'), raceResultCopy: $('race-result-copy'), inviteCount: $('invite-count')
+};
 
-function selectPuzzle(index) {
-  stopTimer();
-  Object.assign(state, { puzzleIndex: index, started: false, finished: false, roundIndex: 0, totalMs: 0, roundMs: 0, splits: [], hintsUsed: 0, pendingRun: null });
-  renderPuzzleHeader();
-  renderArchive();
-  renderLeaderboard();
-  document.querySelector('.game-shell').scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
+const state = {
+  session: null,
+  selectedDate: todayKey() < LAUNCH_DATE ? LAUNCH_DATE : todayKey(),
+  archiveCount: 9,
+  leaderboardScope: 'global',
+  user: null,
+  profile: null,
+  ownScores: new Map(),
+  pendingDaily: localStore.get('pending-daily'),
+  animation: null,
+  leaderboardChannel: null,
+  friendsCache: [],
+  race: null,
+  raceChannel: null,
+  inviteChannel: null,
+  practiceConfig: { difficulty: 'rookie', length: '3', hints: true }
+};
 
-function getLeaderboardEntries() {
-  const puzzle = currentPuzzle();
-  const entries = [...puzzle.demoScores.map(s => ({ ...s, demo: true }))];
-  getRuns().filter(run => run.puzzleId === puzzle.id && run.valid).forEach(run => {
-    const exists = entries.some(e => e.username.toLowerCase() === run.username.toLowerCase());
-    if (!exists) entries.push({ username: run.username, timeMs: run.timeMs, submittedAt: run.submittedAt, hints: run.hints });
-  });
-  return entries.sort((a, b) => a.timeMs - b.timeMs || new Date(a.submittedAt) - new Date(b.submittedAt));
+function toast(title, message = '', type = '') {
+  const node = document.createElement('div');
+  node.className = `toast ${type}`.trim();
+  node.innerHTML = `<strong>${escapeHtml(title)}</strong>${message ? `<span>${escapeHtml(message)}</span>` : ''}`;
+  els.toastRegion.appendChild(node);
+  setTimeout(() => node.remove(), 4300);
 }
-
-function renderLeaderboard(limit = 5, target = els.leaderboardRows) {
-  const user = currentUser();
-  const entries = getLeaderboardEntries();
-  target.innerHTML = '';
-  entries.slice(0, limit).forEach((entry, index) => {
-    const row = document.createElement('div');
-    const isYou = user && entry.username.toLowerCase() === user.username.toLowerCase();
-    row.className = `leaderboard-row${isYou ? ' current-user-row' : ''}`;
-    row.innerHTML = `
-      <span class="rank-number">${String(index + 1).padStart(2, '0')}</span>
-      <span class="player-cell"><span class="avatar">${initialsFor(entry.username)}</span><span><strong>${escapeHtml(entry.username)}${isYou ? ' (You)' : ''}</strong><small>${entry.hints ? `${entry.hints} hint${entry.hints > 1 ? 's' : ''} used` : 'No hints'}</small></span></span>
-      <span class="time-cell">${formatTime(entry.timeMs)}<small>s</small></span>`;
-    target.appendChild(row);
-  });
+function setScreen(screen) {
+  els.startScreen.classList.toggle('hidden', screen !== 'start');
+  els.playScreen.classList.toggle('hidden', screen !== 'play');
+  els.resultScreen.classList.toggle('hidden', screen !== 'result');
 }
-
+function stopAnimation() { if (state.animation) cancelAnimationFrame(state.animation); state.animation = null; }
+function currentRound() { return state.session?.rounds[state.session.roundIndex] || null; }
 function renderProgress() {
   els.progress.innerHTML = '';
-  currentPuzzle().rounds.forEach((_, index) => {
+  const count = state.session?.rounds.length || 3;
+  for (let i = 0; i < count; i += 1) {
     const bar = document.createElement('span');
-    if (index < state.roundIndex) bar.className = 'done';
-    if (index === state.roundIndex) bar.className = 'current';
+    if (i < state.session.roundIndex) bar.className = 'done';
+    else if (i === state.session.roundIndex) bar.className = 'current';
     els.progress.appendChild(bar);
-  });
+  }
+}
+function renderAccount() {
+  els.accountLabel.textContent = state.profile?.username || 'Log in';
+  els.accountCta.textContent = state.profile ? 'Open your profile' : 'Create a free account';
+  els.guestNote.textContent = state.profile
+    ? `Signed in as ${state.profile.username}. Your first daily completion is saved online.`
+    : 'Playing as guest. Create an account to save your result online.';
+}
+function renderBuildStatus() {
+  const count = Number(PLAYER_DB.meta.playerCount || 0).toLocaleString();
+  $('build-status').textContent = `Version ${BUILD_VERSION} · ${count} players · ${ONLINE_CONFIGURED ? 'online backend connected' : 'offline setup mode'}`;
+  els.setupBanner.classList.toggle('hidden', ONLINE_CONFIGURED);
+}
+function puzzleForSelectedDate() { return generateDailyPuzzle(state.selectedDate); }
+async function ownScoreForDate(dateKey) {
+  if (!db || !state.user) return null;
+  if (state.ownScores.has(dateKey)) return state.ownScores.get(dateKey);
+  const { data, error } = await db.from('daily_scores').select('*').eq('user_id', state.user.id).eq('puzzle_date', dateKey).maybeSingle();
+  if (error) { console.warn(error); return null; }
+  state.ownScores.set(dateKey, data || null);
+  return data || null;
+}
+async function renderPuzzleHeader() {
+  const puzzle = puzzleForSelectedDate();
+  const isToday = state.selectedDate === todayKey();
+  els.puzzleLabel.textContent = `${isToday ? 'DAILY' : 'ARCHIVE'} #${puzzle.number} · ${prettyDate(state.selectedDate, { short: true, year: false }).toUpperCase()}`;
+  els.gameTitle.textContent = 'Name Rush';
+  els.modeBadge.textContent = 'DAILY';
+  els.totalTimer.textContent = '0.00';
+  els.roundLabel.textContent = 'Ready when you are';
+  els.startTitle.textContent = isToday ? 'Today’s challenge is waiting.' : `${prettyDate(state.selectedDate)} challenge.`;
+  els.startCopy.textContent = 'Everyone receives the same three initial combinations.';
+  els.startGame.disabled = false;
+  els.startGame.textContent = isToday ? 'Start daily' : 'Play archive puzzle';
+  setScreen('start');
+  if (state.user) {
+    const score = await ownScoreForDate(state.selectedDate);
+    if (score) {
+      els.startCopy.textContent = `Your official score is ${formatTime(score.time_ms)} seconds. You can still replay this puzzle in Practice Mode.`;
+      els.startGame.textContent = 'View saved result';
+    }
+  }
 }
 
-function startGame(mode = 'daily') {
-  const existing = userRunForPuzzle(currentPuzzle().id);
-  if (mode === 'daily' && existing) {
-    showSavedResult(existing);
-    return;
-  }
-  stopTimer();
-  Object.assign(state, {
-    mode, started: true, finished: false, roundIndex: 0, gameStart: performance.now(), roundStart: performance.now(),
-    totalMs: 0, roundMs: 0, hintUsedThisRound: false, hintsUsed: 0, splits: [], pendingRun: null, gaveUp: false
-  });
+function startSession({ mode, rounds, difficulty = null, endless = false, hintsEnabled = true }) {
+  stopAnimation();
+  state.session = {
+    mode, rounds: [...rounds], difficulty, endless, hintsEnabled,
+    startedAt: performance.now(), roundStartedAt: performance.now(), roundIndex: 0,
+    elapsedMs: 0, roundMs: 0, splits: [], hintsUsed: 0, hintUsedThisRound: false,
+    correctCount: 0, skippedCount: 0, invalid: false, pendingSave: false
+  };
   els.modeBadge.textContent = mode.toUpperCase();
+  els.gameTitle.textContent = mode === 'practice' ? 'Practice' : 'Name Rush';
+  els.giveUp.textContent = mode === 'daily' ? 'Give up' : endless ? 'End session' : 'Skip round';
   setScreen('play');
   renderRound();
-  state.raf = requestAnimationFrame(tick);
+  state.animation = requestAnimationFrame(tickSession);
 }
-
+async function startDaily() {
+  const score = await ownScoreForDate(state.selectedDate);
+  if (score) { showSavedDaily(score); return; }
+  const puzzle = puzzleForSelectedDate();
+  startSession({ mode: 'daily', rounds: puzzle.rounds, hintsEnabled: true });
+}
+function startPracticeFromConfig() {
+  const lengthValue = state.practiceConfig.length;
+  const endless = lengthValue === 'endless';
+  const count = endless ? 25 : Number(lengthValue);
+  const rounds = generatePracticeRounds(state.practiceConfig.difficulty, count);
+  document.querySelector('.game-shell').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => startSession({ mode: 'practice', rounds, difficulty: state.practiceConfig.difficulty, endless, hintsEnabled: state.practiceConfig.hints }), 250);
+}
 function renderRound() {
-  const round = currentPuzzle().rounds[state.roundIndex];
-  state.roundStart = performance.now();
-  state.roundMs = 0;
-  state.hintUsedThisRound = false;
-  els.roundLabel.textContent = `Round ${state.roundIndex + 1} of ${currentPuzzle().rounds.length}`;
+  const session = state.session;
+  const round = currentRound();
+  session.roundStartedAt = performance.now();
+  session.roundMs = 0;
+  session.hintUsedThisRound = false;
+  els.roundLabel.textContent = session.endless ? `Round ${session.roundIndex + 1} · Endless` : `Round ${session.roundIndex + 1} of ${session.rounds.length}`;
   els.initials.children[0].textContent = round.initials[0];
   els.initials.children[1].textContent = round.initials[1];
   els.input.value = '';
   els.feedback.textContent = '';
   els.feedback.classList.remove('correct');
-  els.hintPattern.classList.add('hidden');
   els.hintPattern.textContent = '';
+  els.hintPattern.classList.add('hidden');
   els.hint.disabled = true;
+  els.hint.classList.toggle('hidden', !session.hintsEnabled);
   els.hint.innerHTML = '<span aria-hidden="true">◔</span> Hint in 30s';
   renderProgress();
   requestAnimationFrame(() => els.input.focus());
 }
-
-function tick(now) {
-  if (!state.started || state.finished) return;
-  state.totalMs = now - state.gameStart;
-  state.roundMs = now - state.roundStart;
-  els.totalTimer.textContent = formatTime(state.totalMs);
-  els.roundTimer.textContent = `${formatTime(state.roundMs)}s`;
-  if (!state.hintUsedThisRound) {
-    const secondsLeft = Math.max(0, Math.ceil((30000 - state.roundMs) / 1000));
-    els.hint.disabled = state.roundMs < 30000;
-    els.hint.innerHTML = state.roundMs >= 30000 ? '<span aria-hidden="true">◔</span> Show hint' : `<span aria-hidden="true">◔</span> Hint in ${secondsLeft}s`;
+function tickSession(now) {
+  const session = state.session;
+  if (!session) return;
+  session.elapsedMs = now - session.startedAt;
+  session.roundMs = now - session.roundStartedAt;
+  els.totalTimer.textContent = formatTime(session.elapsedMs);
+  els.roundTimer.textContent = `${formatTime(session.roundMs)}s`;
+  if (session.hintsEnabled && !session.hintUsedThisRound) {
+    const remaining = Math.max(0, Math.ceil((30000 - session.roundMs) / 1000));
+    els.hint.disabled = remaining > 0;
+    els.hint.innerHTML = remaining > 0 ? `<span aria-hidden="true">◔</span> Hint in ${remaining}s` : '<span aria-hidden="true">◔</span> Use hint';
   }
-  state.raf = requestAnimationFrame(tick);
+  state.animation = requestAnimationFrame(tickSession);
 }
-
-function stopTimer() { if (state.raf) cancelAnimationFrame(state.raf); state.raf = null; }
-
-function submitAnswer(event) {
-  event.preventDefault();
-  if (!state.started || state.finished) return;
-  const submitted = normalizeName(els.input.value);
-  if (!submitted) { showFeedback('Type a player name first.', false); return; }
-  const round = currentPuzzle().rounds[state.roundIndex];
-  const matchingName = PLAYER_DB.find(round.initials, submitted);
-  if (!matchingName) {
-    showFeedback('That player name does not match this initials set.', false);
+function useSessionHint() {
+  const session = state.session;
+  if (!session || session.roundMs < 30000 || session.hintUsedThisRound) return;
+  session.hintUsedThisRound = true;
+  session.hintsUsed += 1;
+  els.hintPattern.textContent = buildHint(currentRound().hintAnswer, 2);
+  els.hintPattern.classList.remove('hidden');
+  els.hint.disabled = true;
+  els.hint.textContent = 'Hint used';
+}
+function flashAnswer(correct, message) {
+  els.feedback.textContent = message;
+  els.feedback.classList.toggle('correct', correct);
+  if (correct) {
+    els.initials.classList.add('success');
+    setTimeout(() => els.initials.classList.remove('success'), 420);
+  } else {
     els.answerEntry.classList.remove('shake');
     void els.answerEntry.offsetWidth;
     els.answerEntry.classList.add('shake');
-    els.input.select();
-    return;
-  }
-  const split = { round: state.roundIndex + 1, answer: matchingName, timeMs: performance.now() - state.roundStart, hint: state.hintUsedThisRound };
-  state.splits.push(split);
-  showFeedback(`Correct — ${matchingName}`, true);
-  els.initials.classList.add('success');
-  setTimeout(() => els.initials.classList.remove('success'), 380);
-  if (state.roundIndex >= currentPuzzle().rounds.length - 1) {
-    setTimeout(() => finishGame(false), 320);
-  } else {
-    setTimeout(() => { state.roundIndex += 1; renderRound(); }, 380);
   }
 }
-
-function showFeedback(message, correct) {
-  els.feedback.textContent = message;
-  els.feedback.classList.toggle('correct', Boolean(correct));
-}
-
-function useHint() {
-  if (state.roundMs < 30000 || state.hintUsedThisRound) return;
-  state.hintUsedThisRound = true;
-  state.hintsUsed += 1;
-  const round = currentPuzzle().rounds[state.roundIndex];
-  els.hintPattern.textContent = buildHint(round.hintAnswer);
-  els.hintPattern.classList.remove('hidden');
-  els.hint.disabled = true;
-  els.hint.innerHTML = '<span aria-hidden="true">✓</span> Hint used';
-  showFeedback('The hint shows one valid answer. Any matching player still counts.', true);
-  els.input.focus();
-}
-
-function confirmGiveUp() {
-  const round = currentPuzzle().rounds[state.roundIndex];
-  openModal(`
-    <span class="overline">END THIS RUN?</span>
-    <h2>Give up on ${round.initials.join('')}?</h2>
-    <p>This run will not enter the leaderboard. We’ll reveal every accepted player for the current initials.</p>
-    <div class="confirm-actions">
-      <button class="secondary-button" id="cancel-give-up" type="button">Keep playing</button>
-      <button class="primary-button" id="confirm-give-up" type="button">Reveal answers</button>
-    </div>`);
-  $('cancel-give-up').addEventListener('click', closeModal);
-  $('confirm-give-up').addEventListener('click', () => { closeModal(); finishGame(true); });
-}
-
-function finishGame(gaveUp) {
-  stopTimer();
-  state.finished = true;
-  state.started = false;
-  state.gaveUp = gaveUp;
-  state.totalMs = performance.now() - state.gameStart;
-  els.totalTimer.textContent = formatTime(state.totalMs);
-  setScreen('result');
-  els.splitList.innerHTML = '';
-  state.splits.forEach(split => {
-    const row = document.createElement('div');
-    row.className = 'split-row';
-    row.innerHTML = `<span>R${split.round}</span><strong>${escapeHtml(split.answer)}${split.hint ? ' · hint' : ''}</strong><span>${formatTime(split.timeMs)}s</span>`;
-    els.splitList.appendChild(row);
+function submitSessionAnswer(event) {
+  event.preventDefault();
+  const session = state.session;
+  if (!session) return;
+  const submitted = els.input.value.trim();
+  if (!submitted) { flashAnswer(false, 'Type a full player name.'); return; }
+  const match = PLAYER_DB.find(currentRound().initials, submitted);
+  if (!match) { flashAnswer(false, 'That exact NBA name does not match these initials.'); return; }
+  flashAnswer(true, `Correct — ${match.displayName}`);
+  session.correctCount += 1;
+  session.splits.push({
+    initials: currentRound().initials.join(''), answer: match.displayName,
+    timeMs: Math.round(session.roundMs), hinted: session.hintUsedThisRound, skipped: false
   });
-  els.revealedAnswers.classList.add('hidden');
-  els.revealedAnswers.innerHTML = '';
-
-  if (gaveUp) {
-    const round = currentPuzzle().rounds[state.roundIndex];
-    els.resultKicker.textContent = 'Run ended';
-    els.resultTime.textContent = `Round ${state.roundIndex + 1} revealed`;
-    els.resultMessage.textContent = 'This attempt is not eligible for the leaderboard.';
-    els.revealedAnswers.innerHTML = `<h4>All accepted ${round.initials.join('')} names</h4><div class="answer-chips">${answersForRound(round).map(name => `<span class="answer-chip">${escapeHtml(name)}</span>`).join('')}</div>`;
-    els.revealedAnswers.classList.remove('hidden');
-    els.resultPrimary.textContent = 'Try another puzzle';
-    els.resultPrimary.onclick = () => { document.querySelector('#archive').scrollIntoView({ behavior: 'smooth' }); };
-    els.resultReplay.textContent = 'Restart practice';
-    els.resultReplay.onclick = () => startGame('practice');
+  setTimeout(advanceSessionRound, 350);
+}
+function advanceSessionRound() {
+  const session = state.session;
+  if (!session) return;
+  session.roundIndex += 1;
+  if (session.endless && session.roundIndex >= session.rounds.length - 3) {
+    session.rounds.push(...generatePracticeRounds(session.difficulty, 10));
+  }
+  if (!session.endless && session.roundIndex >= session.rounds.length) finishSession();
+  else renderRound();
+}
+function sessionGiveUp() {
+  const session = state.session;
+  if (!session) return;
+  if (session.mode === 'daily') {
+    if (!window.confirm('Give up this daily attempt? Your result will not enter the leaderboard.')) return;
+    session.invalid = true;
+    session.skippedCount += 1;
+    session.splits.push({ initials: currentRound().initials.join(''), answer: null, timeMs: Math.round(session.roundMs), hinted: session.hintUsedThisRound, skipped: true });
+    finishSession(true);
     return;
   }
-
-  const run = {
-    key: currentUser() ? scoreKey(currentPuzzle().id, currentUser().username) : null,
-    puzzleId: currentPuzzle().id,
-    username: currentUser()?.username || 'Guest',
-    timeMs: Math.round(state.totalMs),
-    submittedAt: new Date().toISOString(),
-    hints: state.hintsUsed,
-    splits: state.splits,
-    valid: state.mode === 'daily' && Boolean(currentUser())
-  };
-  state.pendingRun = run;
-
-  if (run.valid && !userRunForPuzzle(run.puzzleId)) {
-    const runs = getRuns();
-    runs.push(run);
-    store.set('runs', runs);
-    els.resultKicker.textContent = 'Daily complete';
-    els.resultTime.textContent = `${formatTime(run.timeMs)} seconds`;
-    els.resultMessage.textContent = `Saved to the ${currentPuzzle().date} leaderboard.`;
-  } else if (state.mode === 'practice') {
-    els.resultKicker.textContent = 'Practice complete';
-    els.resultTime.textContent = `${formatTime(run.timeMs)} seconds`;
-    els.resultMessage.textContent = 'Practice runs never replace your official daily result.';
-  } else {
-    els.resultKicker.textContent = 'Guest run complete';
-    els.resultTime.textContent = `${formatTime(run.timeMs)} seconds`;
-    els.resultMessage.textContent = 'Create an account now to save this result to the prototype leaderboard.';
+  if (session.endless) {
+    if (session.correctCount === 0 || window.confirm('End this endless practice session?')) finishSession();
+    return;
   }
+  const names = PLAYER_DB.namesFor(currentRound().initials);
+  session.skippedCount += 1;
+  session.splits.push({ initials: currentRound().initials.join(''), answer: null, timeMs: Math.round(session.roundMs), hinted: session.hintUsedThisRound, skipped: true });
+  els.revealedAnswers.innerHTML = `<h4>Possible answers for ${currentRound().initials.join('')}</h4><div class="answer-chips">${names.slice(0,60).map(name => `<span class="answer-chip">${escapeHtml(name)}</span>`).join('')}</div>`;
+  els.revealedAnswers.classList.remove('hidden');
+  flashAnswer(false, 'Round skipped. Moving on…');
+  setTimeout(() => { els.revealedAnswers.classList.add('hidden'); advanceSessionRound(); }, 1300);
+}
+async function finishSession(gaveUp = false) {
+  stopAnimation();
+  const session = state.session;
+  if (!session) return;
+  session.elapsedMs = performance.now() - session.startedAt;
+  setScreen('result');
+  els.totalTimer.textContent = formatTime(session.elapsedMs);
+  els.resultTime.textContent = `${formatTime(session.elapsedMs)} seconds`;
+  els.splitList.innerHTML = session.splits.map((split, index) => `<div class="split-row"><span>${String(index+1).padStart(2,'0')}</span><strong>${escapeHtml(split.initials)} · ${escapeHtml(split.answer || 'Skipped')}</strong><span>${formatTime(split.timeMs)}s</span></div>`).join('');
+  els.sessionSummary.classList.add('hidden');
+  els.revealedAnswers.classList.add('hidden');
 
-  els.resultPrimary.textContent = currentUser() || state.mode === 'practice' ? 'View leaderboard' : 'Save this score';
-  els.resultPrimary.onclick = () => {
-    if (!currentUser() && state.mode === 'daily') openAccountModal('create', true);
-    else openLeaderboardModal();
-  };
-  els.resultReplay.textContent = 'Practice again';
-  els.resultReplay.onclick = () => startGame('practice');
-  renderLeaderboard();
+  if (session.mode === 'daily') {
+    els.resultKicker.textContent = gaveUp ? 'Daily ended' : 'Daily complete';
+    if (gaveUp || session.invalid) {
+      const all = currentRound() ? PLAYER_DB.namesFor(currentRound().initials) : [];
+      els.resultMessage.textContent = 'Giving up ends the official attempt without a leaderboard score.';
+      if (all.length) {
+        els.revealedAnswers.innerHTML = `<h4>Possible answers for ${currentRound().initials.join('')}</h4><div class="answer-chips">${all.slice(0,80).map(name => `<span class="answer-chip">${escapeHtml(name)}</span>`).join('')}</div>`;
+        els.revealedAnswers.classList.remove('hidden');
+      }
+    } else {
+      const run = {
+        puzzleDate: state.selectedDate,
+        signature: puzzleForSelectedDate().signature,
+        timeMs: Math.round(session.elapsedMs), hintsUsed: session.hintsUsed, splits: session.splits
+      };
+      if (state.user && db) await saveDailyRun(run);
+      else {
+        state.pendingDaily = run;
+        localStore.set('pending-daily', run);
+        els.resultMessage.textContent = 'Create or log into an account to save this result online.';
+      }
+    }
+    els.resultPrimary.textContent = state.user ? 'View leaderboard' : 'Save this score';
+    els.resultPrimary.onclick = () => state.user ? openLeaderboardModal() : openAccountModal('create');
+    els.resultReplay.textContent = 'Play practice';
+    els.resultReplay.onclick = () => document.querySelector('#practice').scrollIntoView({ behavior:'smooth' });
+  } else {
+    els.resultKicker.textContent = session.endless ? 'Endless session complete' : `${session.difficulty} practice complete`;
+    const completed = session.correctCount + session.skippedCount;
+    const average = session.correctCount ? session.splits.filter(split => !split.skipped).reduce((sum, split) => sum + split.timeMs, 0) / session.correctCount : 0;
+    const best = session.splits.filter(split => !split.skipped).reduce((min, split) => Math.min(min, split.timeMs), Infinity);
+    els.resultMessage.textContent = `${session.correctCount} solved, ${session.skippedCount} skipped, ${session.hintsUsed} hints used.`;
+    els.sessionSummary.innerHTML = `<div class="stat-grid"><div><strong>${session.correctCount}/${completed}</strong><span>solved</span></div><div><strong>${average ? formatTime(average) : '--'}</strong><span>average seconds</span></div><div><strong>${Number.isFinite(best) ? formatTime(best) : '--'}</strong><span>fastest round</span></div><div><strong>${session.hintsUsed}</strong><span>hints</span></div></div>`;
+    els.sessionSummary.classList.remove('hidden');
+    await savePracticeSession({ difficulty: session.difficulty, roundCount: completed, correctCount: session.correctCount, timeMs: Math.round(session.elapsedMs), bestRoundMs: Number.isFinite(best) ? Math.round(best) : null, hintsUsed: session.hintsUsed });
+    els.resultPrimary.textContent = 'Practice records';
+    els.resultPrimary.onclick = () => document.querySelector('#practice').scrollIntoView({ behavior:'smooth' });
+    els.resultReplay.textContent = 'Run it back';
+    els.resultReplay.onclick = startPracticeFromConfig;
+  }
+}
+async function saveDailyRun(run) {
+  const { data, error } = await db.rpc('submit_daily_score', {
+    p_puzzle_date: run.puzzleDate,
+    p_puzzle_signature: run.signature,
+    p_time_ms: run.timeMs,
+    p_hints_used: run.hintsUsed,
+    p_round_splits: run.splits
+  });
+  if (error) {
+    els.resultMessage.textContent = error.message.includes('already') ? 'Your official score for this day was already saved.' : `Score could not be saved: ${error.message}`;
+    toast('Score not saved', error.message, 'error');
+    return;
+  }
+  state.ownScores.set(run.puzzleDate, data);
+  state.pendingDaily = null;
+  localStore.remove('pending-daily');
+  els.resultMessage.textContent = 'Your official score is now on the online leaderboard.';
+  toast('Score saved', `${formatTime(run.timeMs)} seconds`, 'success');
+  await loadLeaderboard();
   renderArchive();
 }
-
-function showSavedResult(run) {
-  state.mode = 'daily';
-  state.totalMs = run.timeMs;
-  state.splits = run.splits || [];
-  els.totalTimer.textContent = formatTime(run.timeMs);
-  els.modeBadge.textContent = 'SAVED';
-  els.roundLabel.textContent = `${currentPuzzle().date} result`;
+function showSavedDaily(score) {
+  stopAnimation();
+  state.session = null;
   setScreen('result');
-  els.resultKicker.textContent = 'Official score';
-  els.resultTime.textContent = `${formatTime(run.timeMs)} seconds`;
-  els.resultMessage.textContent = 'Your first completion remains your leaderboard score.';
-  els.splitList.innerHTML = (run.splits || []).map(split => `<div class="split-row"><span>R${split.round}</span><strong>${escapeHtml(split.answer)}${split.hint ? ' · hint' : ''}</strong><span>${formatTime(split.timeMs)}s</span></div>`).join('');
-  els.revealedAnswers.classList.add('hidden');
+  els.resultKicker.textContent = 'Official score saved';
+  els.resultTime.textContent = `${formatTime(score.time_ms)} seconds`;
+  els.resultMessage.textContent = 'Only your first official completion is ranked. Practice mode remains unlimited.';
+  const splits = Array.isArray(score.round_splits) ? score.round_splits : [];
+  els.splitList.innerHTML = splits.map((split,index) => `<div class="split-row"><span>${String(index+1).padStart(2,'0')}</span><strong>${escapeHtml(split.initials)} · ${escapeHtml(split.answer || 'Completed')}</strong><span>${formatTime(split.timeMs)}s</span></div>`).join('');
   els.resultPrimary.textContent = 'View leaderboard';
   els.resultPrimary.onclick = openLeaderboardModal;
-  els.resultReplay.textContent = 'Practice puzzle';
-  els.resultReplay.onclick = () => startGame('practice');
+  els.resultReplay.textContent = 'Play practice';
+  els.resultReplay.onclick = () => document.querySelector('#practice').scrollIntoView({ behavior:'smooth' });
+  els.sessionSummary.classList.add('hidden');
+  els.revealedAnswers.classList.add('hidden');
 }
 
-function openModal(html) {
-  els.modalContent.innerHTML = html;
-  els.modalBackdrop.classList.remove('hidden');
-  document.body.classList.add('modal-open');
-}
-function closeModal() {
-  els.modalBackdrop.classList.add('hidden');
-  document.body.classList.remove('modal-open');
-  els.modalContent.innerHTML = '';
-}
-
-function openHowToModal() {
-  openModal(`
-    <span class="overline">NAME RUSH RULES</span>
-    <h2>Three names. One clock.</h2>
-    <p>Each round shows a first-name initial and last-name initial. Type any accepted NBA player whose exact name matches both letters.</p>
-    <p class="modal-note">Database loaded: ${PLAYER_DB.meta.playerCount?.toLocaleString?.() || PLAYER_DB.meta.playerCount || 0} NBA-listed players plus ${PLAYER_DB.meta.aliasCount || 0} official former playing names.</p>
-    <div class="account-benefits" style="padding:8px 0 0;color:#101113">
-      <div style="border-color:#d9d7d0"><span>01</span><strong>The clock never stops</strong><p>It runs continuously across all three rounds.</p></div>
-      <div style="border-color:#d9d7d0"><span>02</span><strong>Hints reset each round</strong><p>After 30 seconds on one set, reveal part of one valid name.</p></div>
-      <div style="border-color:#d9d7d0"><span>03</span><strong>Exact spelling counts</strong><p>Capitalization, punctuation, spaces, and accent marks are flexible. The letters and full official name still need to be correct.</p></div>
-    </div>
-    <button class="primary-button" id="modal-play-now" style="width:100%;margin-top:20px" type="button">Play today</button>`);
-  $('modal-play-now').addEventListener('click', () => { closeModal(); startGame('daily'); });
-}
-
-function openAccountModal(initialMode = 'create', savePending = false) {
-  if (currentUser()) { openProfileModal(); return; }
-  openModal(`
-    <span class="overline">LOCAL PROTOTYPE ACCOUNT</span>
-    <h2>Join HoopLoop.</h2>
-    <p>This prototype stores your username and results only in this browser. Real secure accounts come with the backend build.</p>
-    <div class="modal-tabs">
-      <button class="modal-tab ${initialMode === 'create' ? 'active' : ''}" id="create-tab" type="button">Create account</button>
-      <button class="modal-tab ${initialMode === 'login' ? 'active' : ''}" id="login-tab" type="button">Log in</button>
-    </div>
-    <form class="modal-form" id="account-form">
-      <label for="username-input">Username</label>
-      <input id="username-input" maxlength="18" pattern="[A-Za-z0-9_]+" placeholder="Example: Evan1n0" required />
-      <button class="primary-button" id="account-submit" type="submit">${initialMode === 'create' ? 'Create account' : 'Log in'}</button>
-    </form>
-    <div class="modal-note">Usernames may use letters, numbers, and underscores. Authentication is simulated for this playable prototype.</div>`);
-  let mode = initialMode;
-  const setMode = next => {
-    mode = next;
-    $('create-tab').classList.toggle('active', mode === 'create');
-    $('login-tab').classList.toggle('active', mode === 'login');
-    $('account-submit').textContent = mode === 'create' ? 'Create account' : 'Log in';
-  };
-  $('create-tab').addEventListener('click', () => setMode('create'));
-  $('login-tab').addEventListener('click', () => setMode('login'));
-  $('account-form').addEventListener('submit', event => {
-    event.preventDefault();
-    const username = $('username-input').value.trim();
-    if (!/^[A-Za-z0-9_]{3,18}$/.test(username)) {
-      $('username-input').setCustomValidity('Use 3–18 letters, numbers, or underscores.');
-      $('username-input').reportValidity();
-      return;
-    }
-    store.set('user', { username, createdAt: new Date().toISOString(), mode });
-    if (savePending && state.pendingRun) savePendingRun(username);
-    closeModal();
-    renderAll();
-  });
-  requestAnimationFrame(() => $('username-input').focus());
-}
-
-function savePendingRun(username) {
-  const run = state.pendingRun;
-  if (!run || run.puzzleId !== currentPuzzle().id || state.mode !== 'daily') return;
-  if (getRuns().some(item => item.key === scoreKey(run.puzzleId, username))) return;
-  const updated = { ...run, key: scoreKey(run.puzzleId, username), username, valid: true };
-  const runs = getRuns();
-  runs.push(updated);
-  store.set('runs', runs);
-  state.pendingRun = updated;
-}
-
-function openProfileModal() {
-  const user = currentUser();
-  if (!user) { openAccountModal('create'); return; }
-  const runs = getRuns().filter(run => run.username.toLowerCase() === user.username.toLowerCase() && run.valid);
-  const best = runs.length ? Math.min(...runs.map(run => run.timeMs)) : null;
-  openModal(`
-    <span class="overline">PLAYER PROFILE</span>
-    <h2>${escapeHtml(user.username)}</h2>
-    <p>Your local HoopLoop prototype profile.</p>
-    <div class="hero-facts" style="max-width:none;margin:28px 0 8px">
-      <div><strong>${runs.length}</strong><span>saved scores</span></div>
-      <div><strong>${best ? formatTime(best) : '--'}</strong><span>best seconds</span></div>
-      <div><strong>${getFriends().length}</strong><span>friends</span></div>
-    </div>
-    <button class="primary-button" id="profile-friends" style="width:100%;margin-top:24px" type="button">Manage friends</button>
-    <button class="secondary-button" id="logout-button" style="width:100%;margin-top:10px" type="button">Log out</button>
-    <button class="danger-text-button" id="reset-local-button" style="width:100%;margin-top:14px" type="button">Reset all local Version 4 data</button>`);
-  $('profile-friends').addEventListener('click', openFriendsModal);
-  $('logout-button').addEventListener('click', () => { store.set('user', null); closeModal(); renderAll(); });
-  $('reset-local-button').addEventListener('click', () => {
-    const confirmed = window.confirm('Reset your Version 4 account, friends, and saved scores in this browser? This cannot be undone.');
-    if (!confirmed) return;
-    store.clearAll();
-    closeModal();
-    renderAll();
+function renderLeaderboardRows(entries, target = els.leaderboardRows, limit = 8) {
+  target.innerHTML = '';
+  if (!entries.length) { target.innerHTML = '<div class="empty-row">No official scores yet. The first completed run can take the top spot.</div>'; return; }
+  entries.slice(0, limit).forEach((entry,index) => {
+    const username = entry.profiles?.username || entry.username || 'Player';
+    const row = document.createElement('div');
+    row.className = `leaderboard-row${state.profile?.username?.toLowerCase() === String(username).toLowerCase() ? ' current-user-row' : ''}`;
+    row.innerHTML = `<span class="rank-number">${String(index+1).padStart(2,'0')}</span><span class="player-cell"><span class="avatar">${escapeHtml(initialsFor(username))}</span><span><strong>${escapeHtml(username)}</strong><small>${entry.hints_used ? `${entry.hints_used} hint${entry.hints_used === 1 ? '' : 's'} used` : 'No hints'}</small></span></span><span class="time-cell">${formatTime(entry.time_ms)}<small>s</small></span>`;
+    target.appendChild(row);
   });
 }
-
-function openLeaderboardModal() {
-  const entries = getLeaderboardEntries();
-  openModal(`
-    <span class="overline">${currentPuzzle().date.toUpperCase()}</span>
-    <h2>Full leaderboard.</h2>
-    <p>Sorted by the precise total time, then by the earliest submission when two results are identical.</p>
-    <div class="modal-leaderboard" id="modal-leaderboard"></div>`);
-  const target = $('modal-leaderboard');
-  renderLeaderboard(entries.length, target);
+async function getFriendIds() {
+  if (!db || !state.user) return [];
+  const { data, error } = await db.from('friendships').select('requester_id,addressee_id').eq('status','accepted');
+  if (error) return [];
+  return [...new Set((data || []).map(row => row.requester_id === state.user.id ? row.addressee_id : row.requester_id))];
+}
+async function loadLeaderboard(limit = 50) {
+  if (!db) { renderLeaderboardRows([]); return []; }
+  els.leaderboardRows.innerHTML = '<div class="empty-row">Loading online scores…</div>';
+  let query = db.from('daily_scores').select('user_id,time_ms,hints_used,submitted_at,profiles(username)').eq('puzzle_date', state.selectedDate).order('time_ms', { ascending:true }).order('submitted_at', { ascending:true }).limit(limit);
+  if (state.leaderboardScope === 'friends') {
+    if (!state.user) { renderLeaderboardRows([]); return []; }
+    const ids = [state.user.id, ...(await getFriendIds())];
+    query = query.in('user_id', ids);
+  }
+  const { data, error } = await query;
+  if (error) { renderLeaderboardRows([]); toast('Leaderboard error', error.message, 'error'); return []; }
+  renderLeaderboardRows(data || []);
+  return data || [];
+}
+function subscribeLeaderboard() {
+  if (!db) return;
+  if (state.leaderboardChannel) db.removeChannel(state.leaderboardChannel);
+  state.leaderboardChannel = db.channel(`daily-${state.selectedDate}`)
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:'daily_scores', filter:`puzzle_date=eq.${state.selectedDate}` }, loadLeaderboard)
+    .subscribe();
+}
+async function openLeaderboardModal() {
+  const entries = await loadLeaderboard(200);
+  openModal(`<span class="overline">${prettyDate(state.selectedDate).toUpperCase()}</span><h2>Full leaderboard.</h2><p>Official first completions, sorted by exact time and then submission order.</p><div class="modal-leaderboard" id="modal-leaderboard"></div>`);
+  renderLeaderboardRows(entries, $('modal-leaderboard'), 200);
 }
 
-function openFriendsModal() {
-  if (!currentUser()) { openAccountModal('create'); return; }
-  openModal(`
-    <span class="overline">FRIENDS</span>
-    <h2>Find your competition.</h2>
-    <p>Search a prototype username, add them, and compare their public scores.</p>
-    <form class="modal-form" id="friend-search-form">
-      <label for="friend-search-input">Search username</label>
-      <div class="answer-entry"><input id="friend-search-input" placeholder="Try ChetGPT" /><button class="primary-button" type="submit">Search</button></div>
-    </form>
-    <div id="friend-search-results"></div>
-    <h3 style="margin:28px 0 8px">Your friends</h3>
-    <div id="friend-list"></div>`);
-  renderFriendList();
-  $('friend-search-form').addEventListener('submit', event => {
-    event.preventDefault();
-    const query = $('friend-search-input').value.trim().toLowerCase();
-    const results = DEMO_USERS.filter(user => user.username.toLowerCase().includes(query) && user.username.toLowerCase() !== currentUser().username.toLowerCase());
-    const container = $('friend-search-results');
-    container.innerHTML = results.length ? results.map(user => friendResultHtml(user)).join('') : '<p class="modal-note">No matching prototype player found.</p>';
-    container.querySelectorAll('[data-add-friend]').forEach(button => button.addEventListener('click', () => addFriend(button.dataset.addFriend)));
-  });
+function archiveDates() {
+  const today = todayKey() < LAUNCH_DATE ? LAUNCH_DATE : todayKey();
+  const maxDays = daysBetween(LAUNCH_DATE, today) + 1;
+  const count = Math.min(state.archiveCount, maxDays);
+  return Array.from({ length: count }, (_, index) => addDays(today, -index));
 }
-
-function friendResultHtml(user) {
-  const added = getFriends().includes(user.username);
-  return `<div class="friend-search-result"><span class="friend-meta"><span class="avatar">${initialsFor(user.username)}</span><span><strong>${escapeHtml(user.username)}</strong><small>Best daily: ${user.best}</small></span></span><button class="small-action" data-add-friend="${escapeHtml(user.username)}" ${added ? 'disabled' : ''}>${added ? 'Added' : 'Add friend'}</button></div>`;
-}
-function addFriend(username) {
-  const friends = getFriends();
-  if (!friends.includes(username)) { friends.push(username); store.set('friends', friends); }
-  openFriendsModal();
-}
-function renderFriendList() {
-  const container = $('friend-list');
-  if (!container) return;
-  const friends = getFriends();
-  container.innerHTML = friends.length ? friends.map(username => {
-    const user = DEMO_USERS.find(item => item.username === username) || { username, best: '--' };
-    return `<div class="friend-row"><span class="friend-meta"><span class="avatar">${initialsFor(username)}</span><span><strong>${escapeHtml(username)}</strong><small>Best daily: ${user.best}</small></span></span><button class="small-action" data-remove-friend="${escapeHtml(username)}">Remove</button></div>`;
-  }).join('') : '<p class="modal-note">No friends added yet. Search for ChetGPT, HoopMaster, BucketsOnly, or StatSavant.</p>';
-  container.querySelectorAll('[data-remove-friend]').forEach(button => button.addEventListener('click', () => {
-    store.set('friends', getFriends().filter(name => name !== button.dataset.removeFriend));
-    renderFriendList();
-  }));
-}
-
-function escapeHtml(value) {
-  return String(value).replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[char]));
-}
-
-function renderBuildStatus() {
-  const status = document.getElementById('build-status');
-  if (!status) return;
-  const count = Number(PLAYER_DB.meta.playerCount || 0).toLocaleString();
-  const aliases = Number(PLAYER_DB.meta.aliasCount || 0).toLocaleString();
-  status.textContent = `Version ${PLAYER_DB.meta.buildVersion || '4.0.0'} · ${count} players · ${aliases} official former names`;
-}
-
-function renderAll() {
-  renderBuildStatus();
-  renderAccount();
-  renderPuzzleHeader();
-  renderLeaderboard();
-  renderArchive();
-}
-
-$('hero-play-button').addEventListener('click', () => { document.querySelector('.game-shell').scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => startGame('daily'), 300); });
-$('how-to-button').addEventListener('click', openHowToModal);
-els.startGame.addEventListener('click', () => startGame('daily'));
-els.practice.addEventListener('click', () => startGame('practice'));
-els.answerForm.addEventListener('submit', submitAnswer);
-els.hint.addEventListener('click', useHint);
-els.giveUp.addEventListener('click', confirmGiveUp);
-els.accountButton.addEventListener('click', () => currentUser() ? openProfileModal() : openAccountModal('login'));
-els.accountCta.addEventListener('click', () => currentUser() ? openProfileModal() : openAccountModal('create'));
-$('friends-nav').addEventListener('click', openFriendsModal);
-$('view-all-leaderboard').addEventListener('click', openLeaderboardModal);
-$('modal-close').addEventListener('click', closeModal);
-els.modalBackdrop.addEventListener('click', event => { if (event.target === els.modalBackdrop) closeModal(); });
-document.addEventListener('keydown', event => { if (event.key === 'Escape' && !els.modalBackdrop.classList.contains('hidden')) closeModal(); });
-
-if ((PLAYER_DB.meta.playerCount || 0) < 5000) {
-  console.error('HoopLoop database failed to load completely.', PLAYER_DB.meta);
-  document.body.classList.add('database-load-error');
-  const startButton = document.getElementById('start-game-button');
-  if (startButton) {
-    startButton.disabled = true;
-    startButton.textContent = 'Database failed to load';
+async function renderArchive() {
+  els.archiveGrid.innerHTML = '';
+  for (const dateKey of archiveDates()) {
+    const puzzle = generateDailyPuzzle(dateKey);
+    const score = state.ownScores.get(dateKey);
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = `archive-card${dateKey === state.selectedDate ? ' active' : ''}`;
+    card.innerHTML = `<div class="archive-card__top"><span class="archive-card__date">${escapeHtml(prettyDate(dateKey))}</span><span class="archive-card__status">${score ? `${formatTime(score.time_ms)}s` : dateKey === todayKey() ? 'Today' : 'Open'}</span></div><h3>Daily #${puzzle.number}</h3><p>${puzzle.rounds.map(round => round.key).join(' · ')}</p><span class="archive-card__arrow">↗</span>`;
+    card.addEventListener('click', async () => {
+      state.selectedDate = dateKey;
+      if (state.user) await ownScoreForDate(dateKey);
+      await renderPuzzleHeader();
+      await loadLeaderboard();
+      subscribeLeaderboard();
+      renderArchive();
+      document.querySelector('.game-shell').scrollIntoView({ behavior:'smooth', block:'center' });
+    });
+    els.archiveGrid.appendChild(card);
   }
 }
 
-renderAll();
+async function savePracticeSession(record) {
+  const local = localStore.get('practice-sessions', []);
+  local.push({ ...record, createdAt: new Date().toISOString() });
+  localStore.set('practice-sessions', local.slice(-250));
+  if (db && state.user) {
+    const { error } = await db.from('practice_sessions').insert({
+      user_id: state.user.id, difficulty: record.difficulty, round_count: record.roundCount,
+      correct_count: record.correctCount, time_ms: record.timeMs, best_round_ms: record.bestRoundMs, hints_used: record.hintsUsed
+    });
+    if (error) toast('Practice record not synced', error.message, 'error');
+  }
+  await loadPracticeStats();
+}
+async function loadPracticeStats() {
+  let sessions = localStore.get('practice-sessions', []);
+  if (db && state.user) {
+    const { data } = await db.from('practice_sessions').select('*').eq('user_id', state.user.id).order('created_at', { ascending:false }).limit(500);
+    if (data) sessions = data.map(row => ({ roundCount:row.round_count, correctCount:row.correct_count, timeMs:row.time_ms, bestRoundMs:row.best_round_ms }));
+  }
+  const totalSolved = sessions.reduce((sum,item) => sum + Number(item.correctCount || 0), 0);
+  const bestAverage = sessions.reduce((best,item) => item.correctCount ? Math.min(best, item.timeMs / item.correctCount) : best, Infinity);
+  const fastest = sessions.reduce((best,item) => item.bestRoundMs ? Math.min(best,item.bestRoundMs) : best, Infinity);
+  const values = [sessions.length, Number.isFinite(bestAverage) ? `${formatTime(bestAverage)}s` : '--', Number.isFinite(fastest) ? `${formatTime(fastest)}s` : '--', totalSolved];
+  [...els.practiceStats.children].forEach((node,index) => { const strong = node.querySelector('strong'); if (strong) strong.textContent = values[index]; });
+  els.practiceNote.textContent = state.user ? 'Synced to your HoopLoop account.' : 'Guest records are saved only in this browser. Log in to sync across devices.';
+}
 
-console.info('HoopLoop Version 4 player database', PLAYER_DB.meta);
-PUZZLES.forEach(puzzle => puzzle.rounds.forEach(round => {
-  const count = PLAYER_DB.count(round.initials);
-  if (count < 3) console.warn(`Initials ${round.initials.join('')} only have ${count} accepted names.`);
-}));
+function openModal(html) { els.modalContent.innerHTML = html; els.modalBackdrop.classList.remove('hidden'); document.body.classList.add('modal-open'); }
+function closeModal() { els.modalBackdrop.classList.add('hidden'); document.body.classList.remove('modal-open'); }
+function openSetupHelp() {
+  openModal(`<span class="overline">ONE-TIME ONLINE SETUP</span><h2>Connect Supabase.</h2><p>The code is ready, but GitHub Pages cannot create a database by itself.</p><ol class="setup-list"><li>Create a free Supabase project.</li><li>Run <code>supabase/setup.sql</code> in its SQL Editor.</li><li>Paste the Project URL and anon key into <code>config.js</code>.</li><li>Push the changed files to GitHub.</li></ol><p class="modal-note">The detailed screenshots and checks are in ONLINE-SETUP.md.</p>`);
+}
+function openHowTo() {
+  openModal(`<span class="overline">HOW NAME RUSH WORKS</span><h2>Any matching player counts.</h2><p>Type the full official NBA name of any player matching the displayed first and last initials. Capitalization, spacing, punctuation, and accent marks are normalized; misspellings are not.</p><div class="account-benefits light-benefits"><div><span>01</span><strong>Daily</strong><p>Three shared initials and one official leaderboard score per account.</p></div><div><span>02</span><strong>Practice</strong><p>Custom difficulty, session length, hints, and personal records.</p></div><div><span>03</span><strong>Race</strong><p>First player through the same three initials wins. Hints grow every 30 seconds and give-up is disabled.</p></div></div>`);
+}
+
+async function loadProfile() {
+  if (!db || !state.user) { state.profile = null; renderAccount(); return; }
+  const { data, error } = await db.from('profiles').select('*').eq('id', state.user.id).single();
+  if (error) { console.warn(error); state.profile = null; }
+  else state.profile = data;
+  renderAccount();
+}
+async function checkUsernameAvailable(username) {
+  const { data } = await db.from('profiles').select('id').eq('username', username).maybeSingle();
+  return !data;
+}
+function accountFormHtml(mode) {
+  if (mode === 'login') return `<form class="modal-form" id="auth-form"><label for="auth-email">Email</label><input id="auth-email" type="email" required autocomplete="email" /><label for="auth-password">Password</label><input id="auth-password" type="password" minlength="8" required autocomplete="current-password" /><div id="auth-message" class="form-error"></div><button class="primary-button" type="submit">Log in</button><button class="text-button" id="forgot-password" type="button">Forgot password?</button></form>`;
+  return `<form class="modal-form" id="auth-form"><label for="auth-username">Username</label><input id="auth-username" maxlength="18" pattern="[A-Za-z0-9_]{3,18}" required autocomplete="username" placeholder="Evan1n0" /><label for="auth-email">Email</label><input id="auth-email" type="email" required autocomplete="email" /><label for="auth-password">Password</label><input id="auth-password" type="password" minlength="8" required autocomplete="new-password" /><div id="auth-message" class="form-error"></div><button class="primary-button" type="submit">Create account</button></form>`;
+}
+function openAccountModal(initialMode = 'create') {
+  if (!ONLINE_CONFIGURED) { openSetupHelp(); return; }
+  let mode = initialMode;
+  const render = () => {
+    openModal(`<span class="overline">HOOPLOOP ACCOUNT</span><h2>${mode === 'create' ? 'Join the leaderboard.' : 'Welcome back.'}</h2><p>Use an email, password, and unique public username.</p><div class="modal-tabs"><button class="modal-tab ${mode === 'create' ? 'active' : ''}" id="create-tab" type="button">Create account</button><button class="modal-tab ${mode === 'login' ? 'active' : ''}" id="login-tab" type="button">Log in</button></div>${accountFormHtml(mode)}<p class="modal-note">Passwords are handled by Supabase Auth. HoopLoop never stores your password in its own tables.</p>`);
+    $('create-tab').onclick = () => { mode = 'create'; render(); };
+    $('login-tab').onclick = () => { mode = 'login'; render(); };
+    $('auth-form').onsubmit = async event => {
+      event.preventDefault();
+      const message = $('auth-message');
+      message.textContent = '';
+      const email = $('auth-email').value.trim();
+      const password = $('auth-password').value;
+      const submit = event.submitter;
+      submit.disabled = true;
+      submit.textContent = mode === 'create' ? 'Creating…' : 'Logging in…';
+      try {
+        if (mode === 'create') {
+          const username = $('auth-username').value.trim();
+          if (!/^[A-Za-z0-9_]{3,18}$/.test(username)) throw new Error('Use 3–18 letters, numbers, or underscores for the username.');
+          if (!(await checkUsernameAvailable(username))) throw new Error('That username is already taken.');
+          const { data, error } = await db.auth.signUp({ email, password, options: { data: { username }, emailRedirectTo: siteBaseUrl() } });
+          if (error) throw error;
+          if (!data.session) {
+            message.className = 'form-success';
+            message.textContent = 'Account created. Check your email to confirm it, then log in.';
+            submit.textContent = 'Email sent';
+            return;
+          }
+        } else {
+          const { error } = await db.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+        }
+        closeModal();
+      } catch (error) {
+        message.className = 'form-error';
+        message.textContent = error.message;
+        submit.disabled = false;
+        submit.textContent = mode === 'create' ? 'Create account' : 'Log in';
+      }
+    };
+    const forgot = $('forgot-password');
+    if (forgot) forgot.onclick = openForgotPassword;
+  };
+  render();
+}
+function openForgotPassword() {
+  openModal(`<span class="overline">PASSWORD RESET</span><h2>Check your inbox.</h2><p>Enter your account email and Supabase will send a secure reset link.</p><form class="modal-form" id="reset-form"><label for="reset-email">Email</label><input id="reset-email" type="email" required /><div id="reset-message" class="form-error"></div><button class="primary-button" type="submit">Send reset link</button></form>`);
+  $('reset-form').onsubmit = async event => {
+    event.preventDefault();
+    const { error } = await db.auth.resetPasswordForEmail($('reset-email').value.trim(), { redirectTo: siteBaseUrl() });
+    $('reset-message').className = error ? 'form-error' : 'form-success';
+    $('reset-message').textContent = error ? error.message : 'Reset email sent.';
+  };
+}
+function openPasswordUpdate() {
+  openModal(`<span class="overline">NEW PASSWORD</span><h2>Choose a new password.</h2><form class="modal-form" id="password-update-form"><label for="new-password">New password</label><input id="new-password" type="password" minlength="8" required /><div id="password-update-message" class="form-error"></div><button class="primary-button" type="submit">Update password</button></form>`);
+  $('password-update-form').onsubmit = async event => {
+    event.preventDefault();
+    const { error } = await db.auth.updateUser({ password: $('new-password').value });
+    $('password-update-message').className = error ? 'form-error' : 'form-success';
+    $('password-update-message').textContent = error ? error.message : 'Password updated. You can close this window.';
+  };
+}
+async function openProfileModal() {
+  if (!state.profile) { openAccountModal('login'); return; }
+  const [{ count: scoreCount }, { data: practice }, friendIds] = await Promise.all([
+    db.from('daily_scores').select('*', { count:'exact', head:true }).eq('user_id', state.user.id),
+    db.from('practice_sessions').select('correct_count,best_round_ms').eq('user_id', state.user.id).limit(500),
+    getFriendIds()
+  ]);
+  const bestPractice = (practice || []).reduce((best,row) => row.best_round_ms ? Math.min(best,row.best_round_ms) : best, Infinity);
+  openModal(`<span class="overline">PLAYER PROFILE</span><h2>${escapeHtml(state.profile.username)}</h2><p>${escapeHtml(state.user.email || '')}</p><div class="profile-grid"><div><strong>${scoreCount || 0}</strong><span>daily scores</span></div><div><strong>${friendIds.length}</strong><span>friends</span></div><div><strong>${Number.isFinite(bestPractice) ? formatTime(bestPractice) : '--'}</strong><span>practice best</span></div></div><div class="inline-actions"><button class="primary-button" id="profile-friends" type="button">Friends</button><button class="secondary-button" id="profile-races" type="button">Race invites</button></div><button class="secondary-button wide" id="logout-button" style="margin-top:10px" type="button">Log out</button><button class="danger-text-button wide" id="clear-local-button" type="button">Clear local Version 7 practice data</button>`);
+  $('profile-friends').onclick = openFriendsModal;
+  $('profile-races').onclick = openRaceInvitations;
+  $('logout-button').onclick = async () => { await db.auth.signOut(); closeModal(); };
+  $('clear-local-button').onclick = () => { if (window.confirm('Clear local guest practice records and any pending guest score?')) { localStore.clear(); state.pendingDaily = null; loadPracticeStats(); toast('Local data cleared'); } };
+}
+async function trySavePendingDaily() {
+  const pending = localStore.get('pending-daily');
+  if (!pending || !state.user || !db) return;
+  const existing = await ownScoreForDate(pending.puzzleDate);
+  if (existing) { localStore.remove('pending-daily'); state.pendingDaily = null; return; }
+  await saveDailyRun(pending);
+}
+
+async function loadFriendships() {
+  if (!db || !state.user) return [];
+  const { data, error } = await db.from('friendships').select('id,status,requester_id,addressee_id,created_at,requester:profiles!friendships_requester_id_fkey(id,username),addressee:profiles!friendships_addressee_id_fkey(id,username)').order('created_at', { ascending:false });
+  if (error) { toast('Friends error', error.message, 'error'); return []; }
+  state.friendsCache = data || [];
+  return state.friendsCache;
+}
+function friendshipOther(row) { return row.requester_id === state.user.id ? row.addressee : row.requester; }
+async function openFriendsModal() {
+  if (!state.user) { openAccountModal('login'); return; }
+  const rows = await loadFriendships();
+  const incoming = rows.filter(row => row.status === 'pending' && row.addressee_id === state.user.id);
+  const outgoing = rows.filter(row => row.status === 'pending' && row.requester_id === state.user.id);
+  const accepted = rows.filter(row => row.status === 'accepted');
+  openModal(`<span class="overline">FRIENDS</span><h2>Build your competition.</h2><p>Search by exact username, manage requests, compare scores, and start a race.</p><form class="modal-form" id="friend-search-form"><label for="friend-search">Username</label><div class="answer-entry"><input id="friend-search" placeholder="Search HoopLoop username" /><button class="primary-button" type="submit">Search</button></div></form><div id="friend-search-results"></div><div class="request-section"><h3>Incoming requests</h3><div id="incoming-list">${incoming.length ? incoming.map(friendRequestHtml).join('') : '<p class="modal-note">No incoming requests.</p>'}</div></div><div class="request-section"><h3>Your friends</h3><div id="accepted-list">${accepted.length ? accepted.map(friendAcceptedHtml).join('') : '<p class="modal-note">No accepted friends yet.</p>'}</div></div><div class="request-section"><h3>Sent requests</h3><div>${outgoing.length ? outgoing.map(row => `<div class="request-row"><span class="friend-meta"><span class="avatar">${initialsFor(friendshipOther(row)?.username)}</span><span><strong>${escapeHtml(friendshipOther(row)?.username)}</strong><small>Request pending</small></span></span><span class="status-pill">Pending</span></div>`).join('') : '<p class="modal-note">No sent requests.</p>'}</div></div>`);
+  $('friend-search-form').onsubmit = searchFriends;
+  wireFriendActions();
+}
+function friendRequestHtml(row) {
+  const person = friendshipOther(row);
+  return `<div class="request-row"><span class="friend-meta"><span class="avatar">${initialsFor(person?.username)}</span><span><strong>${escapeHtml(person?.username)}</strong><small>Sent you a request</small></span></span><span class="row-actions"><button class="small-action" data-accept-friend="${row.id}">Accept</button><button class="small-action secondary" data-decline-friend="${row.id}">Decline</button></span></div>`;
+}
+function friendAcceptedHtml(row) {
+  const person = friendshipOther(row);
+  return `<div class="request-row"><span class="friend-meta"><span class="avatar">${initialsFor(person?.username)}</span><span><strong>${escapeHtml(person?.username)}</strong><small>Accepted friend</small></span></span><span class="row-actions"><button class="small-action" data-race-friend="${escapeHtml(person?.username)}">Race</button><button class="small-action secondary" data-remove-friend="${row.id}">Remove</button></span></div>`;
+}
+async function searchFriends(event) {
+  event.preventDefault();
+  const query = $('friend-search').value.trim();
+  const target = $('friend-search-results');
+  if (query.length < 2) { target.innerHTML = '<p class="modal-note">Enter at least two characters.</p>'; return; }
+  const { data, error } = await db.from('profiles').select('id,username').ilike('username', `%${query}%`).neq('id', state.user.id).limit(12);
+  if (error) { target.innerHTML = `<p class="modal-note">${escapeHtml(error.message)}</p>`; return; }
+  target.innerHTML = (data || []).length ? data.map(person => `<div class="friend-search-result"><span class="friend-meta"><span class="avatar">${initialsFor(person.username)}</span><strong>${escapeHtml(person.username)}</strong></span><button class="small-action" data-add-username="${escapeHtml(person.username)}">Add friend</button></div>`).join('') : '<p class="modal-note">No matching users.</p>';
+  target.querySelectorAll('[data-add-username]').forEach(button => button.onclick = async () => {
+    const { error: sendError } = await db.rpc('send_friend_request_by_username', { p_username: button.dataset.addUsername });
+    if (sendError) toast('Request not sent', sendError.message, 'error');
+    else { toast('Friend request sent', button.dataset.addUsername, 'success'); openFriendsModal(); }
+  });
+}
+function wireFriendActions() {
+  qsa('[data-accept-friend]').forEach(button => button.onclick = async () => { const { error } = await db.rpc('respond_friend_request', { p_friendship_id:button.dataset.acceptFriend, p_accept:true }); if (error) toast('Could not accept', error.message,'error'); else openFriendsModal(); });
+  qsa('[data-decline-friend]').forEach(button => button.onclick = async () => { await db.rpc('respond_friend_request', { p_friendship_id:button.dataset.declineFriend, p_accept:false }); openFriendsModal(); });
+  qsa('[data-remove-friend]').forEach(button => button.onclick = async () => { if (window.confirm('Remove this friend?')) { await db.rpc('remove_friend', { p_friendship_id:button.dataset.removeFriend }); openFriendsModal(); } });
+  qsa('[data-race-friend]').forEach(button => button.onclick = () => createFriendRace(button.dataset.raceFriend));
+}
+
+async function updateInviteCount() {
+  if (!db || !state.user) { els.inviteCount.classList.add('hidden'); return; }
+  const { count } = await db.from('race_matches').select('*', { count:'exact', head:true }).eq('opponent_id', state.user.id).eq('status','invited');
+  const amount = count || 0;
+  els.inviteCount.textContent = amount;
+  els.inviteCount.classList.toggle('hidden', amount === 0);
+}
+function subscribeInvites() {
+  if (!db || !state.user) return;
+  if (state.inviteChannel) db.removeChannel(state.inviteChannel);
+  state.inviteChannel = db.channel(`invites-${state.user.id}`)
+    .on('postgres_changes', { event:'*', schema:'public', table:'race_matches', filter:`opponent_id=eq.${state.user.id}` }, updateInviteCount)
+    .on('postgres_changes', { event:'*', schema:'public', table:'friendships' }, () => { updateInviteCount(); })
+    .subscribe();
+}
+async function openRaceInvitations() {
+  if (!state.user) { openAccountModal('login'); return; }
+  const { data, error } = await db.from('race_matches').select('*,host:profiles!race_matches_host_id_fkey(username)').eq('opponent_id', state.user.id).eq('status','invited').order('created_at', { ascending:false });
+  if (error) { toast('Invitations error', error.message,'error'); return; }
+  openModal(`<span class="overline">RACE INVITATIONS</span><h2>Who wants next?</h2><p>Accepting starts a synchronized five-second countdown.</p><div id="race-invite-list">${(data || []).length ? data.map(match => `<div class="invite-row"><span class="friend-meta"><span class="avatar">${initialsFor(match.host?.username)}</span><span><strong>${escapeHtml(match.host?.username)}</strong><small>Three-round Name Rush race</small></span></span><span class="row-actions"><button class="small-action" data-accept-race="${match.id}">Accept</button><button class="small-action secondary" data-decline-race="${match.id}">Decline</button></span></div>`).join('') : '<p class="modal-note">No pending race invitations.</p>'}</div>`);
+  qsa('[data-accept-race]').forEach(button => button.onclick = async () => {
+    const { data: match, error: acceptError } = await db.rpc('accept_race', { p_match_id:button.dataset.acceptRace });
+    if (acceptError) toast('Could not accept race', acceptError.message,'error');
+    else { closeModal(); openRaceRoom(match); }
+  });
+  qsa('[data-decline-race]').forEach(button => button.onclick = async () => { await db.rpc('decline_or_leave_race', { p_match_id:button.dataset.declineRace }); openRaceInvitations(); });
+}
+async function quickMatch() {
+  if (!state.user) { openAccountModal('login'); return; }
+  const button = $('quick-match-button');
+  button.disabled = true; button.textContent = 'Searching…';
+  const { data: match, error } = await db.rpc('join_random_race', { p_rounds:generateRaceRounds() });
+  button.disabled = false; button.textContent = 'Find quick match';
+  if (error) { toast('Matchmaking error', error.message,'error'); return; }
+  openRaceRoom(match);
+}
+async function chooseFriendRace() {
+  if (!state.user) { openAccountModal('login'); return; }
+  const rows = (await loadFriendships()).filter(row => row.status === 'accepted');
+  openModal(`<span class="overline">FRIEND RACE</span><h2>Choose your opponent.</h2><p>They will receive a race invitation and can accept when ready.</p><div>${rows.length ? rows.map(row => { const person = friendshipOther(row); return `<div class="request-row"><span class="friend-meta"><span class="avatar">${initialsFor(person.username)}</span><strong>${escapeHtml(person.username)}</strong></span><button class="small-action" data-challenge-name="${escapeHtml(person.username)}">Challenge</button></div>`; }).join('') : '<p class="modal-note">Add and accept a friend before sending a direct challenge.</p>'}</div>`);
+  qsa('[data-challenge-name]').forEach(button => button.onclick = () => createFriendRace(button.dataset.challengeName));
+}
+async function createFriendRace(username) {
+  if (!state.user) return;
+  const { data: match, error } = await db.rpc('create_friend_race', { p_friend_username:username, p_rounds:generateRaceRounds() });
+  if (error) { toast('Challenge not sent', error.message,'error'); return; }
+  closeModal();
+  toast('Race invitation sent', username, 'success');
+  openRaceRoom(match);
+}
+function renderRacePips(target, progress) {
+  target.innerHTML = [0,1,2].map(index => `<span class="${index < progress ? 'done' : ''}"></span>`).join('');
+}
+async function fetchRaceDetails(matchId) {
+  const { data, error } = await db.from('race_matches').select('*,host:profiles!race_matches_host_id_fkey(id,username),opponent:profiles!race_matches_opponent_id_fkey(id,username),winner:profiles!race_matches_winner_id_fkey(id,username)').eq('id',matchId).single();
+  if (error) throw error;
+  return data;
+}
+async function fetchRaceProgress(matchId) {
+  const { data } = await db.from('race_progress').select('*').eq('match_id',matchId);
+  return data || [];
+}
+async function openRaceRoom(matchInput) {
+  if (!state.user) return;
+  closeModal();
+  let match = await fetchRaceDetails(matchInput.id || matchInput);
+  const rounds = (match.rounds || []).map(item => ({ initials:String(item.initials).split(''), key:String(item.initials), hintAnswer:item.hintAnswer, answerCount:item.answerCount }));
+  state.race = { match, rounds, roundIndex:0, roundStartedAt:null, hintsUsed:0, hintLevel:0, raf:null, started:false, progress:[] };
+  els.raceOverlay.classList.remove('hidden');
+  els.raceFinish.classList.add('hidden');
+  els.raceGame.classList.add('hidden');
+  els.raceCountdown.classList.add('hidden');
+  await refreshRaceRoom();
+  subscribeRace(match.id);
+  if (match.status === 'active') beginRaceCountdown();
+}
+async function refreshRaceRoom() {
+  if (!state.race) return;
+  const match = await fetchRaceDetails(state.race.match.id);
+  const progress = await fetchRaceProgress(match.id);
+  state.race.match = match;
+  state.race.progress = progress;
+  const isHost = match.host_id === state.user.id;
+  const opponent = isHost ? match.opponent : match.host;
+  els.raceYouName.textContent = state.profile?.username || 'You';
+  els.raceYouAvatar.textContent = initialsFor(state.profile?.username || 'You');
+  els.raceOpponentName.textContent = opponent?.username || (match.match_type === 'random' ? 'Searching…' : 'Invitation pending…');
+  els.raceOpponentAvatar.textContent = initialsFor(opponent?.username || '?');
+  const own = progress.find(item => item.user_id === state.user.id);
+  const other = progress.find(item => item.user_id !== state.user.id);
+  renderRacePips(els.raceYouPips, own?.round_index || 0);
+  renderRacePips(els.raceOpponentPips, other?.round_index || 0);
+  if (match.status === 'waiting') els.raceStatus.textContent = 'Searching for opponent';
+  else if (match.status === 'invited') els.raceStatus.textContent = 'Waiting for friend';
+  else if (match.status === 'active') els.raceStatus.textContent = 'Race active';
+  else if (match.status === 'finished') showRaceFinished(match, progress);
+  else if (match.status === 'cancelled') showRaceCancelled();
+}
+function subscribeRace(matchId) {
+  if (state.raceChannel) db.removeChannel(state.raceChannel);
+  state.raceChannel = db.channel(`race-${matchId}`)
+    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'race_matches', filter:`id=eq.${matchId}` }, async payload => {
+      if (!state.race) return;
+      state.race.match = { ...state.race.match, ...payload.new };
+      await refreshRaceRoom();
+      if (payload.new.status === 'active' && !state.race.started) beginRaceCountdown();
+    })
+    .on('postgres_changes', { event:'*', schema:'public', table:'race_progress', filter:`match_id=eq.${matchId}` }, refreshRaceRoom)
+    .subscribe();
+}
+function beginRaceCountdown() {
+  const race = state.race;
+  if (!race || race.started || !race.match.starts_at) return;
+  race.started = true;
+  els.raceCountdown.classList.remove('hidden');
+  const loop = () => {
+    if (!state.race) return;
+    const remaining = Date.parse(race.match.starts_at) - Date.now();
+    if (remaining <= 0) { els.raceCountdown.classList.add('hidden'); startRaceGameplay(); return; }
+    els.raceCountdown.textContent = Math.max(1, Math.ceil(remaining / 1000));
+    requestAnimationFrame(loop);
+  };
+  loop();
+}
+function startRaceGameplay() {
+  const race = state.race;
+  if (!race || race.match.status !== 'active') return;
+  els.raceGame.classList.remove('hidden');
+  race.roundIndex = Math.max(0, race.progress.find(item => item.user_id === state.user.id)?.round_index || 0);
+  race.roundStartedAt = performance.now();
+  race.hintLevel = 0;
+  renderRaceRound();
+  race.raf = requestAnimationFrame(tickRace);
+}
+function renderRaceRound() {
+  const race = state.race;
+  if (!race || race.roundIndex >= 3) return;
+  const round = race.rounds[race.roundIndex];
+  race.roundStartedAt = performance.now(); race.hintLevel = 0;
+  els.raceRoundLabel.textContent = `Round ${race.roundIndex + 1} of 3`;
+  els.raceInitials.children[0].textContent = round.initials[0];
+  els.raceInitials.children[1].textContent = round.initials[1];
+  els.raceAnswer.value = ''; els.raceFeedback.textContent = '';
+  els.raceHintPattern.classList.add('hidden'); els.raceHintPattern.textContent = '';
+  els.raceHint.disabled = true; els.raceHint.textContent = 'Hint in 30s';
+  requestAnimationFrame(() => els.raceAnswer.focus());
+}
+function tickRace(now) {
+  const race = state.race;
+  if (!race || race.match.status !== 'active' || race.roundIndex >= 3) return;
+  const roundMs = now - race.roundStartedAt;
+  els.raceRoundTime.textContent = `${formatTime(roundMs)}s`;
+  const available = Math.floor(roundMs / 30000);
+  if (available > race.hintLevel) {
+    els.raceHint.disabled = false;
+    els.raceHint.textContent = `Use hint ${race.hintLevel + 1}${available > race.hintLevel + 1 ? ` of ${available}` : ''}`;
+  } else {
+    const next = 30 - Math.floor((roundMs % 30000) / 1000);
+    els.raceHint.disabled = true;
+    els.raceHint.textContent = `Next hint in ${next}s`;
+  }
+  race.raf = requestAnimationFrame(tickRace);
+}
+function useRaceHint() {
+  const race = state.race;
+  if (!race) return;
+  const available = Math.floor((performance.now() - race.roundStartedAt) / 30000);
+  if (available <= race.hintLevel) return;
+  race.hintLevel += 1; race.hintsUsed += 1;
+  els.raceHintPattern.textContent = buildHint(race.rounds[race.roundIndex].hintAnswer, 1 + race.hintLevel);
+  els.raceHintPattern.classList.remove('hidden');
+}
+async function submitRaceAnswer(event) {
+  event.preventDefault();
+  const race = state.race;
+  if (!race || race.match.status !== 'active') return;
+  const match = PLAYER_DB.find(race.rounds[race.roundIndex].initials, els.raceAnswer.value.trim());
+  if (!match) { els.raceFeedback.textContent = 'That name does not match.'; return; }
+  els.raceFeedback.classList.add('correct');
+  els.raceFeedback.textContent = `Correct — ${match.displayName}`;
+  race.roundIndex += 1;
+  const elapsed = Math.max(0, Date.now() - Date.parse(race.match.starts_at));
+  const finished = race.roundIndex >= 3;
+  const { data: updated, error } = await db.rpc('submit_race_progress', { p_match_id:race.match.id, p_round_index:race.roundIndex, p_elapsed_ms:elapsed, p_hints_used:race.hintsUsed, p_finished:finished });
+  if (error) { toast('Race update failed', error.message,'error'); return; }
+  race.match = updated;
+  renderRacePips(els.raceYouPips, race.roundIndex);
+  if (finished) {
+    cancelAnimationFrame(race.raf);
+    await refreshRaceRoom();
+  } else setTimeout(renderRaceRound, 250);
+}
+function showRaceFinished(match, progress) {
+  if (!state.race) return;
+  if (state.race.raf) cancelAnimationFrame(state.race.raf);
+  els.raceGame.classList.add('hidden'); els.raceCountdown.classList.add('hidden'); els.raceFinish.classList.remove('hidden');
+  const won = match.winner_id === state.user.id;
+  const winner = match.winner?.username || (won ? state.profile?.username : els.raceOpponentName.textContent);
+  const winnerProgress = progress.find(item => item.user_id === match.winner_id);
+  els.raceResultKicker.textContent = won ? 'Victory' : 'Race complete';
+  els.raceResultTitle.textContent = won ? 'You win!' : `${winner} wins`;
+  els.raceResultCopy.textContent = winnerProgress?.elapsed_ms ? `Winning time: ${formatTime(winnerProgress.elapsed_ms)} seconds.` : 'The first verified finish reached the database first.';
+}
+function showRaceCancelled() {
+  els.raceGame.classList.add('hidden'); els.raceCountdown.classList.add('hidden'); els.raceFinish.classList.remove('hidden');
+  els.raceResultKicker.textContent = 'Race cancelled'; els.raceResultTitle.textContent = 'No result'; els.raceResultCopy.textContent = 'This room is no longer active.';
+}
+async function closeRaceRoom() {
+  if (!state.race) { els.raceOverlay.classList.add('hidden'); return; }
+  const active = ['active','waiting','invited'].includes(state.race.match.status);
+  if (active && !window.confirm(state.race.match.status === 'active' ? 'Leave this race and forfeit?' : 'Cancel or leave this race room?')) return;
+  if (active && db) await db.rpc('decline_or_leave_race', { p_match_id:state.race.match.id });
+  if (state.race.raf) cancelAnimationFrame(state.race.raf);
+  if (state.raceChannel) db.removeChannel(state.raceChannel);
+  state.raceChannel = null; state.race = null;
+  els.raceOverlay.classList.add('hidden');
+}
+
+async function initializeOnline() {
+  if (!db) { renderAccount(); return; }
+  const { data: { session } } = await db.auth.getSession();
+  state.user = session?.user || null;
+  await loadProfile();
+  db.auth.onAuthStateChange(async (event, sessionData) => {
+    state.user = sessionData?.user || null;
+    state.ownScores.clear();
+    await loadProfile();
+    if (event === 'PASSWORD_RECOVERY') openPasswordUpdate();
+    if (state.user) {
+      await trySavePendingDaily();
+      subscribeInvites();
+      await updateInviteCount();
+    } else {
+      state.profile = null;
+      if (state.inviteChannel) db.removeChannel(state.inviteChannel);
+      state.inviteChannel = null;
+    }
+    await renderPuzzleHeader();
+    await loadLeaderboard();
+    await loadPracticeStats();
+    renderArchive();
+  });
+  if (state.user) {
+    await trySavePendingDaily();
+    subscribeInvites();
+    await updateInviteCount();
+  }
+}
+
+function wireStaticControls() {
+  $('hero-play-button').onclick = () => { document.querySelector('.game-shell').scrollIntoView({ behavior:'smooth', block:'center' }); setTimeout(startDaily, 280); };
+  els.startGame.onclick = startDaily;
+  els.answerForm.onsubmit = submitSessionAnswer;
+  els.hint.onclick = useSessionHint;
+  els.giveUp.onclick = sessionGiveUp;
+  $('how-to-button').onclick = openHowTo;
+  els.setupHelp.onclick = openSetupHelp;
+  els.accountButton.onclick = () => state.profile ? openProfileModal() : openAccountModal('login');
+  els.accountCta.onclick = () => state.profile ? openProfileModal() : openAccountModal('create');
+  $('friends-nav').onclick = openFriendsModal;
+  $('race-nav').onclick = () => document.querySelector('#race').scrollIntoView({ behavior:'smooth' });
+  $('view-all-leaderboard').onclick = openLeaderboardModal;
+  $('quick-match-button').onclick = quickMatch;
+  $('friend-race-button').onclick = chooseFriendRace;
+  $('race-invites-button').onclick = openRaceInvitations;
+  $('modal-close').onclick = closeModal;
+  els.modalBackdrop.onclick = event => { if (event.target === els.modalBackdrop) closeModal(); };
+  $('race-close').onclick = closeRaceRoom;
+  $('race-rematch-button').onclick = async () => { await closeRaceRoom(); if (!state.race) quickMatch(); };
+  els.raceAnswerForm.onsubmit = submitRaceAnswer;
+  els.raceHint.onclick = useRaceHint;
+  els.archiveMore.onclick = () => { state.archiveCount += 9; renderArchive(); };
+
+  qsa('#practice-difficulty .choice').forEach(button => button.onclick = () => {
+    qsa('#practice-difficulty .choice').forEach(item => item.classList.toggle('active', item === button));
+    state.practiceConfig.difficulty = button.dataset.value;
+  });
+  qsa('#practice-length button').forEach(button => button.onclick = () => {
+    qsa('#practice-length button').forEach(item => item.classList.toggle('active', item === button));
+    state.practiceConfig.length = button.dataset.value;
+  });
+  $('practice-hints').onchange = event => { state.practiceConfig.hints = event.target.checked; };
+  $('start-practice-button').onclick = startPracticeFromConfig;
+  qsa('[data-board]').forEach(button => button.onclick = async () => {
+    if (button.dataset.board === 'friends' && !state.user) { openAccountModal('login'); return; }
+    qsa('[data-board]').forEach(item => item.classList.toggle('active', item === button));
+    state.leaderboardScope = button.dataset.board;
+    await loadLeaderboard();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      if (!els.raceOverlay.classList.contains('hidden')) closeRaceRoom();
+      else if (!els.modalBackdrop.classList.contains('hidden')) closeModal();
+    }
+  });
+}
+
+async function init() {
+  wireStaticControls();
+  renderBuildStatus();
+  if ((PLAYER_DB.meta.playerCount || 0) < 5000) {
+    document.body.classList.add('database-load-error');
+    els.startGame.disabled = true;
+    els.startGame.textContent = 'Database failed to load';
+    toast('Player database failed to load', 'Confirm players-data.js is in the repository root.', 'error');
+  }
+  await initializeOnline();
+  await renderPuzzleHeader();
+  await loadLeaderboard();
+  subscribeLeaderboard();
+  await loadPracticeStats();
+  await renderArchive();
+  console.info('HoopLoop Version 7', { database:PLAYER_DB.meta, online:ONLINE_CONFIGURED, timezone:DAILY_TIME_ZONE });
+}
+
+init().catch(error => {
+  console.error(error);
+  toast('HoopLoop could not finish loading', error.message, 'error');
+});

@@ -4,13 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#ff5a1f" />
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta name="description" content="HoopLoop — clean, competitive basketball knowledge games." />
-  <title>HoopLoop — Name Rush</title>
-  <link rel="stylesheet" href="styles.css?v=4.0.0" />
+  <title>HoopLoop — Name Rush Online</title>
+  <link rel="stylesheet" href="styles.css?v=7.0.0" />
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
+
+  <div id="setup-banner" class="setup-banner hidden" role="status">
+    <strong>Online setup required.</strong>
+    <span>Daily play works, but accounts, shared leaderboards, friends, and races need your Supabase keys in <code>config.js</code>.</span>
+    <button id="setup-help-button" type="button">Setup steps</button>
+  </div>
 
   <header class="site-header">
     <a class="brand" href="#top" aria-label="HoopLoop home">
@@ -18,10 +23,11 @@
     </a>
 
     <nav class="desktop-nav" aria-label="Primary navigation">
-      <a class="active" href="#play">Play</a>
+      <a class="active" href="#play">Daily</a>
+      <a href="#practice">Practice</a>
       <a href="#leaderboard">Leaderboard</a>
-      <a href="#archive">Archive</a>
       <button id="friends-nav" type="button">Friends</button>
+      <button id="race-nav" type="button">Race</button>
     </nav>
 
     <button class="account-control" id="account-button" type="button">
@@ -38,23 +44,21 @@
         <p class="hero-lede">Three sets of initials. Type any NBA player whose exact name matches. Lowest total time wins.</p>
 
         <div class="hero-actions">
-          <button class="primary-button" id="hero-play-button" type="button">
-            Play today <span aria-hidden="true">↗</span>
-          </button>
+          <button class="primary-button" id="hero-play-button" type="button">Play today <span aria-hidden="true">↗</span></button>
           <button class="text-button" id="how-to-button" type="button">How it works</button>
         </div>
 
         <div class="hero-facts" aria-label="Game facts">
-          <div><strong>3</strong><span>rounds</span></div>
+          <div><strong>3</strong><span>daily rounds</span></div>
           <div><strong>30s</strong><span>until hint</span></div>
-          <div><strong>∞</strong><span>archive access</span></div>
+          <div><strong>1v1</strong><span>live races</span></div>
         </div>
       </div>
 
       <section class="game-shell" aria-labelledby="game-title">
         <div class="game-shell__header">
           <div>
-            <span class="overline" id="puzzle-label">DAILY #1</span>
+            <span class="overline" id="puzzle-label">TODAY</span>
             <h2 id="game-title">Name Rush</h2>
           </div>
           <div class="timer-block" aria-label="Total elapsed time">
@@ -69,25 +73,17 @@
         </div>
 
         <div id="start-screen" class="game-screen start-screen">
-          <div class="initial-preview" aria-hidden="true">
-            <span>D</span><span>W</span>
-          </div>
-          <h3>Today’s challenge is waiting.</h3>
+          <div class="initial-preview" aria-hidden="true"><span>D</span><span>W</span></div>
+          <h3 id="start-title">Today’s challenge is waiting.</h3>
           <p id="start-copy">Everyone receives the same three initial combinations.</p>
           <button class="primary-button game-start-button" id="start-game-button" type="button">Start daily</button>
-          <button class="secondary-button compact hidden" id="practice-button" type="button">Practice this puzzle</button>
-          <p class="guest-note" id="guest-note">Playing as guest. Create an account to save your result.</p>
+          <p class="guest-note" id="guest-note">Playing as guest. Create an account to save your result online.</p>
         </div>
 
         <div id="play-screen" class="game-screen play-screen hidden">
           <div class="round-progress" id="round-progress" aria-label="Round progress"></div>
-
           <div class="round-timer"><span>Round time</span><strong id="round-timer">0.00s</strong></div>
-
-          <div class="initials" id="initials" aria-label="Current player initials">
-            <span>D</span><span>W</span>
-          </div>
-
+          <div class="initials" id="initials" aria-label="Current player initials"><span>D</span><span>W</span></div>
           <div class="hint-pattern hidden" id="hint-pattern"></div>
 
           <form class="answer-form" id="answer-form" novalidate>
@@ -99,11 +95,8 @@
           </form>
 
           <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
-
           <div class="game-controls">
-            <button class="secondary-button" id="hint-button" type="button" disabled>
-              <span aria-hidden="true">◔</span> Hint in 30s
-            </button>
+            <button class="secondary-button" id="hint-button" type="button" disabled><span aria-hidden="true">◔</span> Hint in 30s</button>
             <button class="danger-text-button" id="give-up-button" type="button">Give up</button>
           </div>
         </div>
@@ -112,31 +105,99 @@
           <span class="result-kicker" id="result-kicker">Daily complete</span>
           <h3 id="result-time">23.48 seconds</h3>
           <p id="result-message">Your score has been saved.</p>
-
           <div class="split-list" id="split-list"></div>
+          <div class="session-summary hidden" id="session-summary"></div>
           <div class="revealed-answers hidden" id="revealed-answers"></div>
-
           <div class="result-actions">
             <button class="primary-button" id="result-primary-button" type="button">View leaderboard</button>
-            <button class="secondary-button" id="result-replay-button" type="button">Practice again</button>
+            <button class="secondary-button" id="result-replay-button" type="button">Play practice</button>
           </div>
         </div>
       </section>
     </section>
 
+    <section class="section practice-section" id="practice">
+      <div class="section-heading">
+        <div>
+          <span class="overline">TRAIN YOUR RECALL</span>
+          <h2>Practice your way.</h2>
+          <p>Choose a difficulty and session length. Practice rounds are randomized and never affect the daily leaderboard.</p>
+        </div>
+      </div>
+
+      <div class="practice-layout">
+        <div class="practice-config-card">
+          <fieldset>
+            <legend>Difficulty</legend>
+            <div class="choice-grid" id="practice-difficulty">
+              <button class="choice active" data-value="rookie" type="button"><strong>Rookie</strong><span>Many active and recognizable options</span></button>
+              <button class="choice" data-value="starter" type="button"><strong>Starter</strong><span>Strong everyday NBA knowledge</span></button>
+              <button class="choice" data-value="allstar" type="button"><strong>All-Star</strong><span>Deeper current and historical pool</span></button>
+              <button class="choice" data-value="mvp" type="button"><strong>MVP</strong><span>Rare combinations and NBA history</span></button>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Session length</legend>
+            <div class="segmented" id="practice-length">
+              <button class="active" data-value="3" type="button">3</button>
+              <button data-value="5" type="button">5</button>
+              <button data-value="10" type="button">10</button>
+              <button data-value="25" type="button">25</button>
+              <button data-value="endless" type="button">Endless</button>
+            </div>
+          </fieldset>
+
+          <label class="toggle-row"><input id="practice-hints" type="checkbox" checked /><span><strong>Hints enabled</strong><small>A hint unlocks after 30 seconds on each round.</small></span></label>
+          <button class="primary-button wide" id="start-practice-button" type="button">Start practice</button>
+        </div>
+
+        <div class="practice-record-card">
+          <span class="overline">YOUR TRAINING</span>
+          <h3>Practice records</h3>
+          <div class="stat-grid" id="practice-stats">
+            <div><strong>--</strong><span>sessions</span></div>
+            <div><strong>--</strong><span>best average</span></div>
+            <div><strong>--</strong><span>fastest round</span></div>
+            <div><strong>--</strong><span>names solved</span></div>
+          </div>
+          <p id="practice-record-note">Log in to save practice records across devices.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section race-section" id="race">
+      <div class="race-card">
+        <div>
+          <span class="overline">LIVE NAME RUSH</span>
+          <h2>First through three wins.</h2>
+          <p>Race a friend or match with another online player. Both players receive the same three initials. There is no give-up button; another hint level unlocks every 30 seconds.</p>
+        </div>
+        <div class="race-actions">
+          <button class="primary-button" id="quick-match-button" type="button">Find quick match</button>
+          <button class="secondary-button" id="friend-race-button" type="button">Challenge a friend</button>
+          <button class="text-button" id="race-invites-button" type="button">Race invitations <span id="invite-count" class="count-badge hidden">0</span></button>
+        </div>
+      </div>
+    </section>
+
     <section class="section leaderboard-section" id="leaderboard">
       <div class="section-heading">
         <div>
-          <span class="overline">TODAY’S FASTEST</span>
+          <span class="overline">FASTEST TIMES</span>
           <h2>Daily leaderboard</h2>
-          <p>Lower is better. Identical displayed times are ranked by the earlier submission.</p>
+          <p>Lower is better. Identical times are ranked by the earlier submission.</p>
         </div>
-        <button class="text-button" id="view-all-leaderboard" type="button">View full leaderboard ↗</button>
+        <div class="leaderboard-actions">
+          <button class="filter-button active" data-board="global" type="button">Global</button>
+          <button class="filter-button" data-board="friends" type="button">Friends</button>
+          <button class="text-button" id="view-all-leaderboard" type="button">View full leaderboard ↗</button>
+        </div>
       </div>
 
       <div class="leaderboard-card">
         <div class="leaderboard-table-header"><span>Rank</span><span>Player</span><span>Time</span></div>
-        <div id="leaderboard-rows" class="leaderboard-rows"></div>
+        <div id="leaderboard-rows" class="leaderboard-rows"><div class="empty-row">Loading leaderboard…</div></div>
       </div>
     </section>
 
@@ -145,10 +206,11 @@
         <div>
           <span class="overline">KEEP THE LOOP GOING</span>
           <h2>Daily archive</h2>
-          <p>Missed a day? Every released puzzle stays playable with its original leaderboard.</p>
+          <p>Every puzzle remains playable with its original online leaderboard.</p>
         </div>
       </div>
       <div class="archive-grid" id="archive-grid"></div>
+      <button class="secondary-button archive-more" id="archive-more-button" type="button">Show more days</button>
     </section>
 
     <section class="section account-section">
@@ -156,24 +218,19 @@
         <div class="account-card__copy">
           <span class="overline">YOUR HOOPLOOP</span>
           <h2>Play first. Join when your score matters.</h2>
-          <p>Accounts unlock saved results, daily leaderboards, player stats, and friend comparisons.</p>
+          <p>Accounts unlock online scores, player profiles, practice records, friends, and live races.</p>
           <button class="primary-button" id="account-cta" type="button">Create a free account</button>
         </div>
         <div class="account-benefits">
-          <div><span>01</span><strong>Save every daily score</strong><p>Build a permanent history across the archive.</p></div>
-          <div><span>02</span><strong>Compare with friends</strong><p>Search usernames and see each other’s results.</p></div>
-          <div><span>03</span><strong>Prepare for races</strong><p>The friend system becomes the base for head-to-head play.</p></div>
+          <div><span>01</span><strong>Real online leaderboards</strong><p>Your first score is stored in the shared HoopLoop database.</p></div>
+          <div><span>02</span><strong>Friends and comparisons</strong><p>Search usernames, accept requests, and filter daily scores.</p></div>
+          <div><span>03</span><strong>Head-to-head races</strong><p>Challenge a friend or enter random matchmaking.</p></div>
         </div>
       </div>
     </section>
 
     <section class="section coming-soon-section">
-      <div class="section-heading compact-heading">
-        <div>
-          <span class="overline">THE NEXT GAMES</span>
-          <h2>Built to keep expanding.</h2>
-        </div>
-      </div>
+      <div class="section-heading compact-heading"><div><span class="overline">THE NEXT GAMES</span><h2>Built to keep expanding.</h2></div></div>
       <div class="game-preview-grid">
         <article><span>01</span><h3>Start, Bench, Cut</h3><p>Assign three players a role, then compare your choices with the HoopLoop community.</p><small>COMING SOON</small></article>
         <article><span>02</span><h3>Higher or Lower</h3><p>Build a streak by deciding which player owns the higher NBA total or average.</p><small>COMING SOON</small></article>
@@ -183,13 +240,13 @@
   </main>
 
   <footer>
-    <a class="brand footer-brand" href="#top" aria-label="HoopLoop home">
-      <span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span>
-    </a>
+    <a class="brand footer-brand" href="#top" aria-label="HoopLoop home"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a>
     <p>Clean competition for basketball fans.</p>
-    <span id="build-status">Version 4.0.0 · loading database…</span>
+    <span id="build-status">Version 7.0.0 · loading database…</span>
     <span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span>
   </footer>
+
+  <div class="toast-region" id="toast-region" aria-live="polite"></div>
 
   <div class="modal-backdrop hidden" id="modal-backdrop">
     <section class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -198,7 +255,45 @@
     </section>
   </div>
 
-  <script src="players-data.js?v=4.0.0"></script>
-  <script src="script.js?v=4.0.0"></script>
+  <div class="race-overlay hidden" id="race-overlay">
+    <section class="race-room" aria-labelledby="race-room-title">
+      <button class="modal-close race-close" id="race-close" type="button" aria-label="Leave race">×</button>
+      <div class="race-room-header">
+        <div><span class="overline">HEAD-TO-HEAD</span><h2 id="race-room-title">Name Rush Race</h2></div>
+        <div class="race-status" id="race-status">Connecting…</div>
+      </div>
+
+      <div class="versus-row">
+        <div class="competitor you"><span class="avatar" id="race-you-avatar">YO</span><strong id="race-you-name">You</strong><div class="race-pips" id="race-you-pips"></div></div>
+        <div class="versus-mark">VS</div>
+        <div class="competitor"><span class="avatar" id="race-opponent-avatar">?</span><strong id="race-opponent-name">Waiting…</strong><div class="race-pips" id="race-opponent-pips"></div></div>
+      </div>
+
+      <div class="race-countdown hidden" id="race-countdown">3</div>
+      <div class="race-game hidden" id="race-game">
+        <div class="race-round-meta"><span id="race-round-label">Round 1 of 3</span><strong id="race-round-time">0.00s</strong></div>
+        <div class="initials race-initials" id="race-initials"><span>D</span><span>W</span></div>
+        <div class="hint-pattern hidden" id="race-hint-pattern"></div>
+        <form class="answer-form" id="race-answer-form">
+          <label for="race-answer">NBA player name</label>
+          <div class="answer-entry"><input id="race-answer" autocomplete="off" spellcheck="false" placeholder="Type the exact name…" /><button class="primary-button" type="submit">Submit</button></div>
+        </form>
+        <div class="feedback" id="race-feedback" role="status"></div>
+        <button class="secondary-button wide" id="race-hint-button" type="button" disabled>Hint in 30s</button>
+      </div>
+
+      <div class="race-finish hidden" id="race-finish">
+        <span class="result-kicker" id="race-result-kicker">Race complete</span>
+        <h3 id="race-result-title">You win!</h3>
+        <p id="race-result-copy">Final result loading…</p>
+        <button class="primary-button" id="race-rematch-button" type="button">Race again</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="players-data.js?v=7.0.0"></script>
+  <script src="config.js?v=7.0.0"></script>
+  <script src="script.js?v=7.0.0"></script>
 </body>
 </html>

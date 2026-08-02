@@ -1,14 +1,11 @@
 {
-  "name": "HoopLoop",
-  "version": "4.0.0",
-  "buildDate": "2026-08-02",
-  "databasePlayers": 5108,
-  "aliases": 14,
-  "requiredRootFiles": [
-    "index.html",
-    "styles.css",
-    "script.js",
-    "players-data.js",
-    "verify.html"
+  "version": "7.0.0",
+  "features": [
+    "Supabase email/password accounts",
+    "online daily leaderboards",
+    "practice difficulties and session lengths",
+    "friend requests and friend leaderboards",
+    "friend challenges and random head-to-head races",
+    "progressive race hints every 30 seconds"
   ]
 }

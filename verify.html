@@ -1,25 +1,36 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>HoopLoop Version 4 Verification</title>
-<style>
-body{font-family:Arial,sans-serif;background:#f4f3ef;color:#101113;margin:0;padding:32px}main{max-width:800px;margin:auto;background:white;border:1px solid #d9d7d0;border-radius:24px;padding:28px;box-shadow:0 18px 60px rgba(0,0,0,.08)}h1{margin-top:0}.pass{color:#16713a}.fail{color:#b3261e}code{background:#f2f1ed;padding:3px 6px;border-radius:6px}li{margin:9px 0}a{color:#d9480f}button{padding:12px 16px;border:0;border-radius:10px;background:#ff5a1f;color:white;font-weight:700;cursor:pointer}
-</style></head><body><main><h1>HoopLoop Version 4 verification</h1><p>This page confirms that GitHub Pages loaded the correct database and scripts.</p><div id="results">Checking…</div><p><a href="index.html">Return to HoopLoop</a></p></main>
-<script src="players-data.js?v=4.0.0"></script>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>HoopLoop Version 7 Verification</title>
+  <style>
+    :root{font-family:Inter,system-ui,sans-serif;color:#111;background:#f3f1ec}*{box-sizing:border-box}body{margin:0;padding:32px}main{max-width:820px;margin:auto;background:#fff;padding:32px;border-radius:22px;box-shadow:0 22px 70px #0001}h1{font-size:clamp(2.5rem,8vw,5rem);margin:0 0 8px;text-transform:uppercase}.sub{color:#666;line-height:1.6}.check{display:grid;grid-template-columns:28px 1fr;gap:12px;padding:16px 0;border-top:1px solid #ddd}.icon{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;font-weight:900}.pending .icon{background:#eee}.pass .icon{color:#fff;background:#18864c}.fail .icon{color:#fff;background:#bd3328}.check strong,.check small{display:block}.check small{margin-top:4px;color:#666;line-height:1.45}code{padding:2px 5px;background:#eee;border-radius:5px}a{color:#df4c15;font-weight:800}button{padding:12px 16px;border:0;border-radius:9px;background:#ff5a1f;color:#fff;font-weight:900;cursor:pointer}
+  </style>
+</head>
+<body>
+<main>
+  <h1>Version 7 Check</h1>
+  <p class="sub">Run this after publishing. It confirms the player file, configuration, Supabase connection, required public tables, authentication service, and Realtime connection.</p>
+  <div id="checks"></div>
+  <p><button id="rerun">Run checks again</button> &nbsp; <a href="index.html">Open HoopLoop</a></p>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="players-data.js?v=7.0.0"></script>
+<script src="config.js?v=7.0.0"></script>
 <script>
-(function(){
- const data=window.HOOPLOOP_PLAYER_DATA;
- const tests=[];
- const add=(name,ok,detail)=>tests.push({name,ok,detail});
- add('Database file loaded',!!data, data?'Loaded':'Missing players-data.js');
- if(data){
-   add('Version is 4.0.0',data.meta.buildVersion==='4.0.0',data.meta.buildVersion||'missing');
-   add('Player count is at least 5,108',data.players.length>=5108,data.players.length.toLocaleString());
-   const names=new Set(data.players.map(p=>p[3]));
-   ['LeBron James','Dwyane Wade','Jahmai Mashack','Tyler Burton','Lucas Williamson','Toby Okani','Bez Mbeng'].forEach(name=>add(name+' exists',names.has(name),name));
-   const aliases=new Set(data.officialAliases.map(a=>a.name));
-   ['Lew Alcindor','Ron Artest','Enes Kanter'].forEach(name=>add('Alias: '+name,aliases.has(name),name));
- }
- const passed=tests.filter(t=>t.ok).length;
- document.getElementById('results').innerHTML=`<h2 class="${passed===tests.length?'pass':'fail'}">${passed} / ${tests.length} checks passed</h2><ul>${tests.map(t=>`<li class="${t.ok?'pass':'fail'}">${t.ok?'✓':'✕'} <strong>${t.name}</strong> — ${t.detail}</li>`).join('')}</ul>`;
-})();
-</script></body></html>
+const checks = document.getElementById('checks');
+function row(name){const node=document.createElement('div');node.className='check pending';node.innerHTML='<span class="icon">…</span><span><strong>'+name+'</strong><small>Checking…</small></span>';checks.appendChild(node);return node}
+function set(node,pass,message){node.className='check '+(pass?'pass':'fail');node.querySelector('.icon').textContent=pass?'✓':'!';node.querySelector('small').textContent=message}
+async function run(){checks.innerHTML='';
+ const player=row('Player database'); const meta=window.HOOPLOOP_PLAYER_DATA?.meta; set(player,(meta?.playerCount||0)>=5000,meta?`${meta.playerCount.toLocaleString()} players and ${meta.aliasCount} official former names loaded.`:'players-data.js did not load.');
+ const config=row('Supabase configuration'); const cfg=window.HOOPLOOP_CONFIG||{}; const configured=/^https:\/\/.+\.supabase\.co$/i.test(cfg.SUPABASE_URL||'')&&!String(cfg.SUPABASE_ANON_KEY||'').includes('PASTE_'); set(config,configured,configured?'Project URL and browser key are present.':'Paste your Project URL and publishable/anon key into config.js.'); if(!configured)return;
+ const client=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
+ const auth=row('Authentication service'); try{const {error}=await client.auth.getSession();set(auth,!error,error?error.message:'Supabase Auth responded correctly.')}catch(e){set(auth,false,e.message)}
+ const tables=row('Public tables and RLS reads'); try{const names=['profiles','daily_scores'];for(const name of names){const {error}=await client.from(name).select('*',{head:true,count:'exact'}).limit(1);if(error)throw new Error(name+': '+error.message)}set(tables,true,'profiles and daily_scores are reachable through the Data API.')}catch(e){set(tables,false,e.message+' Run supabase/setup.sql and check Data API exposure.');}
+ const realtime=row('Realtime channel'); let settled=false; const channel=client.channel('hooploop-verify-'+Date.now()).subscribe((status,error)=>{if(settled)return;if(status==='SUBSCRIBED'){settled=true;set(realtime,true,'Realtime WebSocket subscription connected.');client.removeChannel(channel)}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){settled=true;set(realtime,false,error?.message||status);client.removeChannel(channel)}}); setTimeout(()=>{if(!settled){settled=true;set(realtime,false,'Realtime did not subscribe within 8 seconds. Check network and Realtime settings.');client.removeChannel(channel)}},8000);
+}
+document.getElementById('rerun').onclick=run;run();
+</script>
+</body>
+</html>
