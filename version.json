@@ -1,17 +1,9 @@
 {
-  "version": "8.0.0",
-  "games": [
-    "Name Rush",
-    "Start, Bench, Cut"
-  ],
-  "features": [
-    "Modern, All-Stars, and Random Start Bench Cut pools",
-    "Guards, Forwards, Bigs, and All Positions filters",
-    "player cards with headshots, career statistics, positions, games, and All-Star selections",
-    "one official daily lineup per account and date",
-    "archived daily Start Bench Cut puzzles",
-    "anonymous community role percentages and exact-lineup percentages",
-    "unlimited generated Start Bench Cut matchups",
-    "existing Name Rush accounts, leaderboards, practice, friends, and races"
-  ]
+  "game": "HoopSim",
+  "version": "0.1.0",
+  "release": "One-season offline career alpha",
+  "teams": 80,
+  "minimumLeagueSize": 8,
+  "maximumLeagueSize": 50,
+  "attributes": 15
 }

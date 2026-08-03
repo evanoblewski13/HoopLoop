@@ -1,58 +1,30 @@
-# HoopLoop Version 8 — Start, Bench, Cut
+# HoopSim Alpha 0.1
 
-Version 8 adds HoopLoop's second complete game while preserving the working Name Rush accounts, friends, leaderboards, practice records, and races from Version 7.1.
+HoopSim is HoopLoop's customizable, offline basketball career simulator.
 
-## What is new
+This alpha is a complete one-season vertical slice. It is intended to test the league creator, player creator, draft logic, simulation balance, awards, playoffs, injuries, progression, and save system before multi-season careers are enabled.
 
-- `start-bench-cut.html` — the complete second game
-- Daily Start, Bench, Cut with a permanent archive
-- Anonymous community role percentages and exact-lineup percentage
-- One official saved lineup per account and date
-- Unlimited Playground generation
-- Modern, All-Stars, and Random player pools
-- All Positions, Guards, Forwards, and Bigs filters
-- Player cards with headshots, position, career span, games, PPG, RPG, APG, active status, and All-Star selections
-- Homepage navigation and a live Game 02 card
-- Version 8 deployment verification
+## Included files
 
-## Player-pool rules
+- `hoopsim.html` — HoopSim game page
+- `hoopsim.css` — HoopSim visual design
+- `hoopsim.js` — career, draft, game, award, playoff, injury, and save logic
+- `hoopsim-teams.js` — the 80 fictional teams supplied for HoopSim
+- `index.html` — HoopLoop Version 8 homepage with a HoopSim Alpha game card added
+- `hoopsim-verify.html` — deployment check
+- `HOOPSIM-ALPHA-GUIDE.md` — installation and use
+- `HOOPSIM-DESIGN-SPEC.md` — locked rules and formulas
+- `HOOPSIM-TEST-CHECKLIST.md` — structured testing plan
 
-### Modern
-Players marked active in the HoopLoop player source used for this release.
+## Important
 
-### All-Stars
-Players verified as having been selected to at least one NBA All-Star Game.
+HoopSim does not need Supabase. It is local-first and stores saves in IndexedDB in the player's browser. Existing HoopLoop accounts, scores, friends, Name Rush data, Start/Bench/Cut data, and Supabase tables are not changed.
 
-### Random
-Every active player plus retired players with at least 100 NBA games.
+## Alpha limitations
 
-### Position filters
-- Guards: records containing a guard designation
-- Forwards: records containing a forward designation
-- Bigs: records containing a center designation
-- Hybrid players can appear in more than one position filter
-- Players without trustworthy position data remain available in All Positions only
-
-Read `SBC-DATA-AUDIT.md` for counts and known limitations.
-
-## Required installation order
-
-1. Run `supabase/sbc-v8.sql` in the same Supabase project already used by HoopLoop.
-2. Copy the Version 8 update files into the root of the existing GitHub repository.
-3. Preserve the working `config.js` and `players-data.js` files already in the repository.
-4. Commit and push with GitHub Desktop.
-5. Open `verify.html`; Version 8 should show seven green checks.
-
-Detailed instructions are in `V8-UPDATE-GUIDE.md`.
-
-## Important files
-
-- `sbc-player-data.js` — Start, Bench, Cut player cards and pool metadata
-- `sbc.js` — game generation, assignments, voting, results, archive, and authentication integration
-- `sbc.css` — dedicated responsive design
-- `supabase/sbc-v8.sql` — secure Daily vote table and aggregate-result functions
-- `verify.html` — deployment and backend verification
-
-## Data and image note
-
-This is an unofficial fan project. Player data should be periodically refreshed and audited. The prototype attempts to load player headshots from NBA-hosted image URLs and falls back to a clean initials card when an image is unavailable. Review the applicable data, trademark, and image-use terms before a commercial public launch.
+- One full season plus an offseason development preview
+- No trades yet
+- No multi-season free agency yet
+- No public career pages yet
+- No custom draft-class editor yet
+- Simulation values will need balancing based on real playtesting
