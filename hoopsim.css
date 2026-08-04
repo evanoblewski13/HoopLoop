@@ -298,3 +298,55 @@ button:disabled { cursor: not-allowed; opacity: .45; transform: none !important;
   .season-averages { grid-template-columns: repeat(2,1fr); }
   .trophy-case, .development-list { grid-template-columns: 1fr; }
 }
+
+/* Alpha 0.2 additions */
+.landing-tagline { margin: -10px 0 18px; font-size: clamp(18px, 2.6vw, 28px); color: var(--muted); font-weight: 700; }
+.field-help { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; }
+.roster-heading { align-items: end; }
+.roster-heading .field { min-width: 230px; margin: 0; }
+.playoff-bracket { display: flex; gap: 28px; align-items: stretch; padding: 10px 2px 18px; scroll-behavior: smooth; }
+.bracket-round { display: flex; flex-direction: column; min-width: 280px; flex: 0 0 280px; }
+.bracket-round-list { display: flex; flex-direction: column; justify-content: space-around; gap: 16px; flex: 1; }
+.bracket-round.current .series-card { border-color: rgba(255,90,31,.45); box-shadow: 0 8px 24px rgba(17,18,20,.07); }
+.bracket-round.complete .bracket-round-label::after { content: ' · FINAL'; color: var(--orange-dark); }
+.bracket-round-label { margin: 0 0 12px; font-size: 12px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); }
+.series-card { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.series-card::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--orange); opacity: .22; }
+.series-team { padding: 11px 12px 11px 15px; }
+.series-team + .series-team { border-top: 1px solid var(--line); }
+.series-team.winner { background: #fff4ed; }
+.series-seed { display: inline-flex; min-width: 20px; color: var(--muted); font-size: 11px; font-weight: 900; }
+.all-team-row { display: grid; grid-template-columns: minmax(180px,.7fr) 1fr; align-items: start; gap: 14px; }
+.all-team-members { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; }
+.all-team-player { padding: 9px 10px; border: 1px solid var(--line); border-radius: 11px; background: var(--soft); }
+.all-team-player strong, .all-team-player small { display: block; }
+.all-team-player small { color: var(--muted); margin-top: 2px; }
+.retirement-card { max-width: 760px; }
+.retirement-hero { padding: 6px 0 18px; border-bottom: 1px solid var(--line); }
+.retirement-hero h2 { font-size: clamp(34px,5vw,58px); margin: 7px 0; }
+.retirement-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin: 18px 0; }
+.retirement-stat { padding: 13px; border-radius: 13px; background: var(--soft); }
+.retirement-stat strong, .retirement-stat span { display: block; }
+.retirement-stat strong { font-size: 23px; }
+.retirement-stat span { color: var(--muted); font-size: 11px; font-weight: 850; text-transform: uppercase; letter-spacing: .06em; }
+.hof-meter { height: 12px; border-radius: 999px; background: #ececec; overflow: hidden; margin: 12px 0 5px; }
+.hof-meter span { display: block; height: 100%; background: linear-gradient(90deg, var(--orange), #f4a261); }
+.hall-card { max-width: 640px; text-align: center; background: #111214; color: white; border-color: #2f3034; }
+.hall-card p { color: #c9c9cc; }
+.hall-ring { width: 78px; height: 78px; display: grid; place-items: center; margin: 0 auto 15px; border: 3px solid var(--orange); border-radius: 50%; font-size: 38px; font-weight: 950; }
+.offer-card.selected-offer { border-color: var(--orange); background: #fff7f2; }
+.season-transition-note { color: var(--muted); font-size: 13px; }
+.dnp-injury { color: #a63b25; font-weight: 800; }
+.dnp-coach { color: var(--muted); font-weight: 800; }
+
+@media (max-width: 900px) {
+  .all-team-row { grid-template-columns: 1fr; }
+  .all-team-members { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .retirement-grid { grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 560px) {
+  .roster-heading { align-items: stretch; }
+  .roster-heading .field { min-width: 0; width: 100%; }
+  .all-team-members { grid-template-columns: 1fr; }
+  .retirement-grid { grid-template-columns: 1fr 1fr; }
+}

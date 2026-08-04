@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#ff5a1f" />
   <meta name="description" content="HoopSim — a customizable, offline basketball career simulator from HoopLoop." />
-  <title>HoopSim Alpha — HoopLoop</title>
-  <link rel="stylesheet" href="hoopsim.css?v=0.1.0" />
+  <title>HoopSim Alpha 0.2 — HoopLoop</title>
+  <link rel="stylesheet" href="hoopsim.css?v=0.2.0" />
 </head>
 <body>
   <div class="page-noise" aria-hidden="true"></div>
@@ -16,7 +16,7 @@
     </a>
     <div class="sim-title">
       <strong>HoopSim</strong>
-      <span>Career Simulator · Alpha 0.1</span>
+      <span>Career Simulator · Alpha 0.2</span>
     </div>
     <div class="header-actions">
       <span id="autosave-status" class="autosave-status">Offline · ready</span>
@@ -28,9 +28,10 @@
   <main>
     <section id="landing-view" class="view landing-view">
       <div class="landing-copy">
-        <span class="eyebrow">BUILD THE CAREER YOU WANT</span>
-        <h1>Your league. Your player. <em>Your basketball story.</em></h1>
-        <p>Choose the teams, season length, playoff format, attributes, and playstyle. HoopSim handles the draft, games, awards, playoffs, injuries, and offseason progression entirely in your browser.</p>
+        <span class="eyebrow">CUSTOMIZABLE BASKETBALL CAREER SIMULATOR</span>
+        <h1>HoopSim</h1>
+        <h2 class="landing-tagline">Made with player creativity and choice in mind.</h2>
+        <p>Create the league and player you want, then simulate an entire career through drafts, seasons, awards, playoffs, free agency, retirement, and Hall of Fame consideration—all on your device.</p>
         <div class="landing-actions">
           <button id="new-career-button" class="primary-button" type="button">Create a career</button>
           <button id="continue-career-button" class="secondary-button" type="button">Load a save</button>
@@ -52,10 +53,12 @@
           <li>Complete regular season</li>
           <li>Awards and All-HoopLoop teams</li>
           <li>Conference playoffs and Finals MVP</li>
-          <li>Offseason development preview</li>
-          <li>Multiple offline save files</li>
+          <li>Multi-season careers and aging</li>
+          <li>Free agency and roster movement</li>
+          <li>Retirement and Hall of Fame results</li>
+          <li>Six offline save files</li>
         </ul>
-        <p>This is an early balancing build. The goal is to make the full loop playable before adding trades, multi-season free agency, public career cards, and deeper story events.</p>
+        <p>Alpha 0.2 focuses on the complete career loop. Trades, public career cards, and deeper story events remain future additions.</p>
       </aside>
     </section>
 
@@ -92,7 +95,8 @@
               </label>
               <label class="field">
                 <span>Games per team</span>
-                <input id="season-games" type="number" min="14" max="99" value="30" />
+                <input id="season-games" type="number" min="14" max="99" step="1" inputmode="numeric" value="30" />
+                <small id="season-games-help" class="field-help">14–99 games</small>
               </label>
             </div>
 
@@ -193,7 +197,7 @@
 
         <div class="creator-footer">
           <button id="back-to-league" class="ghost-button" type="button">Back to league</button>
-          <div class="validation-message" id="player-validation">Minimum overall to enter the draft: 50</div>
+          <div class="validation-message" id="player-validation">Any overall is allowed. Draft stock responds to your choices.</div>
           <button id="begin-draft-button" class="primary-button" type="button">Generate league and enter draft</button>
         </div>
       </section>
@@ -303,7 +307,11 @@
       </section>
 
       <section id="career-roster-tab" class="career-tab hidden">
-        <article class="panel"><div class="panel-heading"><div><span class="eyebrow">YOUR TEAM</span><h2 id="roster-title">Roster</h2></div></div><div id="roster-table" class="roster-table"></div></article>
+        <article class="panel">
+          <div class="panel-heading roster-heading"><div><span class="eyebrow">LEAGUE ROSTERS</span><h2 id="roster-title">Roster</h2></div><label class="field compact"><span>Team</span><select id="roster-team-select"></select></label></div>
+          <p class="helper-copy">View every active roster, role, contract, and injury status in your league.</p>
+          <div id="roster-table" class="roster-table"></div>
+        </article>
       </section>
 
       <section id="career-history-tab" class="career-tab hidden">
@@ -317,7 +325,7 @@
 
   <dialog id="saves-dialog" class="modal">
     <form method="dialog" class="modal-card large-modal">
-      <div class="modal-heading"><div><span class="eyebrow">OFFLINE CAREERS</span><h2>HoopSim save files</h2><p>Careers are stored on this device. Export a backup before clearing browser data.</p></div><button class="icon-button" value="cancel" aria-label="Close">×</button></div>
+      <div class="modal-heading"><div><span class="eyebrow">OFFLINE CAREERS</span><h2>HoopSim save files</h2><p>Careers are stored on this device. Export creates a portable JSON backup you can store or move to another browser. Import restores that file later.</p></div><button class="icon-button" value="cancel" aria-label="Close">×</button></div>
       <div id="save-list" class="save-list"></div>
       <div class="modal-actions"><label class="secondary-button file-button">Import save<input id="import-save-input" type="file" accept="application/json" /></label><button id="new-save-from-dialog" class="primary-button" value="cancel" type="button">New career</button></div>
     </form>
@@ -336,14 +344,38 @@
     <div class="modal-card large-modal">
       <div class="modal-heading"><div><span class="eyebrow">OFFSEASON DEVELOPMENT</span><h2 id="offseason-heading">Season 1 complete</h2><p>Your performance, age, durability, injuries, and variance shaped this development roll.</p></div></div>
       <div id="development-summary" class="development-summary"></div>
-      <p class="alpha-note">Alpha 0.1 ends after the offseason preview. Multi-season continuation is the next major HoopSim milestone.</p>
-      <div class="modal-actions"><button id="finish-alpha-button" class="primary-button" type="button">Save completed career</button></div>
+      <p id="offseason-note" class="alpha-note">Continue into the next season or retire and finalize your career.</p>
+      <div class="modal-actions"><button id="retire-career-button" class="ghost-button" type="button">Retire now</button><button id="continue-next-season-button" class="primary-button" type="button">Continue to next season</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="free-agency-dialog" class="modal">
+    <div class="modal-card large-modal">
+      <div class="modal-heading"><div><span class="eyebrow">FREE AGENCY</span><h2 id="free-agency-heading">Choose your next team</h2><p>Compare projected role, minutes, team strength, and contract length. Salaries are intentionally excluded.</p></div></div>
+      <div id="free-agency-offers" class="offer-grid"></div>
+    </div>
+  </dialog>
+
+  <dialog id="retirement-dialog" class="modal">
+    <div class="modal-card retirement-card">
+      <div id="retirement-summary"></div>
+      <div class="modal-actions"><button id="close-retirement-button" class="primary-button" type="button">Return to career card</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="hall-of-fame-dialog" class="modal hall-modal">
+    <div class="modal-card hall-card">
+      <span class="hall-ring" aria-hidden="true">H</span>
+      <span class="eyebrow">HOOPLOOP HALL OF FAME</span>
+      <h2 id="hall-of-fame-heading">A legendary career.</h2>
+      <p id="hall-of-fame-copy"></p>
+      <button id="close-hall-of-fame-button" class="primary-button" type="button">View final career card</button>
     </div>
   </dialog>
 
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-  <script src="hoopsim-teams.js?v=0.1.0"></script>
-  <script src="hoopsim.js?v=0.1.0"></script>
+  <script src="hoopsim-teams.js?v=0.2.0"></script>
+  <script src="hoopsim.js?v=0.2.0"></script>
 </body>
 </html>

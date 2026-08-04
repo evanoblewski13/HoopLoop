@@ -1,30 +1,13 @@
-# HoopSim Alpha 0.1
+# HoopSim Alpha 0.2
 
-HoopSim is HoopLoop's customizable, offline basketball career simulator.
+HoopSim is HoopLoop's customizable, local-first basketball career simulator.
 
-This alpha is a complete one-season vertical slice. It is intended to test the league creator, player creator, draft logic, simulation balance, awards, playoffs, injuries, progression, and save system before multi-season careers are enabled.
+Alpha 0.2 expands the first one-season prototype into a playable multi-season career. It includes league and player creation, draft and undrafted paths, full seasons, awards, position-balanced All-HoopLoop teams, playoffs, offseason development, contracts, free agency, aging, generated roster movement, retirement, Hall of Fame probability, and six offline save slots.
 
-## Included files
+## Install
 
-- `hoopsim.html` — HoopSim game page
-- `hoopsim.css` — HoopSim visual design
-- `hoopsim.js` — career, draft, game, award, playoff, injury, and save logic
-- `hoopsim-teams.js` — the 80 fictional teams supplied for HoopSim
-- `index.html` — HoopLoop Version 8 homepage with a HoopSim Alpha game card added
-- `hoopsim-verify.html` — deployment check
-- `HOOPSIM-ALPHA-GUIDE.md` — installation and use
-- `HOOPSIM-DESIGN-SPEC.md` — locked rules and formulas
-- `HOOPSIM-TEST-CHECKLIST.md` — structured testing plan
+Copy the HoopSim files into the root of the existing HoopLoop GitHub repository and replace the matching Alpha 0.1 files. No Supabase migration is required.
 
-## Important
+Open `hoopsim-verify.html` after GitHub Pages deploys, then open `hoopsim.html`.
 
-HoopSim does not need Supabase. It is local-first and stores saves in IndexedDB in the player's browser. Existing HoopLoop accounts, scores, friends, Name Rush data, Start/Bench/Cut data, and Supabase tables are not changed.
-
-## Alpha limitations
-
-- One full season plus an offseason development preview
-- No trades yet
-- No multi-season free agency yet
-- No public career pages yet
-- No custom draft-class editor yet
-- Simulation values will need balancing based on real playtesting
+See `HOOPSIM-0.2-UPDATE-GUIDE.md` and `HOOPSIM-0.2-TEST-CHECKLIST.md`.

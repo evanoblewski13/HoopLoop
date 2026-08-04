@@ -1,9 +1,15 @@
 {
   "game": "HoopSim",
-  "version": "0.1.0",
-  "release": "One-season offline career alpha",
+  "version": "0.2.0",
+  "release": "Multi-season offline career alpha",
   "teams": 80,
   "minimumLeagueSize": 8,
   "maximumLeagueSize": 50,
-  "attributes": 15
+  "minimumSeasonGames": 14,
+  "maximumSeasonGames": 99,
+  "attributes": 15,
+  "offlineSaves": 6,
+  "multiSeason": true,
+  "retirement": true,
+  "hallOfFame": true
 }
