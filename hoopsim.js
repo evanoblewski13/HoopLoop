@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '0.2.0';
+  const VERSION = '0.3.0';
   const DB_NAME = 'hoopsim_alpha_db';
   const DB_STORE = 'careers';
   const MAX_SAVES = 6;
@@ -50,6 +50,11 @@
   const FIRST_NAMES = ['Aiden','Andre','Amari','Antonio','Brandon','Bryce','Caleb','Cameron','Cedric','Chris','Darius','Darren','Devin','Donovan','Eli','Elijah','Emmett','Eric','Isaiah','Jabari','Jalen','Jamal','Jared','Jaylen','Jordan','Julian','Kaden','Kai','Kendrick','Kevin','Khalil','Lamar','Malachi','Marcus','Mason','Micah','Miles','Nasir','Noah','Omar','Quentin','Rashad','Reggie','Roman','Samir','Terrence','Tobias','Trevor','Tyrese','Xavier','Zion','Mateo','Luka','Nico','Dante','Dominic','Malik','Desmond','Keon','Kobe','Marcel','Tariq','Javon','Jace','Damian','Ty','Jett','Kellan','Armani','Anthony','Jaxson','Vincent','Sebastian'];
   const LAST_NAMES = ['Adams','Baker','Banks','Bennett','Brooks','Brown','Bryant','Butler','Campbell','Carter','Chambers','Clark','Coleman','Collins','Cook','Cooper','Crawford','Daniels','Davis','Dixon','Edwards','Ellis','Evans','Foster','Franklin','Garcia','Gibson','Gordon','Grant','Green','Hall','Hamilton','Harris','Hayes','Henderson','Hill','Howard','Hughes','Jackson','James','Jefferson','Johnson','Jones','King','Lewis','Long','Marshall','Martin','Matthews','Miller','Mitchell','Moore','Morgan','Morris','Murphy','Nelson','Parker','Peterson','Phillips','Porter','Powell','Price','Reed','Reynolds','Richardson','Rivera','Robinson','Ross','Russell','Sanders','Scott','Simmons','Smith','Stewart','Taylor','Thomas','Thompson','Turner','Walker','Washington','Watson','White','Williams','Wilson','Wright','Young','Stone','Cross','Knight','Fields','Cole','Maddox','Sykes','Holland','Vaughn','Mercer','Rowe','Hawkins','Burke'];
   const INJURY_TYPES = ['ankle sprain','hamstring strain','wrist injury','knee soreness','back tightness','shoulder strain'];
+  const EASTER_EGG_NAMES = ['Parker Fontaine','Bryant Wright','Bryan Stender','Beau Lasky','Dominic Kane','Peyton Kane','James Gross','Michael Tushar','Evan Oblewski','Adam Kane','Will Pollack','Josh Pritzl','Gavin Stelter','Jack Seibs','Brian Huo','Michael Tang','Benjamin Fisher'];
+  let easterEggQueue = [];
+  let draftSession = null;
+  let statsSortKey = 'ppg';
+  let statsSortDirection = -1;
 
   const dom = {};
   const creator = {
@@ -369,6 +374,24 @@
     updatePlayerProjection();
   }
 
+  function previewSeasonGamesInput() {
+    const rawText = dom['season-games'].value.trim();
+    if (!rawText) {
+      dom['season-games-help'].textContent = 'Enter a value from 14–99';
+      return;
+    }
+    const raw = Number(rawText);
+    if (!Number.isFinite(raw)) {
+      dom['season-games-help'].textContent = 'Enter a whole number from 14–99';
+    } else if (raw < 14) {
+      dom['season-games-help'].textContent = 'Values below 14 will be set to 14';
+    } else if (raw > 99) {
+      dom['season-games-help'].textContent = 'Values above 99 will be set to 99';
+    } else {
+      dom['season-games-help'].textContent = `${Math.round(raw)} games selected · allowed range 14–99`;
+    }
+  }
+
   function clampSeasonGamesInput() {
     const raw = Number(dom['season-games'].value);
     const games = clamp(Number.isFinite(raw) ? Math.round(raw) : 14, 14, 99);
@@ -413,8 +436,27 @@
     };
   }
 
+  function prepareEasterEggQueue(existingNames = new Set()) {
+    easterEggQueue = [];
+    if (Math.random() < .32) {
+      const available = EASTER_EGG_NAMES.filter((name) => !existingNames.has(name));
+      if (available.length) easterEggQueue.push(choose(available));
+      if (Math.random() < .10) {
+        const remaining = available.filter((name) => !easterEggQueue.includes(name));
+        if (remaining.length) easterEggQueue.push(choose(remaining));
+      }
+    }
+  }
+
   function fakeName(existingNames) {
     let name = '';
+    while (easterEggQueue.length) {
+      const candidate = easterEggQueue.shift();
+      if (!existingNames.has(candidate)) {
+        existingNames.add(candidate);
+        return candidate;
+      }
+    }
     do name = `${choose(FIRST_NAMES)} ${choose(LAST_NAMES)}`; while (existingNames.has(name));
     existingNames.add(name);
     return name;
@@ -532,42 +574,106 @@
     dom['draft-result'].classList.add('hidden');
     dom['undrafted-offers'].classList.add('hidden');
     dom['continue-after-draft'].classList.add('hidden');
+    dom['draft-mode-controls'].classList.add('hidden');
+    dom['manual-draft-controls'].classList.add('hidden');
+    dom['draft-selection-detail'].classList.add('hidden');
     dom['draft-headline'].textContent = 'Generating your basketball world…';
-    dom['draft-subhead'].textContent = 'Creating rosters, team strengths, contracts, and a draft class.';
 
-    const existingNames = new Set();
     const userPlayer = createUserPlayer(creator.playerConfig);
+    const existingNames = new Set([userPlayer.name]);
+    prepareEasterEggQueue(existingNames);
     const teams = generateLeagueTeams(creator.leagueConfig, existingNames);
     const prospects = generateDraftClass(Math.ceil(teams.length * 1.35), userPlayer, existingNames);
     const draftOrder = shuffle(teams.map((team) => team.id));
     const draftPicks = [];
-    await sleep(450);
-    dom['draft-headline'].textContent = `${creator.leagueConfig.name} Draft`;
-    dom['draft-subhead'].textContent = `${teams.length} teams. One round. Team need can move prospects within their rating tier.`;
-
-    for (let pickIndex = 0; pickIndex < draftOrder.length; pickIndex += 1) {
-      const team = teams.find((entry) => entry.id === draftOrder[pickIndex]);
-      const available = prospects.filter((prospect) => !prospect.drafted);
-      const selected = [...available].sort((a, b) => prospectDraftScore(team, b) - prospectDraftScore(team, a))[0];
-      selected.drafted = true;
-      selected.draftPick = pickIndex + 1;
-      selected.teamId = team.id;
-      team.draftPick = selected.id;
-      team.roster.push(selected);
-      draftPicks.push({ pick: pickIndex + 1, teamId: team.id, playerId: selected.id });
-      const row = document.createElement('div');
-      row.className = `draft-pick ${selected.isUser ? 'user-pick' : ''}`;
-      row.innerHTML = `<span class="pick-number">#${pickIndex + 1}</span><span><strong>${escapeHtml(selected.name)}</strong><small>${selected.position} · ${escapeHtml(selected.playstyle)} · ${escapeHtml(team.name)}</small></span><span class="pick-overall">${selected.overall} OVR</span>`;
-      dom['draft-board'].appendChild(row);
-      if (selected.isUser) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      await sleep(Math.max(35, 115 - teams.length));
-    }
-
-    const draftedUser = prospects.find((prospect) => prospect.isUser && prospect.draftPick);
     currentCareer = buildCareerState(creator.leagueConfig, teams, prospects, draftPicks, userPlayer.id);
-    if (draftedUser) {
-      const team = teams.find((entry) => entry.id === draftedUser.teamId);
-      dom['draft-result'].innerHTML = `<span class="eyebrow">DRAFTED</span><h2>${escapeHtml(team.name)} select ${escapeHtml(draftedUser.name)}.</h2><p>You were selected <strong>#${draftedUser.draftPick}</strong> overall at ${draftedUser.overall} OVR. Your guaranteed rookie contract runs four seasons.</p>`;
+    currentCareer.phase = 'draft';
+    draftSession = { teams, prospects, draftOrder, draftPicks, nextPick: 0, complete: false };
+
+    await sleep(250);
+    dom['draft-headline'].textContent = `${creator.leagueConfig.name} Draft`;
+    dom['draft-mode-controls'].classList.remove('hidden');
+    renderDraftOutlook();
+  }
+
+  function renderDraftOutlook() {
+    if (!draftSession || draftSession.complete) return;
+    const pickNumber = draftSession.nextPick + 1;
+    const team = getTeam(draftSession.draftOrder[draftSession.nextPick]);
+    const available = draftSession.prospects.filter((prospect) => !prospect.drafted)
+      .sort((a,b) => prospectDraftScore(team,b) - prospectDraftScore(team,a));
+    const top = available.slice(0,5);
+    dom['draft-selection-detail'].innerHTML = `<div class="draft-outlook-card"><span class="eyebrow">ON THE CLOCK · PICK #${pickNumber}</span><h3>${escapeHtml(team.name)}</h3><p>Top available prospects for this roster:</p><div class="prospect-mini-list">${top.map((player,index)=>`<div><strong>${index+1}. ${escapeHtml(player.name)}</strong><span>${player.position} · ${player.overall} OVR · ${formatHeight(player.height)} · ${player.weight} lbs</span></div>`).join('')}</div></div>`;
+    dom['draft-selection-detail'].classList.remove('hidden');
+  }
+
+  function renderDraftedProspect(selected, team, pickNumber) {
+    const strongest = ATTRIBUTES.map(([key,label])=>({label,value:selected.attributes[key]})).sort((a,b)=>b.value-a.value).slice(0,4);
+    dom['draft-selection-detail'].innerHTML = `<article class="drafted-prospect-card ${selected.isUser?'user-selection':''}">
+      <div><span class="eyebrow">PICK #${pickNumber} · ${escapeHtml(team.abbr)}</span><h3>${escapeHtml(selected.name)}</h3><p>${selected.position} · ${formatHeight(selected.height)} · ${selected.weight} lbs · ${escapeHtml(selected.playstyle)}</p></div>
+      <div class="drafted-overall"><strong>${selected.overall}</strong><span>OVR</span></div>
+      <div class="drafted-skills">${strongest.map((skill)=>`<span>${escapeHtml(skill.label)} <strong>${skill.value}</strong></span>`).join('')}</div>
+    </article>`;
+    dom['draft-selection-detail'].classList.remove('hidden');
+  }
+
+  function completeOneDraftPick() {
+    if (!draftSession || draftSession.complete || draftSession.nextPick >= draftSession.draftOrder.length) return null;
+    const pickIndex = draftSession.nextPick;
+    const team = getTeam(draftSession.draftOrder[pickIndex]);
+    const available = draftSession.prospects.filter((prospect) => !prospect.drafted);
+    const selected = [...available].sort((a, b) => prospectDraftScore(team, b) - prospectDraftScore(team, a))[0];
+    selected.drafted = true;
+    selected.draftPick = pickIndex + 1;
+    selected.teamId = team.id;
+    team.draftPick = selected.id;
+    team.roster.push(selected);
+    draftSession.draftPicks.push({ pick: pickIndex + 1, teamId: team.id, playerId: selected.id });
+    draftSession.nextPick += 1;
+
+    const row = document.createElement('div');
+    row.className = `draft-pick ${selected.isUser ? 'user-pick' : ''}`;
+    row.innerHTML = `<span class="pick-number">#${pickIndex + 1}</span><button class="player-name-button" data-player-id="${selected.id}" type="button"><strong>${escapeHtml(selected.name)}</strong><small>${selected.position} · ${escapeHtml(selected.playstyle)} · ${escapeHtml(team.name)}</small></button><span class="pick-overall">${selected.overall} OVR</span>`;
+    dom['draft-board'].appendChild(row);
+    renderDraftedProspect(selected, team, pickIndex + 1);
+    if (selected.isUser) row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (draftSession.nextPick >= draftSession.draftOrder.length) finishDraftProcess();
+    return selected;
+  }
+
+  function startManualDraft() {
+    if (!draftSession || draftSession.complete) return;
+    dom['draft-mode-controls'].classList.add('hidden');
+    dom['manual-draft-controls'].classList.remove('hidden');
+    renderDraftOutlook();
+  }
+
+  async function simulateRemainingDraft() {
+    if (!draftSession || draftSession.complete) return;
+    dom['draft-mode-controls'].classList.add('hidden');
+    dom['manual-draft-controls'].classList.add('hidden');
+    while (draftSession && !draftSession.complete && draftSession.nextPick < draftSession.draftOrder.length) {
+      completeOneDraftPick();
+      if (draftSession.nextPick % 6 === 0) await sleep(0);
+    }
+  }
+
+  function draftNextPick() {
+    if (!draftSession || draftSession.complete) return;
+    completeOneDraftPick();
+    if (draftSession && !draftSession.complete) renderDraftOutlook();
+  }
+
+  function finishDraftProcess() {
+    if (!draftSession || draftSession.complete) return;
+    draftSession.complete = true;
+    currentCareer.phase = 'preseason';
+    dom['draft-mode-controls'].classList.add('hidden');
+    dom['manual-draft-controls'].classList.add('hidden');
+    const userPlayer = getUserPlayer();
+    if (userPlayer?.draftPick) {
+      const team = getTeam(userPlayer.teamId);
+      dom['draft-result'].innerHTML = `<span class="eyebrow">DRAFTED</span><h2>${escapeHtml(team.name)} select ${escapeHtml(userPlayer.name)}.</h2><p>You were selected <strong>#${userPlayer.draftPick}</strong> overall at ${userPlayer.overall} OVR. Your guaranteed rookie contract runs four seasons.</p>`;
       dom['draft-result'].classList.remove('hidden');
       finalizeLeagueAfterRosterChoice();
       dom['continue-after-draft'].classList.remove('hidden');
@@ -805,7 +911,7 @@
     return { homeId:homeTeam.id, awayId:awayTeam.id, homeScore, awayScore, winnerId:homeScore>awayScore?homeTeam.id:awayTeam.id, homeBoxes, awayBoxes, homeInjuredBefore, awayInjuredBefore, playoff };
   }
 
-  function userGameEntry(result) {
+  function userGameEntry(result, context = {}) {
     const user = getUserPlayer();
     if (![result.homeId, result.awayId].includes(user.teamId)) return null;
     const opponentId = result.homeId === user.teamId ? result.awayId : result.homeId;
@@ -815,7 +921,18 @@
     const userScore = result.homeId === user.teamId ? result.homeScore : result.awayScore;
     const oppScore = result.homeId === user.teamId ? result.awayScore : result.homeScore;
     const dnpReason = box ? null : injuredBefore?.includes(user.id) ? 'Injury' : 'Coach’s decision';
-    return { round:currentCareer.currentRound+1, opponentId, result:userScore>oppScore?'W':'L', score:`${userScore}-${oppScore}`, box:box||null, dnpReason };
+    return {
+      round: context.round ?? currentCareer.currentRound + 1,
+      opponentId,
+      result: userScore > oppScore ? 'W' : 'L',
+      score: `${userScore}-${oppScore}`,
+      box: box || null,
+      dnpReason,
+      playoff: Boolean(context.playoff),
+      playoffStage: context.stage || null,
+      playoffRound: context.playoffRound || null,
+      seriesGame: context.seriesGame || null
+    };
   }
 
   async function simulateRegularRounds(count) {
@@ -952,6 +1069,16 @@
     const result = simulateGame(home, away, true);
     series.games.push(result);
     if (result.winnerId === series.teamAId) series.winsA += 1; else series.winsB += 1;
+    const entry = userGameEntry(result, {
+      playoff: true,
+      stage: currentCareer.playoffs.stage,
+      playoffRound: currentCareer.playoffs.roundNumber,
+      seriesGame: series.games.length
+    });
+    if (entry) {
+      currentCareer.userPlayoffLogs ||= [];
+      currentCareer.userPlayoffLogs.push(entry);
+    }
     if (series.winsA >= currentCareer.playoffs.winsNeeded || series.winsB >= currentCareer.playoffs.winsNeeded) {
       series.complete = true;
       series.winnerId = series.winsA > series.winsB ? series.teamAId : series.teamBId;
@@ -997,51 +1124,100 @@
     return [...totals.entries()].sort((a,b) => (b[1].points+b[1].rebounds*.5+b[1].assists*.6+b[1].steals*2+b[1].blocks*2)-(a[1].points+a[1].rebounds*.5+a[1].assists*.6+a[1].steals*2+a[1].blocks*2))[0]?.[0] || getTeam(championId).roster[0].id;
   }
 
+  function seasonSnapshot(player) {
+    const regular = statsAverages(player.stats.regular);
+    const playoffs = statsAverages(player.stats.playoffs);
+    const team = getTeam(player.teamId);
+    return {
+      season: currentCareer.league.season,
+      teamId: team.id,
+      age: player.age,
+      overall: player.overall,
+      games: player.stats.regular.games,
+      starts: player.stats.regular.starts,
+      mpg: round1(regular.mpg),
+      ppg: round1(regular.ppg), rpg: round1(regular.rpg), apg: round1(regular.apg), spg: round1(regular.spg), bpg: round1(regular.bpg),
+      fgPct: round1(regular.fgPct*100), threePct: round1(regular.threePct*100), ftPct: round1(regular.ftPct*100),
+      totals: structuredClone(player.stats.regular),
+      playoffTotals: structuredClone(player.stats.playoffs),
+      playoffGames: player.stats.playoffs.games,
+      playoffMpg: round1(playoffs.mpg),
+      playoffPpg: round1(playoffs.ppg), playoffRpg: round1(playoffs.rpg), playoffApg: round1(playoffs.apg),
+      playoffFgPct: round1(playoffs.fgPct*100), playoffThreePct: round1(playoffs.threePct*100), playoffFtPct: round1(playoffs.ftPct*100),
+      record: `${team.record.wins}-${team.record.losses}`,
+      champion: currentCareer.champion === team.id
+    };
+  }
+
   function finalizeSeasonHistory() {
     const user = getUserPlayer();
-    const avg = statsAverages(user.stats.regular);
-    const team = getTeam(user.teamId);
-    const champion = currentCareer.champion === user.teamId;
     const season = currentCareer.league.season;
-    if (champion) user.accolades.push({season,label:'HoopSim Champion'});
-    if (currentCareer.finalsMvp === user.id) user.accolades.push({season,label:'Finals MVP'});
-    user.seasonHistory.push({
-      season, teamId:team.id, overall:user.overall, games:user.stats.regular.games,
-      ppg:round1(avg.ppg), rpg:round1(avg.rpg), apg:round1(avg.apg), spg:round1(avg.spg), bpg:round1(avg.bpg),
-      fgPct:round1(avg.fgPct*100), threePct:round1(avg.threePct*100), ftPct:round1(avg.ftPct*100),
-      totals: structuredClone(user.stats.regular), record:`${team.record.wins}-${team.record.losses}`, champion
+    if (currentCareer.champion === user.teamId && !user.accolades.some((award)=>award.season===season && award.label==='HoopSim Champion')) user.accolades.push({season,label:'HoopSim Champion'});
+    if (currentCareer.finalsMvp === user.id && !user.accolades.some((award)=>award.season===season && award.label==='Finals MVP')) user.accolades.push({season,label:'Finals MVP'});
+    allPlayers().forEach((player)=>{
+      player.seasonHistory ||= [];
+      const snapshot = seasonSnapshot(player);
+      const existingIndex = player.seasonHistory.findIndex((entry)=>entry.season===season);
+      if (existingIndex >= 0) player.seasonHistory[existingIndex] = snapshot;
+      else player.seasonHistory.push(snapshot);
+    });
+  }
+
+  function capturePostseasonScroll() {
+    const panel = dom['postseason-panel'];
+    if (!panel) return { scrollY: window.scrollY, relative: 0 };
+    return { scrollY: window.scrollY, relative: window.scrollY - panel.offsetTop };
+  }
+
+  function restorePostseasonScroll(anchor) {
+    requestAnimationFrame(() => {
+      const panel = dom['postseason-panel'];
+      const top = panel ? panel.offsetTop + anchor.relative : anchor.scrollY;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
     });
   }
 
   async function simNextPlayoffGame() {
     if (!currentCareer.playoffs || currentCareer.playoffs.complete) return;
-    const series = currentCareer.playoffs.currentSeries.find((entry) => !entry.complete);
-    if (series) simulateSeriesGame(series);
+    const anchor = capturePostseasonScroll();
+    currentCareer.playoffs.currentSeries.filter((series) => !series.complete).forEach((series) => simulateSeriesGame(series));
     advancePlayoffStageIfReady();
-    await putSave(currentCareer); renderCareer();
-    dom['postseason-panel'].scrollIntoView({ block: 'start' });
+    await putSave(currentCareer);
+    renderCareer();
+    restorePostseasonScroll(anchor);
   }
 
   async function simCurrentPlayoffRound() {
     if (!currentCareer.playoffs || currentCareer.playoffs.complete) return;
-    currentCareer.playoffs.currentSeries.forEach((series) => { while (!series.complete) simulateSeriesGame(series); });
+    const anchor = capturePostseasonScroll();
+    while (currentCareer.playoffs.currentSeries.some((series) => !series.complete)) {
+      currentCareer.playoffs.currentSeries.filter((series) => !series.complete).forEach((series) => simulateSeriesGame(series));
+      await sleep(0);
+    }
     advancePlayoffStageIfReady();
-    await putSave(currentCareer); renderCareer();
-    dom['postseason-panel'].scrollIntoView({ block: 'start' });
+    await putSave(currentCareer);
+    renderCareer();
+    restorePostseasonScroll(anchor);
   }
 
   async function simAllPlayoffs() {
     if (!currentCareer.playoffs || currentCareer.playoffs.complete) return;
+    const anchor = capturePostseasonScroll();
     while (!currentCareer.playoffs.complete) {
-      currentCareer.playoffs.currentSeries.forEach((series) => { while (!series.complete) simulateSeriesGame(series); });
+      while (currentCareer.playoffs.currentSeries.some((series) => !series.complete)) {
+        currentCareer.playoffs.currentSeries.filter((series) => !series.complete).forEach((series) => simulateSeriesGame(series));
+        await sleep(0);
+      }
       advancePlayoffStageIfReady();
-      await sleep(0);
     }
-    await putSave(currentCareer); renderCareer();
-    dom['postseason-panel'].scrollIntoView({ block: 'start' });
+    await putSave(currentCareer);
+    renderCareer();
+    restorePostseasonScroll(anchor);
   }
 
-  function playerById(id) { return allPlayers().find((player) => player.id === id); }
+  function playerById(id) {
+    return allPlayers().find((player) => player.id === id) || currentCareer?.prospects?.find((player) => player.id === id) || null;
+  }
 
   function renderCareer() {
     if (!currentCareer) return;
@@ -1097,17 +1273,30 @@
     } else dom['next-game-copy'].textContent = 'The regular season is complete.';
   }
 
+  function gameLogMarkup(log) {
+    const opponent = getTeam(log.opponentId);
+    const line = log.box
+      ? `${log.box.points} PTS · ${log.box.rebounds} REB · ${log.box.assists} AST · ${log.box.minutes} MIN`
+      : log.dnpReason === 'Injury'
+        ? `<span class="dnp-injury">DNP · Injury</span>`
+        : `<span class="dnp-coach">DNP · Coach’s decision</span>`;
+    const gameLabel = log.playoff
+      ? `${log.playoffStage === 'finals' ? 'Finals' : `Round ${log.playoffRound}`} · G${log.seriesGame}`
+      : `G${log.round}`;
+    return `<div class="list-row game-log-row ${log.playoff?'playoff-log-row':''}"><span><strong>${log.result} ${log.score}</strong><small> vs ${escapeHtml(opponent.abbr)} · ${line}</small></span><span>${gameLabel}</span></div>`;
+  }
+
   function renderRecentGames() {
-    const logs = (currentCareer.userGameLogs || []).slice(-6).reverse();
-    dom['recent-games'].innerHTML = logs.length ? logs.map((log)=>{
-      const opponent = getTeam(log.opponentId);
-      const line = log.box
-        ? `${log.box.points} PTS · ${log.box.rebounds} REB · ${log.box.assists} AST`
-        : log.dnpReason === 'Injury'
-          ? `<span class="dnp-injury">DNP · Injury</span>`
-          : `<span class="dnp-coach">DNP · Coach’s decision</span>`;
-      return `<div class="list-row"><span><strong>${log.result} ${log.score}</strong><small> vs ${escapeHtml(opponent.abbr)} · ${line}</small></span><span>G${log.round}</span></div>`;
-    }).join('') : '<div class="muted">No games played yet.</div>';
+    const regular = (currentCareer.userGameLogs || []).map((log)=>({...log,playoff:false}));
+    const playoff = (currentCareer.userPlayoffLogs || []).map((log)=>({...log,playoff:true}));
+    const logs = [...regular, ...playoff].slice(-8).reverse();
+    dom['recent-games'].innerHTML = logs.length ? logs.map(gameLogMarkup).join('') : '<div class="muted">No games played yet.</div>';
+  }
+
+  function renderPlayoffGameLog() {
+    const logs = (currentCareer.userPlayoffLogs || []).slice().reverse();
+    dom['playoff-log-panel'].classList.toggle('hidden', !logs.length);
+    dom['playoff-game-log'].innerHTML = logs.length ? logs.map(gameLogMarkup).join('') : '<div class="muted">Your playoff games will appear here.</div>';
   }
 
   function renderStandingsRows(teams, full = false) {
@@ -1137,10 +1326,43 @@
     dom['leaders-preview'].innerHTML = players.length ? leaders.map(([label,player],index)=>`<div class="leader-row"><span>${index+1}</span><strong>${escapeHtml(player.name)}<small>${escapeHtml(getTeam(player.teamId).abbr)} · ${label}</small></strong><span>${round1(statsAverages(player.stats.regular)[label.toLowerCase()]).toFixed(1)}</span></div>`).join('') : '<div class="muted">Leaders appear after games are simulated.</div>';
   }
 
+  function statSortValue(player, key) {
+    const avg = statsAverages(player.stats.regular);
+    if (key === 'name') return player.name.toLowerCase();
+    if (key === 'team') return getTeam(player.teamId).abbr;
+    if (key === 'overall') return player.overall;
+    if (key === 'games') return player.stats.regular.games;
+    if (key === 'mpg') return avg.mpg;
+    return avg[key] ?? 0;
+  }
+
+  function sortHeader(label, key) {
+    const active = statsSortKey === key;
+    const arrow = active ? (statsSortDirection < 0 ? '▼' : '▲') : '';
+    return `<button class="stats-sort-button ${active?'active':''}" data-stat-sort="${key}" type="button">${label}<span>${arrow}</span></button>`;
+  }
+
   function renderStatsTable() {
-    const sortKey = dom['stats-sort'].value;
-    const players = qualifiedPlayersForDisplay().sort((a,b)=>statsAverages(b.stats.regular)[sortKey]-statsAverages(a.stats.regular)[sortKey]).slice(0,100);
-    dom['stats-table'].innerHTML = players.length ? `<table class="data-table"><thead><tr><th>#</th><th>Player</th><th>Team</th><th>GP</th><th>PPG</th><th>RPG</th><th>APG</th><th>SPG</th><th>BPG</th><th>FG%</th><th>3P%</th></tr></thead><tbody>${players.map((player,index)=>{const a=statsAverages(player.stats.regular);return `<tr class="${player.isUser?'user-row':''}"><td>${index+1}</td><td><strong>${escapeHtml(player.name)}</strong><br><small>${player.position} · ${player.overall} OVR</small></td><td>${escapeHtml(getTeam(player.teamId).abbr)}</td><td>${player.stats.regular.games}</td><td>${round1(a.ppg).toFixed(1)}</td><td>${round1(a.rpg).toFixed(1)}</td><td>${round1(a.apg).toFixed(1)}</td><td>${round1(a.spg).toFixed(1)}</td><td>${round1(a.bpg).toFixed(1)}</td><td>${(a.fgPct*100).toFixed(1)}</td><td>${(a.threePct*100).toFixed(1)}</td></tr>`}).join('')}</tbody></table>` : '<div class="muted">Simulate games to populate league statistics.</div>';
+    if (dom['stats-sort'].value !== statsSortKey && [...dom['stats-sort'].options].some((option)=>option.value===statsSortKey)) dom['stats-sort'].value = statsSortKey;
+    const players = qualifiedPlayersForDisplay().sort((a,b)=>{
+      const av=statSortValue(a,statsSortKey), bv=statSortValue(b,statsSortKey);
+      if (typeof av === 'string') return av.localeCompare(bv) * statsSortDirection;
+      return (av-bv) * statsSortDirection;
+    }).slice(0,150);
+    dom['stats-table'].innerHTML = players.length ? `<table class="data-table sortable-table"><thead><tr>
+      <th>#</th><th>Player</th><th>Team</th>
+      <th>${sortHeader('OVR','overall')}</th><th>${sortHeader('GP','games')}</th><th>${sortHeader('MPG','mpg')}</th>
+      <th>${sortHeader('PPG','ppg')}</th><th>${sortHeader('RPG','rpg')}</th><th>${sortHeader('APG','apg')}</th>
+      <th>${sortHeader('SPG','spg')}</th><th>${sortHeader('BPG','bpg')}</th>
+      <th>${sortHeader('FG%','fgPct')}</th><th>${sortHeader('3P%','threePct')}</th><th>${sortHeader('FT%','ftPct')}</th>
+    </tr></thead><tbody>${players.map((player,index)=>{
+      const a=statsAverages(player.stats.regular);
+      return `<tr class="${player.isUser?'user-row':''}"><td>${index+1}</td>
+        <td><button class="player-name-button" data-player-id="${player.id}" type="button"><strong>${escapeHtml(player.name)}</strong><small>${player.position} · ${escapeHtml(player.playstyle)}</small></button></td>
+        <td>${escapeHtml(getTeam(player.teamId).abbr)}</td><td>${player.overall}</td><td>${player.stats.regular.games}</td><td>${round1(a.mpg).toFixed(1)}</td>
+        <td>${round1(a.ppg).toFixed(1)}</td><td>${round1(a.rpg).toFixed(1)}</td><td>${round1(a.apg).toFixed(1)}</td><td>${round1(a.spg).toFixed(1)}</td><td>${round1(a.bpg).toFixed(1)}</td>
+        <td>${(a.fgPct*100).toFixed(1)}</td><td>${(a.threePct*100).toFixed(1)}</td><td>${(a.ftPct*100).toFixed(1)}</td></tr>`;
+    }).join('')}</tbody></table>` : '<div class="muted">Simulate games to populate league statistics.</div>';
   }
 
   function renderRosterSelector(defaultTeamId) {
@@ -1158,20 +1380,101 @@
     dom['roster-title'].textContent = `${team.name} roster`;
     updateTeamRotation(team);
     const roster = [...team.roster].sort((a,b)=>b.projectedMinutes-a.projectedMinutes || b.overall-a.overall);
-    dom['roster-table'].innerHTML = `<table class="data-table"><thead><tr><th>Player</th><th>Pos</th><th>Age</th><th>OVR</th><th>Role</th><th>MPG</th><th>Contract</th><th>Status</th></tr></thead><tbody>${roster.map((player)=>`<tr class="${player.isUser?'user-row':''}"><td><strong>${escapeHtml(player.name)}</strong><br><small>${escapeHtml(player.playstyle)}</small></td><td>${player.position}</td><td>${player.age}</td><td>${player.overall}</td><td>${player.role}</td><td>${player.projectedMinutes}</td><td>${player.contractYears} yr</td><td>${player.injury?`${escapeHtml(player.injury.label)} (${player.injury.gamesRemaining})`:'Healthy'}</td></tr>`).join('')}</tbody></table>`;
+    dom['roster-table'].innerHTML = `<table class="data-table"><thead><tr><th>Player</th><th>Pos</th><th>Age</th><th>OVR</th><th>Role</th><th>MPG</th><th>Contract</th><th>Status</th></tr></thead><tbody>${roster.map((player)=>`<tr class="${player.isUser?'user-row':''}">
+      <td><button class="player-name-button" data-player-id="${player.id}" type="button"><strong>${escapeHtml(player.name)}</strong><small>${escapeHtml(player.playstyle)}</small></button></td>
+      <td>${player.position}</td><td>${player.age}</td><td>${player.overall}</td><td>${player.role}</td><td>${player.projectedMinutes}</td><td>${player.contractYears} yr</td><td>${player.injury?`${escapeHtml(player.injury.label)} (${player.injury.gamesRemaining})`:'Healthy'}</td></tr>`).join('')}</tbody></table>`;
+  }
+
+  function totalsFromSeasons(player, key = 'totals') {
+    const totals = createStats();
+    (player.seasonHistory || []).forEach((season)=>{
+      const source = season[key] || {};
+      Object.keys(totals).forEach((stat)=>{ totals[stat] += Number(source[stat] || 0); });
+    });
+    return totals;
+  }
+
+  function careerSummaryMarkup(player) {
+    const totals = totalsFromSeasons(player);
+    const avg = statsAverages(totals);
+    return `<div class="career-summary-grid">
+      <div><strong>${player.seasonHistory?.length || 0}</strong><span>Seasons</span></div>
+      <div><strong>${totals.games}</strong><span>Games</span></div>
+      <div><strong>${round1(avg.mpg).toFixed(1)}</strong><span>MPG</span></div>
+      <div><strong>${round1(avg.ppg).toFixed(1)}</strong><span>PPG</span></div>
+      <div><strong>${round1(avg.rpg).toFixed(1)}</strong><span>RPG</span></div>
+      <div><strong>${round1(avg.apg).toFixed(1)}</strong><span>APG</span></div>
+      <div><strong>${round1(avg.spg).toFixed(1)}</strong><span>SPG</span></div>
+      <div><strong>${round1(avg.bpg).toFixed(1)}</strong><span>BPG</span></div>
+      <div><strong>${(avg.fgPct*100).toFixed(1)}%</strong><span>FG%</span></div>
+      <div><strong>${(avg.threePct*100).toFixed(1)}%</strong><span>3P%</span></div>
+      <div><strong>${(avg.ftPct*100).toFixed(1)}%</strong><span>FT%</span></div>
+      <div><strong>${totals.points.toLocaleString()}</strong><span>Points</span></div>
+    </div>`;
+  }
+
+  function seasonHistoryMarkup(season) {
+    const team = getTeam(season.teamId);
+    const playoffLine = season.playoffGames
+      ? `<div class="season-stat-line playoff-season-line"><span>PLAYOFFS</span><b>${season.playoffGames} GP</b><b>${Number(season.playoffPpg||0).toFixed(1)} PPG</b><b>${Number(season.playoffRpg||0).toFixed(1)} RPG</b><b>${Number(season.playoffApg||0).toFixed(1)} APG</b><b>${Number(season.playoffFgPct||0).toFixed(1)} FG%</b><b>${Number(season.playoffThreePct||0).toFixed(1)} 3P%</b></div>`
+      : '<div class="season-stat-line playoff-season-line muted"><span>PLAYOFFS</span><b>Did not play</b></div>';
+    return `<article class="season-history-card">
+      <div class="season-history-heading"><div><span class="eyebrow">SEASON ${season.season} · AGE ${season.age ?? '—'}</span><h3>${escapeHtml(team?.name || 'Former team')}</h3><p>${season.record}${season.champion?' · Champion':''}</p></div><strong>${season.overall} OVR</strong></div>
+      <div class="season-stat-line"><span>REGULAR</span><b>${season.games} GP</b><b>${season.starts ?? 0} GS</b><b>${Number(season.mpg||0).toFixed(1)} MPG</b><b>${Number(season.ppg||0).toFixed(1)} PPG</b><b>${Number(season.rpg||0).toFixed(1)} RPG</b><b>${Number(season.apg||0).toFixed(1)} APG</b><b>${Number(season.spg||0).toFixed(1)} SPG</b><b>${Number(season.bpg||0).toFixed(1)} BPG</b></div>
+      <div class="season-shooting-line"><span>${Number(season.fgPct||0).toFixed(1)}% FG</span><span>${Number(season.threePct||0).toFixed(1)}% 3P</span><span>${Number(season.ftPct||0).toFixed(1)}% FT</span></div>
+      ${playoffLine}
+    </article>`;
   }
 
   function renderHistory(user) {
-    dom['career-history-list'].innerHTML = user.seasonHistory.length ? user.seasonHistory.map((season)=>`<div class="list-row"><span><strong>Season ${season.season} · ${escapeHtml(getTeam(season.teamId).name)}</strong><small>${season.ppg} PPG · ${season.rpg} RPG · ${season.apg} APG · ${season.record}${season.champion?' · Champion':''}</small></span><span>${season.overall} OVR</span></div>`).join('') : currentCareer.careerEvents.map((event)=>`<div class="list-row"><span><strong>Season ${event.season}</strong><small>${escapeHtml(event.text)}</small></span></div>`).join('');
+    dom['career-collective-summary'].innerHTML = careerSummaryMarkup(user);
+    const hofUnlocked = user.age >= 30 || (user.seasonHistory?.length || 0) >= 10 || currentCareer.phase === 'retired';
+    if (hofUnlocked) {
+      const probability = hallOfFameProbability(user);
+      dom['career-hof-outlook'].innerHTML = `<div class="hof-outlook-card"><div><span class="eyebrow">HALL OF FAME OUTLOOK</span><strong>${probability}%</strong><p>This estimate changes with production, longevity, awards, and championships.</p></div><div class="hof-meter"><span style="width:${probability}%"></span></div></div>`;
+    } else {
+      dom['career-hof-outlook'].innerHTML = `<div class="hof-locked"><strong>Hall of Fame outlook hidden</strong><span>Unlocks at age 30 or after 10 completed seasons.</span></div>`;
+    }
+    dom['career-history-list'].innerHTML = user.seasonHistory?.length
+      ? [...user.seasonHistory].reverse().map(seasonHistoryMarkup).join('')
+      : currentCareer.careerEvents.map((event)=>`<div class="list-row"><span><strong>Season ${event.season}</strong><small>${escapeHtml(event.text)}</small></span></div>`).join('');
     const counts = {};
     user.accolades.forEach((award)=>{counts[award.label]=(counts[award.label]||0)+1;});
     if (currentCareer.retirement?.hallOfFame) counts['HoopLoop Hall of Fame'] = 1;
     dom['career-accolades'].innerHTML = Object.keys(counts).length ? Object.entries(counts).map(([label,count])=>`<div class="trophy"><strong>${count}</strong><span>${escapeHtml(label)}</span></div>`).join('') : '<div class="muted">Your trophy case is empty.</div>';
   }
 
+  function playerProfileSeasonRows(player) {
+    const history = player.seasonHistory || [];
+    if (!history.length) return '<div class="muted">No completed season history yet.</div>';
+    return `<div class="profile-history-table"><table class="data-table"><thead><tr><th>Season</th><th>Team</th><th>GP</th><th>MPG</th><th>PPG</th><th>RPG</th><th>APG</th><th>FG%</th><th>3P%</th><th>FT%</th><th>OVR</th></tr></thead><tbody>${[...history].reverse().map((season)=>`<tr><td>${season.season}</td><td>${escapeHtml(getTeam(season.teamId)?.abbr || '—')}</td><td>${season.games}</td><td>${Number(season.mpg||0).toFixed(1)}</td><td>${Number(season.ppg||0).toFixed(1)}</td><td>${Number(season.rpg||0).toFixed(1)}</td><td>${Number(season.apg||0).toFixed(1)}</td><td>${Number(season.fgPct||0).toFixed(1)}</td><td>${Number(season.threePct||0).toFixed(1)}</td><td>${Number(season.ftPct||0).toFixed(1)}</td><td>${season.overall}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+
+  function openPlayerProfile(playerId) {
+    const player = playerById(playerId);
+    if (!player) return showToast('Player profile is unavailable.', 'error');
+    const team = player.teamId ? getTeam(player.teamId) : null;
+    const regular = statsAverages(player.stats?.regular || createStats());
+    const playoffs = statsAverages(player.stats?.playoffs || createStats());
+    dom['profile-player-name'].textContent = player.name;
+    dom['profile-player-meta'].textContent = `${player.position} · Age ${player.age} · ${formatHeight(player.height)} · ${player.weight} lbs · ${player.playstyle}${team?` · ${team.name}`:''}`;
+    dom['profile-player-summary'].innerHTML = `<div class="profile-summary-grid">
+      <div><strong>${player.overall}</strong><span>OVR</span></div><div><strong>${player.role || 'Prospect'}</strong><span>Role</span></div>
+      <div><strong>${player.stats?.regular?.games || 0}</strong><span>GP</span></div><div><strong>${round1(regular.mpg).toFixed(1)}</strong><span>MPG</span></div>
+      <div><strong>${round1(regular.ppg).toFixed(1)}</strong><span>PPG</span></div><div><strong>${round1(regular.rpg).toFixed(1)}</strong><span>RPG</span></div>
+      <div><strong>${round1(regular.apg).toFixed(1)}</strong><span>APG</span></div><div><strong>${(regular.fgPct*100).toFixed(1)}%</strong><span>FG%</span></div>
+      <div><strong>${(regular.threePct*100).toFixed(1)}%</strong><span>3P%</span></div><div><strong>${player.stats?.playoffs?.games || 0}</strong><span>Playoff GP</span></div>
+      <div><strong>${round1(playoffs.ppg).toFixed(1)}</strong><span>Playoff PPG</span></div><div><strong>${player.contractYears ?? '—'}</strong><span>Contract years</span></div>
+    </div>`;
+    dom['profile-player-attributes'].innerHTML = `<section class="profile-section"><h3>Attributes</h3><div class="profile-attribute-grid">${ATTRIBUTES.map(([key,label])=>`<div><span>${escapeHtml(label)}</span><strong>${player.attributes[key]}</strong></div>`).join('')}</div></section>`;
+    const accolades = player.accolades?.length ? `<div class="profile-accolades">${player.accolades.map((award)=>`<span>${escapeHtml(award.label)} · S${award.season}</span>`).join('')}</div>` : '<div class="muted">No recorded accolades.</div>';
+    dom['profile-player-history'].innerHTML = `<section class="profile-section"><h3>Season history</h3>${playerProfileSeasonRows(player)}</section><section class="profile-section"><h3>Accolades</h3>${accolades}</section>`;
+    dom['player-profile-dialog'].showModal();
+  }
+
   function awardCard(label, playerId) {
     const player = playerById(playerId);
-    return `<article class="award-card"><span>${label}</span><strong>${escapeHtml(player?.name || '—')}</strong><small>${player ? `${escapeHtml(getTeam(player.teamId).abbr)} · ${player.position}` : ''}</small></article>`;
+    return `<article class="award-card"><span>${label}</span>${player?`<button class="player-name-button" data-player-id="${player.id}" type="button"><strong>${escapeHtml(player.name)}</strong><small>${escapeHtml(getTeam(player.teamId).abbr)} · ${player.position}</small></button>`:'<strong>—</strong>'}</article>`;
   }
 
   function renderPostseason() {
@@ -1180,7 +1483,7 @@
     if (panel.classList.contains('hidden')) return;
     const awards = currentCareer.awards;
     dom['awards-grid'].innerHTML = awardCard('MVP',awards.mvp)+awardCard('ROTY',awards.roty)+awardCard('DPOY',awards.dpoy)+awardCard('6MOTY',awards.sixth)+`<article class="award-card"><span>COTY</span><strong>${escapeHtml(getTeam(awards.coty).name)}</strong><small>Coach rating ${getTeam(awards.coty).coachRating}</small></article>`;
-    const teamLine = (label, ids) => `<div class="all-team-row"><strong>${label}</strong><div class="all-team-members">${ids.map((id)=>{const player=playerById(id);return `<div class="all-team-player"><strong>${escapeHtml(player.name)}</strong><small>${player.position} · ${escapeHtml(getTeam(player.teamId).abbr)} · ${player.overall} OVR</small></div>`}).join('')}</div></div>`;
+    const teamLine = (label, ids) => `<div class="all-team-row"><strong>${label}</strong><div class="all-team-members">${ids.map((id)=>{const player=playerById(id);return `<div class="all-team-player"><button class="player-name-button" data-player-id="${player.id}" type="button"><strong>${escapeHtml(player.name)}</strong><small>${player.position} · ${escapeHtml(getTeam(player.teamId).abbr)} · ${player.overall} OVR</small></button></div>`}).join('')}</div></div>`;
     dom['all-league-teams'].innerHTML = teamLine('All-HoopLoop First Team',awards.first)+teamLine('All-HoopLoop Second Team',awards.second)+teamLine('All-HoopLoop Third Team',awards.third)+teamLine('All-Defensive First Team',awards.defenseFirst)+teamLine('All-Defensive Second Team',awards.defenseSecond);
     if (currentCareer.phase === 'awards') {
       dom['postseason-title'].textContent = `Season ${currentCareer.league.season} awards`;
@@ -1188,6 +1491,7 @@
       dom['playoff-area'].classList.remove('hidden');
       dom['playoff-bracket'].innerHTML = `<button id="begin-playoffs-button" class="primary-button" type="button">Begin ${currentCareer.league.playoffSize}-team playoffs</button>`;
       dom['sim-playoff-game'].classList.add('hidden'); dom['sim-playoff-round'].classList.add('hidden'); dom['sim-all-playoffs'].classList.add('hidden');
+      dom['playoff-log-panel'].classList.add('hidden');
     } else {
       dom['postseason-title'].textContent = currentCareer.phase === 'complete' ? `Season ${currentCareer.league.season} complete` : `Season ${currentCareer.league.season} playoffs`;
       dom['postseason-copy'].textContent = `Every series is best of ${currentCareer.league.seriesLength}.`;
@@ -1202,11 +1506,27 @@
   function renderPlayoffBracket() {
     const playoffs = currentCareer.playoffs;
     if (!playoffs) return;
+    const userTeamId = getUserPlayer().teamId;
     const rounds = playoffs.complete ? [...playoffs.history] : [...playoffs.history, {stage:playoffs.stage,roundNumber:playoffs.roundNumber,series:playoffs.currentSeries,current:true}];
-    dom['playoff-bracket'].innerHTML = rounds.map((round)=>`<section class="bracket-round ${round.current?'current':'complete'}"><h3 class="bracket-round-label">${round.stage==='finals'?'HoopSim Finals':`Round ${round.roundNumber}`}</h3><div class="bracket-round-list">${round.series.map((series)=>{
-      const a=getTeam(series.teamAId), b=getTeam(series.teamBId);
-      return `<article class="series-card"><div class="series-team ${series.winnerId===a.id?'winner':''}"><span><i class="series-seed">${series.seedA || ''}</i>${escapeHtml(a.name)}</span><strong>${series.winsA}</strong></div><div class="series-team ${series.winnerId===b.id?'winner':''}"><span><i class="series-seed">${series.seedB || ''}</i>${escapeHtml(b.name)}</span><strong>${series.winsB}</strong></div></article>`;
-    }).join('')}</div></section>`).join('');
+    dom['playoff-bracket'].innerHTML = `<div class="bracket-scroll">${rounds.map((round)=>`<section class="bracket-round ${round.current?'current':'complete'}">
+      <h3 class="bracket-round-label">${round.stage==='finals'?'HoopSim Finals':`Round ${round.roundNumber}`}</h3>
+      <div class="bracket-round-list">${round.series.map((series)=>{
+        const a=getTeam(series.teamAId), b=getTeam(series.teamBId);
+        const userSeries = [a.id,b.id].includes(userTeamId);
+        const gameChips = series.games.map((game,index)=>{
+          const aScore = game.homeId===a.id ? game.homeScore : game.awayScore;
+          const bScore = game.homeId===b.id ? game.homeScore : game.awayScore;
+          return `<span class="${game.winnerId===a.id?'a-win':'b-win'}" title="Game ${index+1}: ${a.abbr} ${aScore}, ${b.abbr} ${bScore}">G${index+1} ${aScore}-${bScore}</span>`;
+        }).join('');
+        return `<article class="series-card ${userSeries?'user-series':''}">
+          <div class="series-conference">${round.stage==='finals'?'CHAMPIONSHIP':escapeHtml(series.conference)}</div>
+          <div class="series-team ${series.winnerId===a.id?'winner':''}"><span><i class="series-seed">${series.seedA || ''}</i>${escapeHtml(a.name)}</span><strong>${series.winsA}</strong></div>
+          <div class="series-team ${series.winnerId===b.id?'winner':''}"><span><i class="series-seed">${series.seedB || ''}</i>${escapeHtml(b.name)}</span><strong>${series.winsB}</strong></div>
+          <div class="series-game-strip">${gameChips || '<span class="not-started">Series not started</span>'}</div>
+        </article>`;
+      }).join('')}</div>
+    </section>`).join('')}</div>`;
+    renderPlayoffGameLog();
   }
 
   function renderSeasonFinale() {
@@ -1281,6 +1601,10 @@
 
   function replenishLeagueRosters() {
     const names = existingLeagueNames();
+    if (Math.random() < .10) {
+      const availableEggs = EASTER_EGG_NAMES.filter((name)=>!names.has(name));
+      if (availableEggs.length) easterEggQueue = [choose(availableEggs)];
+    }
     currentCareer.teams.forEach((team) => {
       while (team.roster.length < 12) {
         const rookie = createGeneratedPlayer({
@@ -1358,8 +1682,14 @@
   function openOffseason() {
     const development = prepareOffseason();
     const user = getUserPlayer();
-    dom['offseason-heading'].textContent = `${user.name}: ${development.oldOverall} → ${development.newOverall} OVR`;
-    dom['development-summary'].innerHTML = `<div class="development-overall"><strong>${development.newOverall}</strong><span>NEW OVR</span></div><div class="development-list">${ATTRIBUTES.map(([key,label])=>{const change=development.changes[key];return `<div class="development-change ${change>0?'positive':change<0?'negative':''}"><span>${label}</span><b>${change>0?'+':''}${change}</b></div>`}).join('')}</div>`;
+    const overallDelta = development.newOverall - development.oldOverall;
+    dom['offseason-heading'].textContent = `${user.name}: ${development.oldOverall} → ${development.newOverall} OVR (${overallDelta>=0?'+':''}${overallDelta})`;
+    dom['development-summary'].innerHTML = `<div class="development-overall"><strong>${development.newOverall}</strong><span>NEW OVR</span></div><div class="development-list">${ATTRIBUTES.map(([key,label])=>{
+      const oldValue = development.before[key];
+      const newValue = user.attributes[key];
+      const change = newValue - oldValue;
+      return `<div class="development-change ${change>0?'positive':change<0?'negative':''}"><span>${label}</span><div class="development-values"><b>${oldValue}</b><i>→</i><strong>${newValue}</strong><em>(${change>0?'+':''}${change})</em></div></div>`;
+    }).join('')}</div>`;
     const forced = currentCareer.forcedRetirementReason;
     dom['offseason-note'].textContent = forced || (user.contractYears <= 0 ? 'Your contract has expired. Continue to review three free-agent offers, or retire now.' : `You have ${user.contractYears} season${user.contractYears===1?'':'s'} remaining on your contract.`);
     dom['continue-next-season-button'].textContent = forced ? 'Finalize retirement' : user.contractYears <= 0 ? 'Review contract offers' : `Continue to Season ${currentCareer.league.season + 1}`;
@@ -1389,6 +1719,7 @@
     currentCareer.champion = null;
     currentCareer.finalsMvp = null;
     currentCareer.userGameLogs = [];
+    currentCareer.userPlayoffLogs = [];
     currentCareer.development = null;
     currentCareer.forcedRetirementReason = null;
     currentCareer.careerEvents.push({ season:currentCareer.league.season, text:`Season ${currentCareer.league.season} began.` });
@@ -1510,17 +1841,36 @@
   function migrateCareer(career) {
     career.version = VERSION;
     career.league.season ||= 1;
+    career.league.games = clamp(Number(career.league.games || 30), 14, 99);
     career.userGameLogs ||= [];
+    career.userPlayoffLogs ||= [];
     career.careerEvents ||= [];
+    career.settings ||= { injuriesEnabled: career.league.injuriesEnabled !== false };
     career.teams.forEach((team)=>{
       team.record ||= {wins:0,losses:0,pointsFor:0,pointsAgainst:0};
       team.roster.forEach((player)=>{
         player.seasonHistory ||= [];
+        player.seasonHistory.forEach((season)=>{
+          season.starts ??= season.totals?.starts || 0;
+          season.mpg ??= season.totals?.games ? round1((season.totals.minutes || 0) / season.totals.games) : 0;
+          season.playoffTotals ||= createStats();
+          const playoffAvg = statsAverages(season.playoffTotals);
+          season.playoffGames ??= season.playoffTotals.games || 0;
+          season.playoffMpg ??= round1(playoffAvg.mpg);
+          season.playoffPpg ??= round1(playoffAvg.ppg);
+          season.playoffRpg ??= round1(playoffAvg.rpg);
+          season.playoffApg ??= round1(playoffAvg.apg);
+          season.playoffFgPct ??= round1(playoffAvg.fgPct*100);
+          season.playoffThreePct ??= round1(playoffAvg.threePct*100);
+          season.playoffFtPct ??= round1(playoffAvg.ftPct*100);
+        });
         player.accolades ||= [];
         player.majorInjuries ||= 0;
         player.contractYears = Number.isFinite(player.contractYears) ? player.contractYears : 1;
         player.contractLength ||= Math.max(1, player.contractYears);
         player.stats ||= {regular:createStats(),playoffs:createStats()};
+        player.stats.regular ||= createStats();
+        player.stats.playoffs ||= createStats();
       });
     });
     return career;
@@ -1575,10 +1925,12 @@
 
   function startNewCareer() {
     currentCareer = null;
+    draftSession = null;
     creator.leagueConfig = null; creator.playerConfig = null;
     creator.selectedTeamIds.clear();
     dom['league-size'].value = '16'; dom['season-games'].value='30'; dom['league-name'].value='HoopSim League';
     updatePlayoffOptions(); autoSelectTeams();
+    dom['player-name'].value='Evan Oblewski';
     dom['player-position'].value='PG'; dom['player-playstyle'].value='All Around Hooper'; dom['player-height'].value='75'; dom['player-weight'].value='195';
     applyPlaystyleTemplate(); showView('creator-view'); showCreatorStep('league');
   }
@@ -1589,13 +1941,20 @@
     dom['open-saves-button'].addEventListener('click', renderSaveDialog);
     dom['new-save-from-dialog'].addEventListener('click', () => { dom['saves-dialog'].close(); startNewCareer(); });
     dom['league-size'].addEventListener('change', updatePlayoffOptions);
-    ['input','change','blur'].forEach((eventName)=>dom['season-games'].addEventListener(eventName,()=>{ if(dom['season-games'].value!=='') clampSeasonGamesInput(); }));
+    dom['season-games'].addEventListener('input', previewSeasonGamesInput);
+    ['change','blur'].forEach((eventName)=>dom['season-games'].addEventListener(eventName,clampSeasonGamesInput));
+    document.querySelectorAll('[data-adjust-games]').forEach((button)=>button.addEventListener('click',()=>{
+      const current = Number(dom['season-games'].value);
+      const base = Number.isFinite(current) ? current : 30;
+      dom['season-games'].value = String(clamp(Math.round(base + Number(button.dataset.adjustGames)),14,99));
+      clampSeasonGamesInput();
+    }));
     dom['team-search'].addEventListener('input', renderTeams);
     dom['team-grid'].addEventListener('click', (event) => { const button=event.target.closest('[data-team-id]'); if(button)toggleTeam(Number(button.dataset.teamId)); });
     dom['auto-select-teams'].addEventListener('click', autoSelectTeams);
     dom['clear-team-selection'].addEventListener('click',()=>{creator.selectedTeamIds.clear();renderTeams();});
     dom['randomize-league-button'].addEventListener('click',()=>{
-      const sizes=Array.from({length:22},(_,i)=>8+i*2);dom['league-size'].value=String(choose(sizes));dom['season-games'].value=randInt(14,99);updatePlayoffOptions();dom['series-length'].value=String(choose([1,3,5,7,9]));autoSelectTeams();
+      const sizes=Array.from({length:22},(_,i)=>8+i*2);dom['league-size'].value=String(choose(sizes));dom['season-games'].value=randInt(14,99);updatePlayoffOptions();dom['series-length'].value=String(choose([1,3,5,7,9]));autoSelectTeams();clampSeasonGamesInput();
     });
     dom['cancel-creator-button'].addEventListener('click',()=>showView('landing-view'));
     dom['continue-to-player'].addEventListener('click',()=>{if(validateLeagueConfig()){showCreatorStep('player');updatePlayerProjection();}});
@@ -1608,6 +1967,10 @@
     dom['projection-visible'].addEventListener('change',()=>{dom['projection-content'].classList.toggle('hidden',!dom['projection-visible'].checked);dom['projection-hidden'].classList.toggle('hidden',dom['projection-visible'].checked);});
     dom['attribute-grid'].addEventListener('input',(event)=>{const key=event.target.dataset.attributeRange||event.target.dataset.attributeNumber;if(key)syncAttribute(key,event.target.value);});
     dom['begin-draft-button'].addEventListener('click',async()=>{creator.playerConfig=gatherPlayerConfig();const saves=await getAllSaves();if(saves.length>=MAX_SAVES)return showToast(`Delete or export a save first. Maximum ${MAX_SAVES}.`,'error');await runDraft();});
+    dom['manual-draft-button'].addEventListener('click',startManualDraft);
+    dom['simulate-draft-button'].addEventListener('click',simulateRemainingDraft);
+    dom['draft-next-pick-button'].addEventListener('click',draftNextPick);
+    dom['simulate-remaining-draft-button'].addEventListener('click',simulateRemainingDraft);
     dom['draft-step'].addEventListener('click',(event)=>{const button=event.target.closest('[data-sign-team]');if(button)signUndrafted(Number(button.dataset.signTeam));});
     dom['continue-after-draft'].addEventListener('click',async()=>{await putSave(currentCareer);renderCareer();});
     document.querySelectorAll('[data-sim]').forEach((button)=>button.addEventListener('click',()=>{
@@ -1615,8 +1978,21 @@
     }));
     document.querySelectorAll('.career-tabs button').forEach((button)=>button.addEventListener('click',()=>showCareerTab(button.dataset.tab)));
     document.querySelectorAll('[data-open-tab]').forEach((button)=>button.addEventListener('click',()=>showCareerTab(button.dataset.openTab)));
-    dom['stats-sort'].addEventListener('change',renderStatsTable);
+    dom['stats-sort'].addEventListener('change',()=>{statsSortKey=dom['stats-sort'].value;statsSortDirection=-1;renderStatsTable();});
+    dom['stats-table'].addEventListener('click',(event)=>{
+      const sortButton=event.target.closest('[data-stat-sort]');
+      if(sortButton){
+        const key=sortButton.dataset.statSort;
+        if(statsSortKey===key) statsSortDirection*=-1; else {statsSortKey=key;statsSortDirection=-1;}
+        renderStatsTable();
+      }
+    });
     dom['roster-team-select'].addEventListener('change',()=>{currentCareer.rosterViewTeamId=Number(dom['roster-team-select'].value);renderRoster(getTeam(currentCareer.rosterViewTeamId));});
+    document.addEventListener('click',(event)=>{
+      const playerButton=event.target.closest('[data-player-id]');
+      if(playerButton && currentCareer) openPlayerProfile(playerButton.dataset.playerId);
+    });
+    dom['close-player-profile'].addEventListener('click',()=>dom['player-profile-dialog'].close());
     dom['manual-save-button'].addEventListener('click',async()=>{await putSave(currentCareer);showToast('Career saved.','success');});
     dom['career-menu-button'].addEventListener('click',()=>dom['career-menu-dialog'].showModal());
     dom['export-current-save'].addEventListener('click',()=>downloadSave(currentCareer));

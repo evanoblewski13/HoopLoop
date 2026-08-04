@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#ff5a1f" />
   <meta name="description" content="HoopSim — a customizable, offline basketball career simulator from HoopLoop." />
-  <title>HoopSim Alpha 0.2 — HoopLoop</title>
-  <link rel="stylesheet" href="hoopsim.css?v=0.2.0" />
+  <title>HoopSim Alpha 0.3 — HoopLoop</title>
+  <link rel="stylesheet" href="hoopsim.css?v=0.3.0" />
 </head>
 <body>
   <div class="page-noise" aria-hidden="true"></div>
@@ -16,7 +16,7 @@
     </a>
     <div class="sim-title">
       <strong>HoopSim</strong>
-      <span>Career Simulator · Alpha 0.2</span>
+      <span>Career Simulator · Alpha 0.3</span>
     </div>
     <div class="header-actions">
       <span id="autosave-status" class="autosave-status">Offline · ready</span>
@@ -58,7 +58,7 @@
           <li>Retirement and Hall of Fame results</li>
           <li>Six offline save files</li>
         </ul>
-        <p>Alpha 0.2 focuses on the complete career loop. Trades, public career cards, and deeper story events remain future additions.</p>
+        <p>Alpha 0.3 deepens the draft, playoffs, player profiles, and career history. Trades, public career cards, and deeper story events remain future additions.</p>
       </aside>
     </section>
 
@@ -95,7 +95,11 @@
               </label>
               <label class="field">
                 <span>Games per team</span>
-                <input id="season-games" type="number" min="14" max="99" step="1" inputmode="numeric" value="30" />
+                <div class="number-stepper">
+                  <button class="number-step-button" data-adjust-games="-1" type="button" aria-label="Decrease season games">−</button>
+                  <input id="season-games" type="number" min="14" max="99" step="1" inputmode="numeric" value="30" />
+                  <button class="number-step-button" data-adjust-games="1" type="button" aria-label="Increase season games">+</button>
+                </div>
                 <small id="season-games-help" class="field-help">14–99 games</small>
               </label>
             </div>
@@ -153,7 +157,7 @@
         <div class="player-creator-layout">
           <div class="panel player-basics-panel">
             <div class="panel-heading"><div><span class="eyebrow">PLAYER IDENTITY</span><h2>Create your rookie.</h2></div></div>
-            <label class="field"><span>Player name</span><input id="player-name" type="text" maxlength="32" value="Alex Carter" /></label>
+            <label class="field"><span>Player name</span><input id="player-name" type="text" maxlength="32" value="Evan Oblewski" /></label>
             <div class="field-row three">
               <label class="field"><span>Age</span><input id="player-age" type="number" min="18" max="30" value="19" /></label>
               <label class="field"><span>Position</span><select id="player-position"><option>PG</option><option>SG</option><option>SF</option><option>PF</option><option>C</option></select></label>
@@ -206,7 +210,16 @@
         <div class="draft-stage panel">
           <span class="eyebrow">INAUGURAL HOOPSIM DRAFT</span>
           <h2 id="draft-headline">The league is generating.</h2>
-          <p id="draft-subhead">Building rosters, team strengths, and a draft class around your settings.</p>
+          <p id="draft-subhead" class="hidden" aria-hidden="true"></p>
+          <div id="draft-mode-controls" class="draft-mode-controls hidden">
+            <button id="manual-draft-button" class="secondary-button" type="button">Manual Draft</button>
+            <button id="simulate-draft-button" class="primary-button" type="button">Simulate every pick</button>
+          </div>
+          <div id="manual-draft-controls" class="manual-draft-controls hidden">
+            <button id="draft-next-pick-button" class="primary-button" type="button">Draft next pick</button>
+            <button id="simulate-remaining-draft-button" class="secondary-button" type="button">Simulate remaining picks</button>
+          </div>
+          <div id="draft-selection-detail" class="draft-selection-detail hidden"></div>
           <div id="draft-board" class="draft-board"></div>
           <div id="draft-result" class="draft-result hidden"></div>
           <div id="undrafted-offers" class="undrafted-offers hidden"></div>
@@ -219,7 +232,7 @@
       <div class="career-header">
         <div>
           <span class="eyebrow" id="career-league-label">HOOPSIM LEAGUE</span>
-          <h1 id="career-title">Alex Carter’s Career</h1>
+          <h1 id="career-title">Evan Oblewski’s Career</h1>
           <p id="career-subtitle">Season 1 · Regular Season</p>
         </div>
         <div class="career-header-actions">
@@ -244,7 +257,7 @@
               <div><span id="player-team-name">Oshkosh Sleet</span><small id="player-contract">Rookie contract · Year 1 of 4</small></div>
               <div class="overall-badge"><strong id="career-overall">60</strong><span>OVR</span></div>
             </div>
-            <h2 id="career-player-name">Alex Carter</h2>
+            <h2 id="career-player-name">Evan Oblewski</h2>
             <p id="career-player-meta">PG · 6′3″ · 195 lbs · Pure Playmaker</p>
             <div class="role-row"><span id="career-role">Rotation</span><span id="career-minutes">22 projected MPG</span><span id="career-health">Healthy</span></div>
             <div class="season-averages" id="season-averages"></div>
@@ -285,8 +298,12 @@
           <div id="all-league-teams" class="all-league-teams"></div>
           <div id="playoff-area" class="playoff-area hidden">
             <div id="playoff-bracket" class="playoff-bracket"></div>
+            <section id="playoff-log-panel" class="playoff-log-panel hidden">
+              <div class="panel-heading compact-heading"><div><span class="eyebrow">YOUR PLAYOFF RUN</span><h3>Postseason game log</h3></div></div>
+              <div id="playoff-game-log" class="list-stack"></div>
+            </section>
             <div class="sim-button-grid playoff-buttons">
-              <button id="sim-playoff-game" class="primary-button" type="button">Sim next game</button>
+              <button id="sim-playoff-game" class="primary-button" type="button">Sim one game per series</button>
               <button id="sim-playoff-round" class="secondary-button" type="button">Sim current round</button>
               <button id="sim-all-playoffs" class="secondary-button" type="button">Sim all playoffs</button>
             </div>
@@ -316,12 +333,29 @@
 
       <section id="career-history-tab" class="career-tab hidden">
         <div class="history-grid">
-          <article class="panel"><div class="panel-heading"><div><span class="eyebrow">CAREER CARD</span><h2>Season history</h2></div></div><div id="career-history-list" class="list-stack"></div></article>
+          <article class="panel">
+            <div class="panel-heading"><div><span class="eyebrow">CAREER CARD</span><h2>Season history</h2></div></div>
+            <div id="career-collective-summary" class="career-collective-summary"></div>
+            <div id="career-hof-outlook" class="career-hof-outlook"></div>
+            <div id="career-history-list" class="season-history-list"></div>
+          </article>
           <article class="panel"><div class="panel-heading"><div><span class="eyebrow">ACCOLADES</span><h2>Trophy case</h2></div></div><div id="career-accolades" class="trophy-case"></div></article>
         </div>
       </section>
     </section>
   </main>
+
+  <dialog id="player-profile-dialog" class="modal">
+    <div class="modal-card player-profile-card">
+      <div class="modal-heading">
+        <div><span class="eyebrow">PLAYER PROFILE</span><h2 id="profile-player-name">Player</h2><p id="profile-player-meta"></p></div>
+        <button id="close-player-profile" class="icon-button" type="button" aria-label="Close player profile">×</button>
+      </div>
+      <div id="profile-player-summary"></div>
+      <div id="profile-player-attributes"></div>
+      <div id="profile-player-history"></div>
+    </div>
+  </dialog>
 
   <dialog id="saves-dialog" class="modal">
     <form method="dialog" class="modal-card large-modal">
@@ -375,7 +409,7 @@
 
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-  <script src="hoopsim-teams.js?v=0.2.0"></script>
-  <script src="hoopsim.js?v=0.2.0"></script>
+  <script src="hoopsim-teams.js?v=0.3.0"></script>
+  <script src="hoopsim.js?v=0.3.0"></script>
 </body>
 </html>

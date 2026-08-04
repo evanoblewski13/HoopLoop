@@ -350,3 +350,107 @@ button:disabled { cursor: not-allowed; opacity: .45; transform: none !important;
   .all-team-members { grid-template-columns: 1fr; }
   .retirement-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* HoopSim Alpha 0.3 polish */
+.number-stepper { display: grid; grid-template-columns: 42px minmax(0,1fr) 42px; align-items: stretch; gap: 6px; }
+.number-stepper input { min-width: 0; text-align: center; font-weight: 800; }
+.number-step-button { border: 1px solid var(--line); border-radius: 10px; background: var(--soft); color: var(--ink); font: inherit; font-size: 20px; font-weight: 900; cursor: pointer; }
+.number-step-button:hover { border-color: var(--orange); background: #fff4ee; }
+
+.draft-mode-controls, .manual-draft-controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+.draft-selection-detail { margin: 16px 0 20px; }
+.draft-outlook-card, .drafted-prospect-card { border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(145deg,#fff,#f7f7f8); padding: 18px; }
+.draft-outlook-card h3, .drafted-prospect-card h3 { margin: 4px 0 6px; font-size: 24px; }
+.prospect-mini-list { display: grid; gap: 7px; margin-top: 12px; }
+.prospect-mini-list > div { display: flex; justify-content: space-between; gap: 16px; padding: 9px 10px; background: var(--soft); border-radius: 10px; }
+.prospect-mini-list span { color: var(--muted); font-size: 12px; text-align: right; }
+.drafted-prospect-card { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; }
+.drafted-prospect-card.user-selection { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,90,31,.12); }
+.drafted-overall { width: 74px; height: 74px; border-radius: 50%; display: grid; place-content: center; text-align: center; background: var(--ink); color: white; }
+.drafted-overall strong { font-size: 28px; line-height: 1; }
+.drafted-overall span { font-size: 10px; letter-spacing: .1em; }
+.drafted-skills { grid-column: 1/-1; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; }
+.drafted-skills span { background: var(--soft); border-radius: 9px; padding: 8px; font-size: 12px; display: flex; justify-content: space-between; }
+
+.player-name-button { border: 0; padding: 0; margin: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; display: inline-flex; flex-direction: column; align-items: flex-start; }
+.player-name-button strong { text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; }
+.player-name-button:hover strong, .player-name-button:focus-visible strong { color: var(--orange); text-decoration-color: currentColor; }
+.player-name-button small { color: var(--muted); }
+
+.sortable-table th { white-space: nowrap; }
+.stats-sort-button { border: 0; background: transparent; color: inherit; font: inherit; font-size: 11px; font-weight: 900; padding: 4px 2px; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
+.stats-sort-button.active { color: var(--orange); }
+
+.playoff-area { position: relative; }
+.bracket-scroll { display: flex; gap: 30px; align-items: flex-start; min-width: max-content; padding: 12px 4px 22px; }
+.bracket-round { min-width: 310px; display: grid; gap: 12px; }
+.bracket-round.current .bracket-round-label { color: var(--orange); }
+.bracket-round-list { display: grid; gap: 18px; }
+.series-card { position: relative; border: 1px solid var(--line); border-radius: 16px; background: #fff; padding: 13px; box-shadow: 0 8px 20px rgba(17,18,20,.06); }
+.series-card.user-series { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,90,31,.12), 0 8px 20px rgba(17,18,20,.06); }
+.series-conference { color: var(--muted); font-size: 10px; font-weight: 900; letter-spacing: .12em; margin-bottom: 7px; }
+.series-team { border-radius: 9px; padding: 9px 10px; }
+.series-team.winner { background: #eef9f1; }
+.series-game-strip { display: flex; flex-wrap: wrap; gap: 5px; border-top: 1px solid var(--line); padding-top: 9px; margin-top: 8px; }
+.series-game-strip span { border-radius: 999px; background: var(--soft); color: var(--muted); padding: 4px 7px; font-size: 10px; font-weight: 800; }
+.series-game-strip .a-win, .series-game-strip .b-win { color: var(--ink); }
+.series-game-strip .not-started { font-weight: 600; }
+.playoff-log-panel { margin-top: 20px; border: 1px solid var(--line); border-radius: 16px; padding: 16px; background: var(--soft); }
+.compact-heading { margin-bottom: 10px; }
+.compact-heading h3 { margin: 2px 0 0; }
+.playoff-log-row { border-left: 4px solid var(--orange); }
+
+.career-collective-summary { margin-bottom: 14px; }
+.career-summary-grid, .profile-summary-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; }
+.career-summary-grid > div, .profile-summary-grid > div { background: var(--soft); border-radius: 11px; padding: 10px; display: grid; gap: 2px; }
+.career-summary-grid strong, .profile-summary-grid strong { font-size: 18px; }
+.career-summary-grid span, .profile-summary-grid span { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.career-hof-outlook { margin: 14px 0 18px; }
+.hof-outlook-card, .hof-locked { border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+.hof-outlook-card strong { display: block; font-size: 30px; margin: 4px 0; }
+.hof-outlook-card p, .hof-locked span { color: var(--muted); font-size: 12px; }
+.hof-locked { display: grid; gap: 4px; background: var(--soft); }
+.season-history-list { display: grid; gap: 12px; }
+.season-history-card { border: 1px solid var(--line); border-radius: 16px; padding: 15px; }
+.season-history-heading { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.season-history-heading h3 { margin: 3px 0; }
+.season-history-heading p { margin: 0; color: var(--muted); font-size: 12px; }
+.season-history-heading > strong { font-size: 20px; }
+.season-stat-line { display: grid; grid-template-columns: 70px repeat(8,minmax(58px,1fr)); gap: 5px; align-items: center; margin-top: 13px; overflow-x: auto; }
+.season-stat-line span { font-size: 10px; font-weight: 900; color: var(--muted); }
+.season-stat-line b { background: var(--soft); border-radius: 8px; padding: 7px 5px; font-size: 11px; text-align: center; white-space: nowrap; }
+.season-shooting-line { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.season-shooting-line span { background: #fff4ee; color: #a53d16; border-radius: 999px; padding: 5px 8px; font-size: 11px; font-weight: 800; }
+.playoff-season-line { grid-template-columns: 70px repeat(6,minmax(64px,1fr)); border-top: 1px solid var(--line); padding-top: 8px; }
+
+.player-profile-card { width: min(1000px, calc(100vw - 24px)); max-height: 90vh; overflow: auto; }
+.profile-section { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px; }
+.profile-section h3 { margin: 0 0 12px; }
+.profile-attribute-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+.profile-attribute-grid > div { background: var(--soft); border-radius: 9px; padding: 9px; display: flex; justify-content: space-between; gap: 8px; }
+.profile-history-table { overflow-x: auto; }
+.profile-accolades { display: flex; flex-wrap: wrap; gap: 7px; }
+.profile-accolades span { background: #fff4ee; color: #a53d16; border-radius: 999px; padding: 6px 9px; font-size: 11px; font-weight: 800; }
+
+.development-list { display: grid; grid-template-columns: 1fr; gap: 6px; max-height: 56vh; overflow: auto; padding-right: 3px; }
+.development-change { align-items: center; }
+.development-values { display: grid; grid-template-columns: 34px 18px 34px 50px; align-items: center; justify-items: end; gap: 4px; }
+.development-values i { color: var(--muted); font-style: normal; }
+.development-values em { font-style: normal; font-size: 11px; color: var(--muted); }
+.development-change.positive .development-values strong, .development-change.positive .development-values em { color: var(--green); }
+.development-change.negative .development-values strong, .development-change.negative .development-values em { color: var(--red); }
+
+@media (max-width: 760px) {
+  .number-stepper { grid-template-columns: 48px minmax(0,1fr) 48px; }
+  .number-step-button { min-height: 46px; }
+  .draft-mode-controls > *, .manual-draft-controls > * { flex: 1 1 170px; }
+  .prospect-mini-list > div { align-items: flex-start; flex-direction: column; gap: 2px; }
+  .prospect-mini-list span { text-align: left; }
+  .drafted-prospect-card { grid-template-columns: 1fr auto; }
+  .drafted-skills { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .career-summary-grid, .profile-summary-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .profile-attribute-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .bracket-round { min-width: 270px; }
+  .season-history-heading { align-items: center; }
+}
+.bracket-round.complete .bracket-round-label::after { content: ''; }
