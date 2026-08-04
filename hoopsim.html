@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#ff5a1f" />
   <meta name="description" content="HoopSim — a customizable, offline basketball career simulator from HoopLoop." />
-  <title>HoopSim Alpha 0.3 — HoopLoop</title>
-  <link rel="stylesheet" href="hoopsim.css?v=0.3.0" />
+  <title>HoopSim Alpha 0.4 — HoopLoop</title>
+  <link rel="stylesheet" href="hoopsim.css?v=0.4.0" />
 </head>
 <body>
   <div class="page-noise" aria-hidden="true"></div>
@@ -16,7 +16,7 @@
     </a>
     <div class="sim-title">
       <strong>HoopSim</strong>
-      <span>Career Simulator · Alpha 0.3</span>
+      <span>Career Simulator · Alpha 0.4</span>
     </div>
     <div class="header-actions">
       <span id="autosave-status" class="autosave-status">Offline · ready</span>
@@ -52,13 +52,13 @@
           <li>Full draft and undrafted offers</li>
           <li>Complete regular season</li>
           <li>Awards and All-HoopLoop teams</li>
-          <li>Conference playoffs and Finals MVP</li>
+          <li>Conference playoffs, box scores, and Finals MVP</li>
           <li>Multi-season careers and aging</li>
-          <li>Free agency and roster movement</li>
+          <li>Free agency, trade requests, and league news</li>
           <li>Retirement and Hall of Fame results</li>
           <li>Six offline save files</li>
         </ul>
-        <p>Alpha 0.3 deepens the draft, playoffs, player profiles, and career history. Trades, public career cards, and deeper story events remain future additions.</p>
+        <p>Alpha 0.4 adds playoff box scores, league news, dynamic free agency interest, trophy-case stat leaders, jersey retirement, and offseason trade requests. Public career cards and deeper story events remain future additions.</p>
       </aside>
     </section>
 
@@ -97,7 +97,7 @@
                 <span>Games per team</span>
                 <div class="number-stepper">
                   <button class="number-step-button" data-adjust-games="-1" type="button" aria-label="Decrease season games">−</button>
-                  <input id="season-games" type="number" min="14" max="99" step="1" inputmode="numeric" value="30" />
+                  <input id="season-games" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="30" />
                   <button class="number-step-button" data-adjust-games="1" type="button" aria-label="Increase season games">+</button>
                 </div>
                 <small id="season-games-help" class="field-help">14–99 games</small>
@@ -158,8 +158,9 @@
           <div class="panel player-basics-panel">
             <div class="panel-heading"><div><span class="eyebrow">PLAYER IDENTITY</span><h2>Create your rookie.</h2></div></div>
             <label class="field"><span>Player name</span><input id="player-name" type="text" maxlength="32" value="Evan Oblewski" /></label>
-            <div class="field-row three">
+            <div class="field-row four">
               <label class="field"><span>Age</span><input id="player-age" type="number" min="18" max="30" value="19" /></label>
+              <label class="field"><span>Jersey</span><input id="player-jersey" type="text" inputmode="numeric" maxlength="2" value="1" aria-label="Jersey number" /></label>
               <label class="field"><span>Position</span><select id="player-position"><option>PG</option><option>SG</option><option>SF</option><option>PF</option><option>C</option></select></label>
               <label class="field"><span>Playstyle</span><select id="player-playstyle"></select></label>
             </div>
@@ -246,6 +247,7 @@
         <button data-tab="league" type="button">League</button>
         <button data-tab="stats" type="button">Stats</button>
         <button data-tab="roster" type="button">Roster</button>
+        <button data-tab="news" type="button">News</button>
         <button data-tab="history" type="button">History</button>
       </nav>
 
@@ -331,6 +333,17 @@
         </article>
       </section>
 
+      <section id="career-news-tab" class="career-tab hidden">
+        <article class="panel league-news-panel">
+          <div class="panel-heading"><div><span class="eyebrow">LEAGUE NEWS</span><h2>Movement around the league</h2><p>Trades, signings, and retirements from every completed offseason.</p></div></div>
+          <div class="news-columns">
+            <section><div class="news-heading"><span>TRADES</span><strong id="trade-news-count">0</strong></div><div id="trade-news-list" class="news-list"></div></section>
+            <section><div class="news-heading"><span>SIGNINGS</span><strong id="signing-news-count">0</strong></div><div id="signing-news-list" class="news-list"></div></section>
+            <section><div class="news-heading"><span>RETIREMENTS</span><strong id="retirement-news-count">0</strong></div><div id="retirement-news-list" class="news-list"></div></section>
+          </div>
+        </article>
+      </section>
+
       <section id="career-history-tab" class="career-tab hidden">
         <div class="history-grid">
           <article class="panel">
@@ -357,6 +370,13 @@
     </div>
   </dialog>
 
+  <dialog id="box-score-dialog" class="modal">
+    <div class="modal-card box-score-card">
+      <div class="modal-heading"><div><span class="eyebrow">GAME BOX SCORE</span><h2 id="box-score-title">Box score</h2><p id="box-score-subtitle"></p></div><button id="close-box-score" class="icon-button" type="button" aria-label="Close box score">×</button></div>
+      <div id="box-score-content" class="box-score-content"></div>
+    </div>
+  </dialog>
+
   <dialog id="saves-dialog" class="modal">
     <form method="dialog" class="modal-card large-modal">
       <div class="modal-heading"><div><span class="eyebrow">OFFLINE CAREERS</span><h2>HoopSim save files</h2><p>Careers are stored on this device. Export creates a portable JSON backup you can store or move to another browser. Import restores that file later.</p></div><button class="icon-button" value="cancel" aria-label="Close">×</button></div>
@@ -379,6 +399,11 @@
       <div class="modal-heading"><div><span class="eyebrow">OFFSEASON DEVELOPMENT</span><h2 id="offseason-heading">Season 1 complete</h2><p>Your performance, age, durability, injuries, and variance shaped this development roll.</p></div></div>
       <div id="development-summary" class="development-summary"></div>
       <p id="offseason-note" class="alpha-note">Continue into the next season or retire and finalize your career.</p>
+      <div class="trade-request-panel">
+        <div><strong>Want a change of scenery?</strong><span>Request one random offseason trade. The request has a 33% chance to be denied.</span></div>
+        <button id="request-trade-button" class="secondary-button" type="button">Request trade</button>
+      </div>
+      <div id="trade-request-result" class="trade-request-result hidden"></div>
       <div class="modal-actions"><button id="retire-career-button" class="ghost-button" type="button">Retire now</button><button id="continue-next-season-button" class="primary-button" type="button">Continue to next season</button></div>
     </div>
   </dialog>
@@ -409,7 +434,7 @@
 
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-  <script src="hoopsim-teams.js?v=0.3.0"></script>
-  <script src="hoopsim.js?v=0.3.0"></script>
+  <script src="hoopsim-teams.js?v=0.4.0"></script>
+  <script src="hoopsim.js?v=0.4.0"></script>
 </body>
 </html>

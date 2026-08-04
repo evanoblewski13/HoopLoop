@@ -1,8 +1,8 @@
-# HoopSim Alpha 0.3
+# HoopSim Alpha 0.4
 
 HoopSim is HoopLoop's customizable, local-first basketball career simulator.
 
-Alpha 0.3 adds a manual draft, player profile pages, sortable league statistics, deeper season and career history, hidden Hall of Fame outlooks, richer playoff brackets and playoff game logs, explicit mobile season-length controls, and seventeen occasional easter-egg player names.
+Alpha 0.4 focuses on postseason depth, simulation realism, league movement, and career legacy. It adds higher playoff starter minutes, inspectable game box scores, persistent playoff seeds, a vertically centered bracket, stronger height/attribute effects, teammate-quality-assisted playmaking, League News, rating-based free-agency interest, statistical-leader trophies, jersey numbers and jersey retirement, offseason trade requests, and automatic roster-view switching after team changes.
 
 ## Install
 
@@ -10,4 +10,4 @@ Copy the files in this folder into the root of the existing HoopLoop GitHub repo
 
 Open `hoopsim-verify.html` after GitHub Pages deploys, then open `hoopsim.html`.
 
-See `HOOPSIM-0.3-UPDATE-GUIDE.md` and `HOOPSIM-0.3-TEST-CHECKLIST.md`.
+See `HOOPSIM-0.4-UPDATE-GUIDE.md` and `HOOPSIM-0.4-TEST-CHECKLIST.md`.

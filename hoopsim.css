@@ -454,3 +454,67 @@ button:disabled { cursor: not-allowed; opacity: .45; transform: none !important;
   .season-history-heading { align-items: center; }
 }
 .bracket-round.complete .bracket-round-label::after { content: ''; }
+
+/* Alpha 0.4 additions */
+.field-row.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.game-log-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.game-log-actions > span { color: var(--muted); font-size: 11px; }
+
+.bracket-scroll { align-items: stretch; }
+.bracket-round { display: flex; flex-direction: column; }
+.bracket-round-list { display: flex; flex-direction: column; justify-content: space-around; flex: 1; min-height: var(--bracket-height, 360px); gap: 18px; }
+.series-game-strip .box-score-chip { border: 0; border-radius: 999px; background: var(--soft); color: var(--ink); padding: 5px 8px; font: inherit; font-size: 10px; font-weight: 900; cursor: pointer; }
+.series-game-strip .box-score-chip:hover, .series-game-strip .box-score-chip:focus-visible { background: #fff0e9; color: var(--orange-dark); outline: 2px solid rgba(255,90,31,.2); }
+
+.box-score-card { width: min(1120px, calc(100vw - 20px)); max-height: 92vh; overflow: auto; }
+.box-score-content { display: grid; gap: 22px; }
+.box-team-section { border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: #fff; }
+.box-team-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 18px; background: var(--soft); border-bottom: 1px solid var(--line); }
+.box-team-heading > div { display: flex; align-items: center; gap: 10px; }
+.box-team-heading span { display: grid; place-items: center; min-width: 44px; height: 34px; padding: 0 8px; border-radius: 9px; background: var(--ink); color: #fff; font-size: 11px; font-weight: 900; }
+.box-team-heading h3 { margin: 0; }
+.box-team-heading > strong { font-size: 32px; }
+.box-table-scroll { overflow-x: auto; }
+.box-table { min-width: 900px; }
+.box-table td, .box-table th { text-align: center; }
+.box-table td:first-child, .box-table th:first-child { text-align: left; }
+.box-total-row { background: #fff7f3; font-weight: 800; }
+
+.news-columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.news-columns > section { border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: #fff; }
+.news-heading { display: flex; justify-content: space-between; align-items: center; padding: 13px 14px; background: var(--soft); border-bottom: 1px solid var(--line); }
+.news-heading span { font-size: 11px; font-weight: 900; letter-spacing: .1em; }
+.news-heading strong { display: grid; place-items: center; min-width: 28px; height: 28px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 11px; }
+.news-list { max-height: 560px; overflow-y: auto; }
+.news-card { padding: 13px 14px; border-bottom: 1px solid var(--line); }
+.news-card:last-child { border-bottom: 0; }
+.news-card span { color: var(--orange-dark); font-size: 9px; font-weight: 900; letter-spacing: .1em; }
+.news-card p { margin: 5px 0 0; font-size: 13px; line-height: 1.45; }
+.news-empty { padding: 18px 14px; }
+
+.trade-request-panel { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-top: 16px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--soft); }
+.trade-request-panel > div { display: grid; gap: 3px; }
+.trade-request-panel span { color: var(--muted); font-size: 12px; }
+.trade-request-result { margin-top: 10px; border-radius: 12px; padding: 12px 14px; font-size: 13px; font-weight: 700; }
+.trade-request-result.approved { background: #ecf9ef; color: #166534; border: 1px solid #bfe7c8; }
+.trade-request-result.denied { background: #fff1ef; color: #8e1b12; border: 1px solid #f2c5be; }
+
+.retirement-accolades, .jersey-retirement-section { margin: 20px 0; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--soft); }
+.retirement-accolades > div { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+.retirement-accolades span:not(.eyebrow) { padding: 6px 9px; border-radius: 999px; background: #fff; font-size: 11px; font-weight: 800; }
+.jersey-retirement-section { display: grid; gap: 10px; background: linear-gradient(145deg, #111214, #25272b); color: #fff; }
+.jersey-retirement-section article { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 11px 12px; border-radius: 11px; background: rgba(255,255,255,.08); }
+.jersey-retirement-section small { color: rgba(255,255,255,.7); text-align: right; }
+
+@media (max-width: 900px) {
+  .news-columns { grid-template-columns: 1fr; }
+  .news-list { max-height: 300px; }
+}
+@media (max-width: 760px) {
+  .field-row.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .trade-request-panel { align-items: stretch; flex-direction: column; }
+  .trade-request-panel button { width: 100%; }
+  .bracket-round-list { min-height: auto; justify-content: flex-start; }
+  .jersey-retirement-section article { align-items: flex-start; flex-direction: column; }
+  .jersey-retirement-section small { text-align: left; }
+}

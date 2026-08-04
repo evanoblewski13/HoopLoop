@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '0.3.0';
+  const VERSION = '0.4.0';
   const DB_NAME = 'hoopsim_alpha_db';
   const DB_STORE = 'careers';
   const MAX_SAVES = 6;
@@ -70,6 +70,12 @@
 
   const $ = (id) => document.getElementById(id);
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const sanitizeJerseyNumber = (value) => {
+    const digits = String(value ?? '').replace(/\D/g, '').slice(0, 2);
+    if (!digits) return '0';
+    if (digits === '00') return '00';
+    return String(clamp(Number(digits), 0, 99));
+  };
   const round1 = (value) => Math.round(value * 10) / 10;
   const round3 = (value) => Math.round(value * 1000) / 1000;
   const mean = (values) => values.reduce((sum, value) => sum + value, 0) / Math.max(1, values.length);
@@ -431,6 +437,7 @@
       playstyle: dom['player-playstyle'].value,
       height: Number(dom['player-height'].value),
       weight: clamp(Number(dom['player-weight'].value), 140, 400),
+      jerseyNumber: sanitizeJerseyNumber(dom['player-jersey'].value),
       attributes: { ...creator.attributes },
       overall
     };
@@ -504,7 +511,7 @@
 
   function createUserPlayer(config) {
     return {
-      id: uid('user'), ...config, teamId: null, isUser: true, isRookie: true, contractYears: 4, contractLength: 4,
+      id: uid('user'), ...config, jerseyNumber: sanitizeJerseyNumber(config.jerseyNumber ?? '1'), teamId: null, isUser: true, isRookie: true, contractYears: 4, contractLength: 4,
       role: 'Prospect', projectedMinutes: 0, injury: null, majorInjuries: 0,
       stats: { regular: createStats(), playoffs: createStats() }, seasonHistory: [], accolades: []
     };
@@ -688,7 +695,8 @@
       league: { ...config, season: 1 }, teams, prospects, draftPicks, userPlayerId,
       schedule: [], currentRound: 0, phase: 'preseason', awards: null, playoffs: null,
       champion: null, finalsMvp: null, completed: false, careerEvents: [],
-      settings: { injuriesEnabled: config.injuriesEnabled }, rosterViewTeamId:null
+      settings: { injuriesEnabled: config.injuriesEnabled }, rosterViewTeamId:null, lastKnownUserTeamId:null,
+      tradeRequestSeason:null
     };
   }
 
@@ -714,7 +722,9 @@
     user.contractYears = 1;
     user.contractLength = 1;
     team.roster.push(user);
-    currentCareer.careerEvents.push({ type:'signed', season:1, text:`Signed with ${team.name} after going undrafted.` });
+    currentCareer.rosterViewTeamId = team.id;
+    currentCareer.lastKnownUserTeamId = team.id;
+    recordLeagueNews('signing', `${user.name} signed with ${team.name} after going undrafted.`, 1);
     dom['undrafted-offers'].classList.add('hidden');
     dom['draft-result'].innerHTML = `<span class="eyebrow">SIGNED</span><h2>${escapeHtml(team.name)} give ${escapeHtml(user.name)} a chance.</h2><p>You signed a one-year rookie deal after going undrafted. Your role will be determined by the roster.</p>`;
     finalizeLeagueAfterRosterChoice();
@@ -767,6 +777,19 @@
   function getTeam(teamId) { return currentCareer.teams.find((team) => team.id === teamId); }
   function allPlayers() { return currentCareer.teams.flatMap((team) => team.roster); }
 
+  function recordLeagueNews(category, text, season = currentCareer?.league?.season || 1) {
+    if (!currentCareer) return;
+    currentCareer.careerEvents ||= [];
+    currentCareer.careerEvents.push({ id: uid('news'), category, type: category, season, text, createdAt: new Date().toISOString() });
+  }
+
+  function addAccolade(player, label, season = currentCareer.league.season, teamId = player.teamId) {
+    player.accolades ||= [];
+    if (!player.accolades.some((award) => award.season === season && award.label === label)) {
+      player.accolades.push({ season, label, teamId });
+    }
+  }
+
   function rotationScore(player, team) {
     const gamesPlayed = team.record.wins + team.record.losses;
     const winPct = gamesPlayed ? team.record.wins / gamesPlayed : team.expectedWinPct;
@@ -792,12 +815,21 @@
     return selected;
   }
 
-  function updateTeamRotation(team) {
+  function updateTeamRotation(team, playoff = false) {
     const available = team.roster.filter((player) => !player.injury || player.injury.gamesRemaining <= 0).sort((a,b) => rotationScore(b, team)-rotationScore(a, team));
     const starters = chooseStartingFive(team.roster);
-    const rotationSize = available.length >= 10 ? 10 : Math.min(9, available.length);
+    const regularSize = available.length >= 10 ? 10 : Math.min(9, available.length);
+    const rotationSize = playoff ? Math.min(9, available.length) : regularSize;
     const rotation = [...starters, ...available.filter((player) => !starters.includes(player))].slice(0, rotationSize);
-    const minuteSlots = rotationSize >= 10 ? [36,34,32,30,28,22,18,16,13,11] : [37,35,33,31,29,23,20,17,15];
+    const regularSlots = rotationSize >= 10 ? [36,34,32,30,28,22,18,16,13,11] : [37,35,33,31,29,23,20,17,15];
+    const playoffSlotsBySize = {
+      9: [40,39,38,37,36,20,14,10,6],
+      8: [41,40,39,38,37,20,15,10],
+      7: [42,41,40,39,38,22,18],
+      6: [43,42,41,40,39,35],
+      5: [48,48,48,48,48]
+    };
+    const minuteSlots = playoff ? (playoffSlotsBySize[rotationSize] || regularSlots) : regularSlots;
     team.roster.forEach((player) => {
       const index = rotation.indexOf(player);
       player.projectedMinutes = index >= 0 ? minuteSlots[index] : 0;
@@ -820,39 +852,59 @@
     return sum(rotation.map((player) => ((player.attributes.interiorDefense + player.attributes.perimeterDefense + player.attributes.iq) / 3) * player.projectedMinutes)) / sum(rotation.map((player) => player.projectedMinutes));
   }
 
-  function simulatePlayerBox(player, opponentDefense, coachRating) {
+  function teamOffensiveSupport(team, focalPlayerId) {
+    const teammates = team.roster.filter((player) => player.id !== focalPlayerId && player.projectedMinutes > 0 && !player.injury);
+    if (!teammates.length) return .82;
+    const weightedSkill = sum(teammates.map((player) => {
+      const scoring = mean([player.attributes.layup, player.attributes.dunk, player.attributes.midrange, player.attributes.threePoint, player.attributes.postMoves]);
+      return scoring * player.projectedMinutes;
+    })) / Math.max(1, sum(teammates.map((player) => player.projectedMinutes)));
+    return clamp(.72 + (weightedSkill - 48) * .012, .72, 1.28);
+  }
+
+  function simulatePlayerBox(player, opponentDefense, coachRating, offenseSupport = 1) {
     const minutes = player.projectedMinutes;
     const a = player.attributes;
     const scoringSkill = mean([a.layup, a.dunk, a.midrange, a.threePoint, a.postMoves]);
     const creation = mean([a.passing, a.dribbling, a.iq]);
     const defenseFactor = clamp(1 + (70 - opponentDefense) * .003, .88, 1.10);
     const coachFactor = clamp(1 + (coachRating - 70) * .0015, .96, 1.05);
-    const playstyleFga = player.playstyle === 'Pure Scorer' ? 2.5 : player.playstyle === 'Offensive Engine' ? 1.4 : player.playstyle === 'Pure Playmaker' ? -1.2 : player.playstyle === '3&D' ? -.3 : 0;
-    const fgaPer36 = clamp(3.5 + scoringSkill / 11 + a.dribbling / 60 + playstyleFga, 3.5, 20);
-    const fga = Math.max(0, Math.round(fgaPer36 * minutes / 36 * rand(.87,1.13)));
-    const threeRate = clamp(.06 + a.threePoint / 240 + (player.playstyle === '3&D' ? .15 : 0) + (player.playstyle === 'Pure Scorer' ? .04 : 0), .04, .68);
-    const threeA = Math.min(fga, Math.round(fga * threeRate * rand(.85,1.15)));
+    const sizeFinishing = clamp((player.height - POSITION_HEIGHT[player.position]) * .008 + (a.vertical - 60) * .0015, -.05, .09);
+    const playstyleFga = player.playstyle === 'Pure Scorer' ? 2.7 : player.playstyle === 'Offensive Engine' ? 1.5 : player.playstyle === 'Pure Playmaker' ? -1.1 : player.playstyle === '3&D' ? -.25 : 0;
+    const fgaPer36 = clamp(3.2 + scoringSkill / 10.7 + a.dribbling / 58 + playstyleFga, 3.2, 21.5);
+    const fga = Math.max(0, Math.round(fgaPer36 * minutes / 36 * rand(.88,1.12)));
+    const threeRate = clamp(.05 + a.threePoint / 235 + (player.playstyle === '3&D' ? .15 : 0) + (player.playstyle === 'Pure Scorer' ? .04 : 0), .03, .70);
+    const threeA = Math.min(fga, Math.round(fga * threeRate * rand(.86,1.14)));
     const twoA = Math.max(0, fga - threeA);
     const twoSkill = mean([a.layup, a.dunk, a.midrange, a.postMoves]);
-    const twoPct = clamp((.37 + twoSkill * .00235) * defenseFactor * coachFactor, .35, .65);
-    const threePct = clamp((.21 + a.threePoint * .00255) * defenseFactor * coachFactor, .20, .47);
+    const twoPct = clamp((.365 + twoSkill * .00245 + sizeFinishing) * defenseFactor * coachFactor, .34, .69);
+    const threePct = clamp((.205 + a.threePoint * .0027) * defenseFactor * coachFactor, .19, .49);
     const threeM = binomial(threeA, threePct);
     const twoM = binomial(twoA, twoPct);
-    const ftaPer36 = clamp(.6 + (a.layup + a.dunk + a.postMoves) / 58 + (player.playstyle === 'Pure Scorer' ? 1 : 0), .5, 10);
-    const fta = Math.round(ftaPer36 * minutes / 36 * rand(.65,1.35));
+    const ftaPer36 = clamp(.45 + (a.layup + a.dunk + a.postMoves) / 56 + Math.max(0, player.height - 78) * .035 + (player.playstyle === 'Pure Scorer' ? 1 : 0), .4, 11);
+    const fta = Math.round(ftaPer36 * minutes / 36 * rand(.68,1.32));
     const ftPct = clamp(.45 + a.freeThrow * .005, .50, .96);
     const ftm = binomial(fta, ftPct);
     const points = twoM * 2 + threeM * 3 + ftm;
-    const positionReb = { PG:0, SG:.3, SF:.8, PF:1.7, C:2.7 }[player.position];
-    const rebounds = Math.max(0, Math.round((.4 + a.rebounding / 13 + positionReb + (player.playstyle === 'Uber Athlete' ? 1.2 : 0)) * minutes / 36 * rand(.65,1.35)));
-    const posAst = player.position === 'PG' ? 1.4 : player.position === 'SG' ? .5 : 0;
-    const assists = Math.max(0, Math.round((.2 + a.passing / 15 + a.dribbling / 55 + posAst + (player.playstyle === 'Pure Playmaker' ? 2 : player.playstyle === 'Offensive Engine' ? 1 : 0)) * minutes / 36 * rand(.55,1.45)));
-    const steals = Math.max(0, Math.round((.15 + a.perimeterDefense / 78 + a.iq / 210 + (player.playstyle === 'Lockdown Defender' ? .5 : 0)) * minutes / 36 * rand(.45,1.55)));
-    const heightBonus = Math.max(0, (player.height - 75) / 14);
-    const blocks = Math.max(0, Math.round((.05 + a.interiorDefense / 82 + heightBonus + (player.position === 'C' ? .4 : 0)) * minutes / 36 * rand(.4,1.6)));
-    const turnovers = Math.max(0, Math.round((.4 + fga / 16 + assists / 3.8 + creation / 150 - a.iq / 220) * rand(.6,1.4)));
-    const fouls = Math.max(0, Math.round((1.2 + (100-a.iq)/60) * minutes / 36 * rand(.5,1.5)));
-    return { playerId:player.id, minutes, points, rebounds, assists, steals, blocks, turnovers, fgm:twoM+threeM, fga, threeM, threeA, ftm, fta, fouls, starter:player.role==='Starter' };
+    const positionReb = { PG:.15, SG:.35, SF:.85, PF:1.75, C:2.8 }[player.position];
+    const heightReb = Math.max(-.6, (player.height - POSITION_HEIGHT[player.position]) * .30);
+    const verticalReb = (a.vertical - 50) / 30;
+    const eliteSizeBonus = Math.max(0, player.height - 86) * .50 + Math.max(0, a.rebounding - 85) * .20;
+    const reboundPer36 = .2 + a.rebounding / 12 + positionReb + heightReb + verticalReb + eliteSizeBonus + (player.playstyle === 'Uber Athlete' ? .8 : 0);
+    const rebounds = Math.max(0, Math.round(reboundPer36 * minutes / 36 * rand(.78,1.22)));
+    const posAst = player.position === 'PG' ? 1.45 : player.position === 'SG' ? .55 : player.position === 'SF' ? .2 : 0;
+    const playmakerBonus = player.playstyle === 'Pure Playmaker' ? 2.1 : player.playstyle === 'Offensive Engine' ? 1.05 : 0;
+    const assistPer36 = .15 + a.passing / 14.2 + a.dribbling / 60 + posAst + playmakerBonus;
+    const passingLeverage = clamp(.78 + (a.passing - 50) * .006, .65, 1.08);
+    const talentMultiplier = clamp(1 + (offenseSupport - 1) * passingLeverage, .68, 1.34);
+    const assists = Math.max(0, Math.round(assistPer36 * talentMultiplier * minutes / 36 * rand(.72,1.28)));
+    const steals = Math.max(0, Math.round((.12 + a.perimeterDefense / 76 + a.iq / 205 + (player.playstyle === 'Lockdown Defender' ? .52 : 0)) * minutes / 36 * rand(.55,1.45)));
+    const heightBonus = Math.max(-.15, (player.height - POSITION_HEIGHT[player.position]) / 8);
+    const verticalBlock = Math.max(0, (a.vertical - 55) / 80);
+    const blocks = Math.max(0, Math.round((.03 + a.interiorDefense / 78 + heightBonus + verticalBlock + (player.position === 'C' ? .42 : player.position === 'PF' ? .18 : 0)) * minutes / 36 * rand(.52,1.48)));
+    const turnovers = Math.max(0, Math.round((.35 + fga / 17 + assists / 4 + creation / 155 - a.iq / 215) * rand(.65,1.35)));
+    const fouls = Math.max(0, Math.round((1.1 + (100-a.iq)/62) * minutes / 36 * rand(.55,1.45)));
+    return { playerId:player.id, playerName:player.name, position:player.position, overall:player.overall, minutes, points, rebounds, assists, steals, blocks, turnovers, fgm:twoM+threeM, fga, threeM, threeA, ftm, fta, fouls, starter:player.role==='Starter' };
   }
 
   function addBoxToStats(stats, box) {
@@ -877,11 +929,11 @@
   function simulateGame(homeTeam, awayTeam, playoff = false) {
     const homeInjuredBefore = homeTeam.roster.filter((player) => player.injury).map((player) => player.id);
     const awayInjuredBefore = awayTeam.roster.filter((player) => player.injury).map((player) => player.id);
-    updateTeamRotation(homeTeam); updateTeamRotation(awayTeam);
+    updateTeamRotation(homeTeam, playoff); updateTeamRotation(awayTeam, playoff);
     const homeDefense = averageDefense(homeTeam);
     const awayDefense = averageDefense(awayTeam);
-    const homeBoxes = homeTeam.roster.filter((player) => player.projectedMinutes > 0 && !player.injury).map((player) => simulatePlayerBox(player, awayDefense, homeTeam.coachRating));
-    const awayBoxes = awayTeam.roster.filter((player) => player.projectedMinutes > 0 && !player.injury).map((player) => simulatePlayerBox(player, homeDefense, awayTeam.coachRating));
+    const homeBoxes = homeTeam.roster.filter((player) => player.projectedMinutes > 0 && !player.injury).map((player) => simulatePlayerBox(player, awayDefense, homeTeam.coachRating, teamOffensiveSupport(homeTeam, player.id)));
+    const awayBoxes = awayTeam.roster.filter((player) => player.projectedMinutes > 0 && !player.injury).map((player) => simulatePlayerBox(player, homeDefense, awayTeam.coachRating, teamOffensiveSupport(awayTeam, player.id)));
     let homeScore = sum(homeBoxes.map((box) => box.points));
     let awayScore = sum(awayBoxes.map((box) => box.points));
     const homeCourt = randInt(0,3);
@@ -908,7 +960,7 @@
     homeTeam.roster.forEach((player) => maybeInjurePlayer(player, homeTeam));
     awayTeam.roster.forEach((player) => maybeInjurePlayer(player, awayTeam));
     updateTeamRotation(homeTeam); updateTeamRotation(awayTeam);
-    return { homeId:homeTeam.id, awayId:awayTeam.id, homeScore, awayScore, winnerId:homeScore>awayScore?homeTeam.id:awayTeam.id, homeBoxes, awayBoxes, homeInjuredBefore, awayInjuredBefore, playoff };
+    return { id:uid('game'), season:currentCareer.league.season, homeId:homeTeam.id, awayId:awayTeam.id, homeScore, awayScore, winnerId:homeScore>awayScore?homeTeam.id:awayTeam.id, homeBoxes, awayBoxes, homeInjuredBefore, awayInjuredBefore, playoff };
   }
 
   function userGameEntry(result, context = {}) {
@@ -931,7 +983,8 @@
       playoff: Boolean(context.playoff),
       playoffStage: context.stage || null,
       playoffRound: context.playoffRound || null,
-      seriesGame: context.seriesGame || null
+      seriesGame: context.seriesGame || null,
+      gameId: result.id || null
     };
   }
 
@@ -1021,7 +1074,9 @@
     const defUsed = new Set();
     const defenseFirst = selectPositionBalanced(qualified, defensiveScore, defUsed);
     const defenseSecond = selectPositionBalanced(qualified, defensiveScore, defUsed);
-    return { mvp:mvp.id, roty:roty.id, dpoy:dpoy.id, sixth:sixth.id, coty:coachTeam.id, first:first.map(p=>p.id), second:second.map(p=>p.id), third:third.map(p=>p.id), defenseFirst:defenseFirst.map(p=>p.id), defenseSecond:defenseSecond.map(p=>p.id) };
+    const leaderFor = (key) => [...qualified].sort((a,b)=>statsAverages(b.stats.regular)[key]-statsAverages(a.stats.regular)[key])[0]?.id || null;
+    const statLeaders = { scoring:leaderFor('ppg'), rebounding:leaderFor('rpg'), assists:leaderFor('apg'), steals:leaderFor('spg'), blocks:leaderFor('bpg') };
+    return { mvp:mvp.id, roty:roty.id, dpoy:dpoy.id, sixth:sixth.id, coty:coachTeam.id, first:first.map(p=>p.id), second:second.map(p=>p.id), third:third.map(p=>p.id), defenseFirst:defenseFirst.map(p=>p.id), defenseSecond:defenseSecond.map(p=>p.id), statLeaders };
   }
 
   function finishRegularSeason() {
@@ -1030,10 +1085,14 @@
     const user = getUserPlayer();
     const awardMap = currentCareer.awards;
     [['MVP','mvp'],['Rookie of the Year','roty'],['Defensive Player of the Year','dpoy'],['Sixth Man of the Year','sixth']].forEach(([label,key]) => {
-      if (awardMap[key] === user.id) user.accolades.push({ season:currentCareer.league.season, label });
+      if (awardMap[key] === user.id) addAccolade(user, label);
     });
     [['All-HoopLoop First Team','first'],['All-HoopLoop Second Team','second'],['All-HoopLoop Third Team','third'],['All-Defensive First Team','defenseFirst'],['All-Defensive Second Team','defenseSecond']].forEach(([label,key]) => {
-      if (awardMap[key].includes(user.id)) user.accolades.push({ season:currentCareer.league.season, label });
+      if (awardMap[key].includes(user.id)) addAccolade(user, label);
+    });
+    const leaderLabels = { scoring:'Scoring Leader', rebounding:'Rebounding Leader', assists:'Assists Leader', steals:'Steals Leader', blocks:'Blocks Leader' };
+    Object.entries(awardMap.statLeaders || {}).forEach(([key, playerId]) => {
+      if (playerId === user.id) addAccolade(user, leaderLabels[key]);
     });
   }
 
@@ -1049,10 +1108,13 @@
     const west = standingsForConference('West').slice(0, slots);
     const east = standingsForConference('East').slice(0, slots);
     const pair = (teams, conference) => Array.from({ length: teams.length/2 }, (_, i) => createSeries(teams[i], teams[teams.length-1-i], conference, i+1, teams.length-i));
+    const seedByTeam = {};
+    west.forEach((team,index)=>{ seedByTeam[team.id] = index + 1; });
+    east.forEach((team,index)=>{ seedByTeam[team.id] = index + 1; });
     currentCareer.playoffs = {
       bestOf:currentCareer.league.seriesLength, winsNeeded:Math.floor(currentCareer.league.seriesLength/2)+1,
       stage:'conference', roundNumber:1, currentSeries:[...pair(west,'West'),...pair(east,'East')],
-      history:[], finals:null, complete:false
+      history:[], finals:null, complete:false, seedByTeam
     };
     currentCareer.phase = 'playoffs';
   }
@@ -1102,9 +1164,9 @@
     const eastWinners = playoffs.currentSeries.filter((s)=>s.conference==='East').map((s)=>getTeam(s.winnerId));
     if (westWinners.length === 1 && eastWinners.length === 1) {
       playoffs.stage = 'finals'; playoffs.roundNumber += 1;
-      playoffs.currentSeries = [createSeries(westWinners[0], eastWinners[0], 'Finals')];
+      playoffs.currentSeries = [createSeries(westWinners[0], eastWinners[0], 'Finals', playoffs.seedByTeam?.[westWinners[0].id] ?? null, playoffs.seedByTeam?.[eastWinners[0].id] ?? null)];
     } else {
-      const pairWinners = (teams, conference) => Array.from({length:teams.length/2},(_,i)=>createSeries(teams[i],teams[teams.length-1-i],conference));
+      const pairWinners = (teams, conference) => Array.from({length:teams.length/2},(_,i)=>createSeries(teams[i],teams[teams.length-1-i],conference, playoffs.seedByTeam?.[teams[i].id] ?? null, playoffs.seedByTeam?.[teams[teams.length-1-i].id] ?? null));
       playoffs.roundNumber += 1;
       playoffs.currentSeries = [...pairWinners(westWinners,'West'),...pairWinners(eastWinners,'East')];
     }
@@ -1152,8 +1214,8 @@
   function finalizeSeasonHistory() {
     const user = getUserPlayer();
     const season = currentCareer.league.season;
-    if (currentCareer.champion === user.teamId && !user.accolades.some((award)=>award.season===season && award.label==='HoopSim Champion')) user.accolades.push({season,label:'HoopSim Champion'});
-    if (currentCareer.finalsMvp === user.id && !user.accolades.some((award)=>award.season===season && award.label==='Finals MVP')) user.accolades.push({season,label:'Finals MVP'});
+    if (currentCareer.champion === user.teamId) addAccolade(user, 'HoopSim Champion', season, user.teamId);
+    if (currentCareer.finalsMvp === user.id) addAccolade(user, 'Finals MVP', season, user.teamId);
     allPlayers().forEach((player)=>{
       player.seasonHistory ||= [];
       const snapshot = seasonSnapshot(player);
@@ -1163,17 +1225,17 @@
     });
   }
 
-  function capturePostseasonScroll() {
-    const panel = dom['postseason-panel'];
-    if (!panel) return { scrollY: window.scrollY, relative: 0 };
-    return { scrollY: window.scrollY, relative: window.scrollY - panel.offsetTop };
+  function capturePostseasonScroll(elementId = 'sim-playoff-game') {
+    const element = $(elementId) || dom['postseason-panel'];
+    return { elementId, viewportTop: element?.getBoundingClientRect?.().top ?? 0, scrollY: window.scrollY };
   }
 
   function restorePostseasonScroll(anchor) {
     requestAnimationFrame(() => {
-      const panel = dom['postseason-panel'];
-      const top = panel ? panel.offsetTop + anchor.relative : anchor.scrollY;
-      window.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
+      const element = $(anchor.elementId) || dom['season-finale'] || dom['postseason-panel'];
+      if (!element?.getBoundingClientRect) return window.scrollTo({ top: anchor.scrollY, behavior: 'auto' });
+      const delta = element.getBoundingClientRect().top - anchor.viewportTop;
+      window.scrollBy({ top: delta, behavior: 'auto' });
     });
   }
 
@@ -1219,12 +1281,54 @@
     return allPlayers().find((player) => player.id === id) || currentCareer?.prospects?.find((player) => player.id === id) || null;
   }
 
+  function findGameResult(gameId) {
+    if (!gameId || !currentCareer) return null;
+    for (const round of currentCareer.schedule || []) {
+      for (const game of round) if (game.result?.id === gameId) return game.result;
+    }
+    const playoffRounds = [...(currentCareer.playoffs?.history || [])];
+    if (currentCareer.playoffs?.currentSeries) playoffRounds.push({ series:currentCareer.playoffs.currentSeries });
+    for (const round of playoffRounds) {
+      for (const series of round.series || []) {
+        const game = (series.games || []).find((entry)=>entry.id===gameId);
+        if (game) return game;
+      }
+    }
+    return null;
+  }
+
+  function boxScoreTeamMarkup(team, boxes, score) {
+    const byId = new Map(boxes.map((box)=>[box.playerId,box]));
+    const rows = [...boxes].sort((a,b)=>Number(b.starter)-Number(a.starter) || b.minutes-a.minutes).map((box)=>{
+      const player = playerById(box.playerId);
+      const name = box.playerName || player?.name || 'Unknown Player';
+      const position = box.position || player?.position || '—';
+      return `<tr><td><button class="player-name-button" data-player-id="${box.playerId}" type="button"><strong>${escapeHtml(name)}</strong><small>${position}${box.starter?' · Starter':''}</small></button></td><td>${box.minutes}</td><td>${box.fgm}-${box.fga}</td><td>${box.threeM}-${box.threeA}</td><td>${box.ftm}-${box.fta}</td><td>${box.rebounds}</td><td>${box.assists}</td><td>${box.steals}</td><td>${box.blocks}</td><td>${box.turnovers}</td><td>${box.fouls}</td><td><strong>${box.points}</strong></td></tr>`;
+    }).join('');
+    const totals = boxes.reduce((acc,box)=>{ ['minutes','fgm','fga','threeM','threeA','ftm','fta','rebounds','assists','steals','blocks','turnovers','fouls','points'].forEach((key)=>acc[key]+=Number(box[key]||0)); return acc; }, {minutes:0,fgm:0,fga:0,threeM:0,threeA:0,ftm:0,fta:0,rebounds:0,assists:0,steals:0,blocks:0,turnovers:0,fouls:0,points:0});
+    return `<section class="box-team-section"><div class="box-team-heading"><div><span>${escapeHtml(team.abbr)}</span><h3>${escapeHtml(team.name)}</h3></div><strong>${score}</strong></div><div class="box-table-scroll"><table class="data-table box-table"><thead><tr><th>Player</th><th>MIN</th><th>FG</th><th>3PT</th><th>FT</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>TO</th><th>PF</th><th>PTS</th></tr></thead><tbody>${rows}<tr class="box-total-row"><td><strong>TEAM</strong></td><td>${totals.minutes}</td><td>${totals.fgm}-${totals.fga}</td><td>${totals.threeM}-${totals.threeA}</td><td>${totals.ftm}-${totals.fta}</td><td>${totals.rebounds}</td><td>${totals.assists}</td><td>${totals.steals}</td><td>${totals.blocks}</td><td>${totals.turnovers}</td><td>${totals.fouls}</td><td><strong>${score}</strong></td></tr></tbody></table></div></section>`;
+  }
+
+  function openBoxScore(gameId) {
+    const game = findGameResult(gameId);
+    if (!game) return showToast('That box score is not available in this save.', 'error');
+    const home = getTeam(game.homeId), away = getTeam(game.awayId);
+    dom['box-score-title'].textContent = `${away.name} ${game.awayScore}, ${home.name} ${game.homeScore}`;
+    dom['box-score-subtitle'].textContent = `${game.playoff ? 'Playoff game' : 'Regular season'} · Season ${game.season || currentCareer.league.season}`;
+    dom['box-score-content'].innerHTML = boxScoreTeamMarkup(away, game.awayBoxes || [], game.awayScore) + boxScoreTeamMarkup(home, game.homeBoxes || [], game.homeScore);
+    dom['box-score-dialog'].showModal();
+  }
+
   function renderCareer() {
     if (!currentCareer) return;
     migrateCareer(currentCareer);
     showView('career-view', false);
     const user = getUserPlayer();
     const team = getTeam(user.teamId);
+    if (currentCareer.lastKnownUserTeamId !== user.teamId) {
+      currentCareer.rosterViewTeamId = user.teamId;
+      currentCareer.lastKnownUserTeamId = user.teamId;
+    }
     updateTeamRotation(team);
     dom['career-league-label'].textContent = currentCareer.league.name.toUpperCase();
     dom['career-title'].textContent = `${user.name}’s Career`;
@@ -1236,7 +1340,7 @@
     dom['player-contract'].textContent = `${user.draftPick ? 'Career contract' : 'Player contract'} · Year ${contractYear} · ${user.contractYears} remaining`;
     dom['career-overall'].textContent = user.overall;
     dom['career-player-name'].textContent = user.name;
-    dom['career-player-meta'].textContent = `${user.position} · Age ${user.age} · ${formatHeight(user.height)} · ${user.weight} lbs · ${user.playstyle}`;
+    dom['career-player-meta'].textContent = `#${user.jerseyNumber ?? '0'} · ${user.position} · Age ${user.age} · ${formatHeight(user.height)} · ${user.weight} lbs · ${user.playstyle}`;
     dom['career-role'].textContent = currentCareer.phase === 'retired' ? 'Retired' : user.role;
     dom['career-minutes'].textContent = currentCareer.phase === 'retired' ? `${user.seasonHistory.length} seasons` : `${user.projectedMinutes} projected MPG`;
     dom['career-health'].textContent = user.injury ? `${user.injury.label} · ${user.injury.gamesRemaining} games` : 'Healthy';
@@ -1247,6 +1351,7 @@
     renderLeaders();
     renderStatsTable();
     renderRosterSelector(team.id);
+    renderLeagueNews();
     renderHistory(user);
     renderPostseason();
     disableSimButtons(currentCareer.phase !== 'regular');
@@ -1283,7 +1388,7 @@
     const gameLabel = log.playoff
       ? `${log.playoffStage === 'finals' ? 'Finals' : `Round ${log.playoffRound}`} · G${log.seriesGame}`
       : `G${log.round}`;
-    return `<div class="list-row game-log-row ${log.playoff?'playoff-log-row':''}"><span><strong>${log.result} ${log.score}</strong><small> vs ${escapeHtml(opponent.abbr)} · ${line}</small></span><span>${gameLabel}</span></div>`;
+    return `<div class="list-row game-log-row ${log.playoff?'playoff-log-row':''}"><span><strong>${log.result} ${log.score}</strong><small> vs ${escapeHtml(opponent.abbr)} · ${line}</small></span><div class="game-log-actions"><span>${gameLabel}</span>${log.gameId?`<button class="text-button" data-box-score="${log.gameId}" type="button">Box score</button>`:''}</div></div>`;
   }
 
   function renderRecentGames() {
@@ -1385,6 +1490,22 @@
       <td>${player.position}</td><td>${player.age}</td><td>${player.overall}</td><td>${player.role}</td><td>${player.projectedMinutes}</td><td>${player.contractYears} yr</td><td>${player.injury?`${escapeHtml(player.injury.label)} (${player.injury.gamesRemaining})`:'Healthy'}</td></tr>`).join('')}</tbody></table>`;
   }
 
+  function renderLeagueNews() {
+    const events = [...(currentCareer.careerEvents || [])].reverse();
+    const groups = {
+      trade: events.filter((event)=>['trade','traded'].includes(event.category || event.type)),
+      signing: events.filter((event)=>['signing','signed'].includes(event.category || event.type)),
+      retirement: events.filter((event)=>['retirement','retired'].includes(event.category || event.type))
+    };
+    const renderGroup = (items) => items.length ? items.slice(0,80).map((event)=>`<article class="news-card"><span>SEASON ${event.season || 1}</span><p>${escapeHtml(event.text)}</p></article>`).join('') : '<div class="muted news-empty">No news in this category yet.</div>';
+    dom['trade-news-count'].textContent = groups.trade.length;
+    dom['signing-news-count'].textContent = groups.signing.length;
+    dom['retirement-news-count'].textContent = groups.retirement.length;
+    dom['trade-news-list'].innerHTML = renderGroup(groups.trade);
+    dom['signing-news-list'].innerHTML = renderGroup(groups.signing);
+    dom['retirement-news-list'].innerHTML = renderGroup(groups.retirement);
+  }
+
   function totalsFromSeasons(player, key = 'totals') {
     const totals = createStats();
     (player.seasonHistory || []).forEach((season)=>{
@@ -1457,7 +1578,7 @@
     const regular = statsAverages(player.stats?.regular || createStats());
     const playoffs = statsAverages(player.stats?.playoffs || createStats());
     dom['profile-player-name'].textContent = player.name;
-    dom['profile-player-meta'].textContent = `${player.position} · Age ${player.age} · ${formatHeight(player.height)} · ${player.weight} lbs · ${player.playstyle}${team?` · ${team.name}`:''}`;
+    dom['profile-player-meta'].textContent = `${player.isUser ? `#${player.jerseyNumber ?? '0'} · ` : ''}${player.position} · Age ${player.age} · ${formatHeight(player.height)} · ${player.weight} lbs · ${player.playstyle}${team?` · ${team.name}`:''}`;
     dom['profile-player-summary'].innerHTML = `<div class="profile-summary-grid">
       <div><strong>${player.overall}</strong><span>OVR</span></div><div><strong>${player.role || 'Prospect'}</strong><span>Role</span></div>
       <div><strong>${player.stats?.regular?.games || 0}</strong><span>GP</span></div><div><strong>${round1(regular.mpg).toFixed(1)}</strong><span>MPG</span></div>
@@ -1482,7 +1603,8 @@
     panel.classList.toggle('hidden', !['awards','playoffs','complete'].includes(currentCareer.phase));
     if (panel.classList.contains('hidden')) return;
     const awards = currentCareer.awards;
-    dom['awards-grid'].innerHTML = awardCard('MVP',awards.mvp)+awardCard('ROTY',awards.roty)+awardCard('DPOY',awards.dpoy)+awardCard('6MOTY',awards.sixth)+`<article class="award-card"><span>COTY</span><strong>${escapeHtml(getTeam(awards.coty).name)}</strong><small>Coach rating ${getTeam(awards.coty).coachRating}</small></article>`;
+    const leaderCards = awards.statLeaders ? awardCard('SCORING LEADER',awards.statLeaders.scoring)+awardCard('REBOUNDING LEADER',awards.statLeaders.rebounding)+awardCard('ASSISTS LEADER',awards.statLeaders.assists)+awardCard('STEALS LEADER',awards.statLeaders.steals)+awardCard('BLOCKS LEADER',awards.statLeaders.blocks) : '';
+    dom['awards-grid'].innerHTML = awardCard('MVP',awards.mvp)+awardCard('ROTY',awards.roty)+awardCard('DPOY',awards.dpoy)+awardCard('6MOTY',awards.sixth)+`<article class="award-card"><span>COTY</span><strong>${escapeHtml(getTeam(awards.coty).name)}</strong><small>Coach rating ${getTeam(awards.coty).coachRating}</small></article>`+leaderCards;
     const teamLine = (label, ids) => `<div class="all-team-row"><strong>${label}</strong><div class="all-team-members">${ids.map((id)=>{const player=playerById(id);return `<div class="all-team-player"><button class="player-name-button" data-player-id="${player.id}" type="button"><strong>${escapeHtml(player.name)}</strong><small>${player.position} · ${escapeHtml(getTeam(player.teamId).abbr)} · ${player.overall} OVR</small></button></div>`}).join('')}</div></div>`;
     dom['all-league-teams'].innerHTML = teamLine('All-HoopLoop First Team',awards.first)+teamLine('All-HoopLoop Second Team',awards.second)+teamLine('All-HoopLoop Third Team',awards.third)+teamLine('All-Defensive First Team',awards.defenseFirst)+teamLine('All-Defensive Second Team',awards.defenseSecond);
     if (currentCareer.phase === 'awards') {
@@ -1508,20 +1630,24 @@
     if (!playoffs) return;
     const userTeamId = getUserPlayer().teamId;
     const rounds = playoffs.complete ? [...playoffs.history] : [...playoffs.history, {stage:playoffs.stage,roundNumber:playoffs.roundNumber,series:playoffs.currentSeries,current:true}];
-    dom['playoff-bracket'].innerHTML = `<div class="bracket-scroll">${rounds.map((round)=>`<section class="bracket-round ${round.current?'current':'complete'}">
+    const maxSeries = Math.max(1, ...rounds.map((round)=>round.series.length));
+    const bracketHeight = Math.max(190, maxSeries * 176);
+    dom['playoff-bracket'].innerHTML = `<div class="bracket-scroll" style="--bracket-height:${bracketHeight}px">${rounds.map((round)=>`<section class="bracket-round ${round.current?'current':'complete'}">
       <h3 class="bracket-round-label">${round.stage==='finals'?'HoopSim Finals':`Round ${round.roundNumber}`}</h3>
       <div class="bracket-round-list">${round.series.map((series)=>{
         const a=getTeam(series.teamAId), b=getTeam(series.teamBId);
         const userSeries = [a.id,b.id].includes(userTeamId);
+        const seedA = series.seedA ?? playoffs.seedByTeam?.[a.id] ?? '';
+        const seedB = series.seedB ?? playoffs.seedByTeam?.[b.id] ?? '';
         const gameChips = series.games.map((game,index)=>{
           const aScore = game.homeId===a.id ? game.homeScore : game.awayScore;
           const bScore = game.homeId===b.id ? game.homeScore : game.awayScore;
-          return `<span class="${game.winnerId===a.id?'a-win':'b-win'}" title="Game ${index+1}: ${a.abbr} ${aScore}, ${b.abbr} ${bScore}">G${index+1} ${aScore}-${bScore}</span>`;
+          return `<button class="box-score-chip ${game.winnerId===a.id?'a-win':'b-win'}" data-box-score="${game.id}" type="button" title="Open Game ${index+1} box score">G${index+1} ${aScore}-${bScore}</button>`;
         }).join('');
         return `<article class="series-card ${userSeries?'user-series':''}">
           <div class="series-conference">${round.stage==='finals'?'CHAMPIONSHIP':escapeHtml(series.conference)}</div>
-          <div class="series-team ${series.winnerId===a.id?'winner':''}"><span><i class="series-seed">${series.seedA || ''}</i>${escapeHtml(a.name)}</span><strong>${series.winsA}</strong></div>
-          <div class="series-team ${series.winnerId===b.id?'winner':''}"><span><i class="series-seed">${series.seedB || ''}</i>${escapeHtml(b.name)}</span><strong>${series.winsB}</strong></div>
+          <div class="series-team ${series.winnerId===a.id?'winner':''}"><span><i class="series-seed">${seedA}</i>${escapeHtml(a.name)}</span><strong>${series.winsA}</strong></div>
+          <div class="series-team ${series.winnerId===b.id?'winner':''}"><span><i class="series-seed">${seedB}</i>${escapeHtml(b.name)}</span><strong>${series.winsB}</strong></div>
           <div class="series-game-strip">${gameChips || '<span class="not-started">Series not started</span>'}</div>
         </article>`;
       }).join('')}</div>
@@ -1639,6 +1765,7 @@
       team.roster = staying;
     });
     shuffle(freeAgents).forEach((player) => {
+      const previousTeam = getTeam(player.teamId);
       const candidates = [...currentCareer.teams].sort((a,b) => {
         const needA = teamNeedScore(a, player) + (12-a.roster.length)*2 + rand(-1,1);
         const needB = teamNeedScore(b, player) + (12-b.roster.length)*2 + rand(-1,1);
@@ -1649,6 +1776,7 @@
       player.contractYears = weightedChoice([[3,3],[4,5],[5,4],[2,1],[1,.35]]);
       player.contractLength = player.contractYears;
       team.roster.push(player);
+      if (previousTeam && previousTeam.id !== team.id) recordLeagueNews('signing', `${player.name} signed a ${player.contractYears}-year deal with ${team.name} after leaving ${previousTeam.name}.`, currentCareer.league.season + 1);
     });
   }
 
@@ -1666,7 +1794,7 @@
         player.isRookie = false;
         player.injury = null;
         if (shouldGeneratedPlayerRetire(player)) {
-          currentCareer.careerEvents.push({ season:currentCareer.league.season, text:`${player.name} retired at age ${player.age}.` });
+          recordLeagueNews('retirement', `${player.name} retired at age ${player.age}.`, currentCareer.league.season);
         } else survivors.push(player);
       });
       team.roster = survivors;
@@ -1681,6 +1809,7 @@
 
   function openOffseason() {
     const development = prepareOffseason();
+    renderLeagueNews();
     const user = getUserPlayer();
     const overallDelta = development.newOverall - development.oldOverall;
     dom['offseason-heading'].textContent = `${user.name}: ${development.oldOverall} → ${development.newOverall} OVR (${overallDelta>=0?'+':''}${overallDelta})`;
@@ -1691,9 +1820,14 @@
       return `<div class="development-change ${change>0?'positive':change<0?'negative':''}"><span>${label}</span><div class="development-values"><b>${oldValue}</b><i>→</i><strong>${newValue}</strong><em>(${change>0?'+':''}${change})</em></div></div>`;
     }).join('')}</div>`;
     const forced = currentCareer.forcedRetirementReason;
-    dom['offseason-note'].textContent = forced || (user.contractYears <= 0 ? 'Your contract has expired. Continue to review three free-agent offers, or retire now.' : `You have ${user.contractYears} season${user.contractYears===1?'':'s'} remaining on your contract.`);
+    const offerCount = freeAgencyOfferCount(user.overall);
+    dom['offseason-note'].textContent = forced || (user.contractYears <= 0 ? `Your contract has expired. Your ${user.overall} OVR reputation has generated up to ${offerCount} free-agent options.` : `You have ${user.contractYears} season${user.contractYears===1?'':'s'} remaining on your contract.`);
     dom['continue-next-season-button'].textContent = forced ? 'Finalize retirement' : user.contractYears <= 0 ? 'Review contract offers' : `Continue to Season ${currentCareer.league.season + 1}`;
     dom['retire-career-button'].classList.toggle('hidden', Boolean(forced));
+    const tradeAvailable = !forced && user.contractYears > 0 && currentCareer.tradeRequestSeason !== currentCareer.league.season;
+    dom['request-trade-button'].disabled = !tradeAvailable;
+    dom['request-trade-button'].textContent = currentCareer.tradeRequestSeason === currentCareer.league.season ? 'Trade request used' : user.contractYears <= 0 ? 'Use free agency instead' : 'Request trade';
+    dom['trade-request-result'].classList.add('hidden');
     dom['offseason-dialog'].showModal();
   }
 
@@ -1722,7 +1856,19 @@
     currentCareer.userPlayoffLogs = [];
     currentCareer.development = null;
     currentCareer.forcedRetirementReason = null;
+    currentCareer.rosterViewTeamId = getUserPlayer().teamId;
+    currentCareer.lastKnownUserTeamId = getUserPlayer().teamId;
     currentCareer.careerEvents.push({ season:currentCareer.league.season, text:`Season ${currentCareer.league.season} began.` });
+  }
+
+  function freeAgencyOfferCount(overall) {
+    if (overall >= 95) return 10;
+    if (overall >= 90) return 8;
+    if (overall >= 85) return 7;
+    if (overall >= 80) return 6;
+    if (overall >= 75) return 5;
+    if (overall >= 70) return 4;
+    return 3;
   }
 
   function buildFreeAgencyOffers() {
@@ -1734,7 +1880,8 @@
       const projectedRoleScore = need + (team.roster.filter((p)=>p.position===user.position && p.overall>user.overall).length*-2);
       return { team, score:projectedRoleScore + rand(-1.5,1.5) };
     }).sort((a,b)=>b.score-a.score);
-    const selected = [{team:currentTeam,score:999}, ...ranked.filter((entry)=>entry.team.id!==currentTeam.id)].slice(0,3);
+    const count = Math.min(currentCareer.teams.length, freeAgencyOfferCount(user.overall));
+    const selected = [{team:currentTeam,score:999}, ...ranked.filter((entry)=>entry.team.id!==currentTeam.id)].slice(0,count);
     return selected.map(({team})=>{
       const stronger = team.roster.filter((player)=>player.position===user.position && player.overall>user.overall).length;
       const role = stronger===0?'Likely starter':stronger===1?'Rotation / sixth man':'Reserve competition';
@@ -1747,7 +1894,7 @@
   function showFreeAgencyOffers() {
     currentCareer.freeAgencyOffers = buildFreeAgencyOffers();
     const user = getUserPlayer();
-    dom['free-agency-heading'].textContent = `${user.name} enters free agency`;
+    dom['free-agency-heading'].textContent = `${user.name} enters free agency · ${currentCareer.freeAgencyOffers.length} teams interested`;
     dom['free-agency-offers'].innerHTML = currentCareer.freeAgencyOffers.map((offer)=>{
       const team=getTeam(offer.teamId);
       return `<article class="offer-card"><span class="eyebrow">${team.id===user.teamId?'RE-SIGN':'NEW TEAM'}</span><h3>${escapeHtml(team.name)}</h3><p>${offer.role} · ${offer.minutes} projected MPG</p><p>${offer.years}-year contract · Team quality ${offer.quality}</p><button class="primary-button wide" data-free-agent-team="${team.id}" type="button">Choose ${escapeHtml(team.abbr)}</button></article>`;
@@ -1769,12 +1916,48 @@
     user.contractYears = offer.years;
     user.contractLength = offer.years;
     newTeam.roster.push(user);
-    currentCareer.careerEvents.push({season:currentCareer.league.season+1,text:`Signed a ${offer.years}-year contract with ${newTeam.name}.`});
+    currentCareer.rosterViewTeamId = newTeam.id;
+    currentCareer.lastKnownUserTeamId = newTeam.id;
+    recordLeagueNews('signing', `${user.name} signed a ${offer.years}-year contract with ${newTeam.name}${oldTeam.id===newTeam.id?'':' after leaving '+oldTeam.name}.`, currentCareer.league.season + 1);
     dom['free-agency-dialog'].close();
     resetForNextSeason();
     await putSave(currentCareer);
     renderCareer();
     showToast(`Signed with ${newTeam.name}.`, 'success');
+  }
+
+  async function requestTrade() {
+    const user = getUserPlayer();
+    if (!currentCareer || currentCareer.tradeRequestSeason === currentCareer.league.season || user.contractYears <= 0) return;
+    currentCareer.tradeRequestSeason = currentCareer.league.season;
+    dom['request-trade-button'].disabled = true;
+    dom['request-trade-button'].textContent = 'Trade request used';
+    dom['trade-request-result'].classList.remove('hidden');
+    if (Math.random() < .33) {
+      dom['trade-request-result'].className = 'trade-request-result denied';
+      dom['trade-request-result'].textContent = 'The front office denied your trade request. You will remain with your current team for now.';
+      await putSave(currentCareer);
+      return;
+    }
+    const oldTeam = getTeam(user.teamId);
+    const newTeam = choose(currentCareer.teams.filter((team)=>team.id!==oldTeam.id));
+    const tradePiece = [...newTeam.roster].filter((player)=>!player.isUser).sort((a,b)=>Math.abs(a.overall-user.overall)-Math.abs(b.overall-user.overall))[0];
+    oldTeam.roster = oldTeam.roster.filter((player)=>player.id!==user.id);
+    newTeam.roster = newTeam.roster.filter((player)=>player.id!==tradePiece.id);
+    tradePiece.teamId = oldTeam.id;
+    user.teamId = newTeam.id;
+    oldTeam.roster.push(tradePiece);
+    newTeam.roster.push(user);
+    updateTeamRotation(oldTeam);
+    updateTeamRotation(newTeam);
+    currentCareer.rosterViewTeamId = newTeam.id;
+    currentCareer.lastKnownUserTeamId = newTeam.id;
+    recordLeagueNews('trade', `${oldTeam.name} traded ${user.name} to ${newTeam.name} for ${tradePiece.name}.`, currentCareer.league.season + 1);
+    dom['trade-request-result'].className = 'trade-request-result approved';
+    dom['trade-request-result'].textContent = `Trade approved: you are headed to the ${newTeam.name}. ${tradePiece.name} was sent to ${oldTeam.name}.`;
+    await putSave(currentCareer);
+    renderCareer();
+    if (!dom['offseason-dialog'].open) dom['offseason-dialog'].showModal();
   }
 
   async function continueNextSeason() {
@@ -1812,6 +1995,27 @@
     return clamp(Math.round(score), 1, 99);
   }
 
+  function jerseyRetirementTeams(user) {
+    const seasonCounts = {};
+    (user.seasonHistory || []).forEach((season)=>{ seasonCounts[season.teamId] = (seasonCounts[season.teamId] || 0) + 1; });
+    const accoladeCounts = {};
+    (user.accolades || []).forEach((award)=>{
+      const inferredTeamId = award.teamId ?? user.seasonHistory?.find((season)=>season.season===award.season)?.teamId;
+      if (inferredTeamId != null) accoladeCounts[inferredTeamId] = (accoladeCounts[inferredTeamId] || 0) + 1;
+    });
+    return Object.keys(seasonCounts).map(Number).map((teamId)=>{
+      const team = getTeam(teamId);
+      const finalsMvp = (user.accolades || []).some((award)=>award.label==='Finals MVP' && (award.teamId ?? user.seasonHistory?.find((season)=>season.season===award.season)?.teamId)===teamId);
+      const accolades = accoladeCounts[teamId] || 0;
+      const seasons = seasonCounts[teamId] || 0;
+      const reasons = [];
+      if (finalsMvp) reasons.push('Finals MVP');
+      if (accolades >= 5) reasons.push(`${accolades} team accolades`);
+      if (seasons >= 15) reasons.push(`${seasons} seasons`);
+      return reasons.length ? { teamId, teamName:team?.name || 'Former team', reasons } : null;
+    }).filter(Boolean);
+  }
+
   function buildRetirementSummary(reason) {
     const user = getUserPlayer();
     const totals = careerTotals(user);
@@ -1821,6 +2025,8 @@
       reason, seasons:user.seasonHistory.length, games:totals.games,
       points:totals.points, rebounds:totals.rebounds, assists:totals.assists,
       ppg:round1(totals.points/games), rpg:round1(totals.rebounds/games), apg:round1(totals.assists/games),
+      fgPct:round1((totals.fga ? totals.fgm/totals.fga : 0)*100), threePct:round1((totals.threeA ? totals.threeM/totals.threeA : 0)*100), ftPct:round1((totals.fta ? totals.ftm/totals.fta : 0)*100),
+      teamsPlayed:[...new Set((user.seasonHistory||[]).map((season)=>season.teamId))], jerseyRetirements:jerseyRetirementTeams(user),
       hofProbability:hof, hallOfFame:hof>=80
     };
   }
@@ -1828,12 +2034,17 @@
   async function retireCareer(reason = 'You chose to end the career on your own terms.') {
     dom['offseason-dialog'].close();
     currentCareer.retirement = buildRetirementSummary(reason);
+    recordLeagueNews('retirement', `${getUserPlayer().name} retired after ${currentCareer.retirement.seasons} seasons.`, currentCareer.league.season);
     currentCareer.phase = 'retired';
     currentCareer.completed = true;
     await putSave(currentCareer);
     const user = getUserPlayer();
     const r = currentCareer.retirement;
-    dom['retirement-summary'].innerHTML = `<div class="retirement-hero"><span class="eyebrow">FINAL CAREER CARD</span><h2>${escapeHtml(user.name)}</h2><p>${escapeHtml(r.reason)}</p></div><div class="retirement-grid"><div class="retirement-stat"><strong>${r.seasons}</strong><span>Seasons</span></div><div class="retirement-stat"><strong>${r.games}</strong><span>Games</span></div><div class="retirement-stat"><strong>${r.points.toLocaleString()}</strong><span>Points</span></div><div class="retirement-stat"><strong>${r.ppg}</strong><span>Career PPG</span></div><div class="retirement-stat"><strong>${r.rebounds.toLocaleString()}</strong><span>Rebounds</span></div><div class="retirement-stat"><strong>${r.apg}</strong><span>Career APG</span></div><div class="retirement-stat"><strong>${user.accolades.length}</strong><span>Accolades</span></div><div class="retirement-stat"><strong>${r.hofProbability}%</strong><span>Hall probability</span></div></div><h3>HoopLoop Hall of Fame probability: ${r.hofProbability}%</h3><div class="hof-meter"><span style="width:${r.hofProbability}%"></span></div><p>${r.hallOfFame?'This career cleared the 80% induction threshold.':'This career did not reach the 80% automatic induction threshold.'}</p>`;
+    const accoladeCounts = {};
+    user.accolades.forEach((award)=>{ accoladeCounts[award.label]=(accoladeCounts[award.label]||0)+1; });
+    const accoladeSummary = Object.entries(accoladeCounts).sort((a,b)=>b[1]-a[1]).map(([label,count])=>`<span>${escapeHtml(label)}${count>1?` ×${count}`:''}</span>`).join('') || '<span>No major accolades</span>';
+    const jerseySummary = r.jerseyRetirements.length ? `<section class="jersey-retirement-section"><span class="eyebrow">JERSEY RETIREMENTS</span>${r.jerseyRetirements.map((entry)=>`<article><strong>#${escapeHtml(user.jerseyNumber)} · ${escapeHtml(entry.teamName)}</strong><small>${escapeHtml(entry.reasons.join(' · '))}</small></article>`).join('')}</section>` : '';
+    dom['retirement-summary'].innerHTML = `<div class="retirement-hero"><span class="eyebrow">FINAL CAREER CARD</span><h2>#${escapeHtml(user.jerseyNumber)} ${escapeHtml(user.name)}</h2><p>${escapeHtml(r.reason)}</p></div><div class="retirement-grid"><div class="retirement-stat"><strong>${r.seasons}</strong><span>Seasons</span></div><div class="retirement-stat"><strong>${r.games}</strong><span>Games</span></div><div class="retirement-stat"><strong>${r.points.toLocaleString()}</strong><span>Points</span></div><div class="retirement-stat"><strong>${r.ppg}</strong><span>Career PPG</span></div><div class="retirement-stat"><strong>${r.rebounds.toLocaleString()}</strong><span>Rebounds</span></div><div class="retirement-stat"><strong>${r.apg}</strong><span>Career APG</span></div><div class="retirement-stat"><strong>${r.fgPct}%</strong><span>FG%</span></div><div class="retirement-stat"><strong>${r.threePct}%</strong><span>3P%</span></div><div class="retirement-stat"><strong>${r.ftPct}%</strong><span>FT%</span></div><div class="retirement-stat"><strong>${r.teamsPlayed.length}</strong><span>Teams</span></div><div class="retirement-stat"><strong>${user.accolades.length}</strong><span>Accolades</span></div><div class="retirement-stat"><strong>${r.hofProbability}%</strong><span>Hall probability</span></div></div><section class="retirement-accolades"><span class="eyebrow">CAREER HONORS</span><div>${accoladeSummary}</div></section>${jerseySummary}<h3>HoopLoop Hall of Fame probability: ${r.hofProbability}%</h3><div class="hof-meter"><span style="width:${r.hofProbability}%"></span></div><p>${r.hallOfFame?'This career cleared the 80% induction threshold.':'This career did not reach the 80% automatic induction threshold.'}</p>`;
     dom['retirement-dialog'].showModal();
     renderCareer();
   }
@@ -1845,7 +2056,31 @@
     career.userGameLogs ||= [];
     career.userPlayoffLogs ||= [];
     career.careerEvents ||= [];
+    career.careerEvents.forEach((event)=>{ event.category ||= event.type === 'signed' ? 'signing' : event.type === 'retired' ? 'retirement' : event.type === 'traded' ? 'trade' : event.category; });
     career.settings ||= { injuriesEnabled: career.league.injuriesEnabled !== false };
+    career.tradeRequestSeason ??= null;
+    career.lastKnownUserTeamId ??= null;
+    (career.schedule || []).forEach((round)=>round.forEach((scheduled)=>{
+      if (scheduled.result) {
+        scheduled.result.id ||= uid('game');
+        scheduled.result.season ||= career.league.season;
+      }
+    }));
+    if (career.playoffs) {
+      if (!career.playoffs.seedByTeam) {
+        career.playoffs.seedByTeam = {};
+        const firstRound = career.playoffs.history?.[0]?.series || (career.playoffs.roundNumber === 1 ? career.playoffs.currentSeries : []);
+        (firstRound || []).forEach((series)=>{
+          if (series.seedA != null) career.playoffs.seedByTeam[series.teamAId] = series.seedA;
+          if (series.seedB != null) career.playoffs.seedByTeam[series.teamBId] = series.seedB;
+        });
+      }
+      const rounds = [...(career.playoffs.history || []), { series:career.playoffs.currentSeries || [] }];
+      rounds.forEach((round)=>round.series?.forEach((series)=>series.games?.forEach((game)=>{
+        game.id ||= uid('game');
+        game.season ||= career.league.season;
+      })));
+    }
     career.teams.forEach((team)=>{
       team.record ||= {wins:0,losses:0,pointsFor:0,pointsAgainst:0};
       team.roster.forEach((player)=>{
@@ -1865,6 +2100,8 @@
           season.playoffFtPct ??= round1(playoffAvg.ftPct*100);
         });
         player.accolades ||= [];
+        player.accolades.forEach((award)=>{ award.teamId ??= player.seasonHistory?.find((season)=>season.season===award.season)?.teamId ?? player.teamId; });
+        if (player.isUser) player.jerseyNumber = sanitizeJerseyNumber(player.jerseyNumber ?? '1');
         player.majorInjuries ||= 0;
         player.contractYears = Number.isFinite(player.contractYears) ? player.contractYears : 1;
         player.contractLength ||= Math.max(1, player.contractYears);
@@ -1931,6 +2168,7 @@
     dom['league-size'].value = '16'; dom['season-games'].value='30'; dom['league-name'].value='HoopSim League';
     updatePlayoffOptions(); autoSelectTeams();
     dom['player-name'].value='Evan Oblewski';
+    dom['player-jersey'].value='1';
     dom['player-position'].value='PG'; dom['player-playstyle'].value='All Around Hooper'; dom['player-height'].value='75'; dom['player-weight'].value='195';
     applyPlaystyleTemplate(); showView('creator-view'); showCreatorStep('league');
   }
@@ -1941,8 +2179,11 @@
     dom['open-saves-button'].addEventListener('click', renderSaveDialog);
     dom['new-save-from-dialog'].addEventListener('click', () => { dom['saves-dialog'].close(); startNewCareer(); });
     dom['league-size'].addEventListener('change', updatePlayoffOptions);
-    dom['season-games'].addEventListener('input', previewSeasonGamesInput);
+    dom['season-games'].addEventListener('input',()=>{ dom['season-games'].value = dom['season-games'].value.replace(/\D/g,'').slice(0,2); previewSeasonGamesInput(); });
     ['change','blur'].forEach((eventName)=>dom['season-games'].addEventListener(eventName,clampSeasonGamesInput));
+    dom['season-games'].addEventListener('keydown',(event)=>{ if(event.key==='Enter'){ event.preventDefault(); dom['season-games'].blur(); } });
+    dom['player-jersey'].addEventListener('input',()=>{ dom['player-jersey'].value = dom['player-jersey'].value.replace(/\D/g,'').slice(0,2); });
+    dom['player-jersey'].addEventListener('blur',()=>{ dom['player-jersey'].value = sanitizeJerseyNumber(dom['player-jersey'].value); });
     document.querySelectorAll('[data-adjust-games]').forEach((button)=>button.addEventListener('click',()=>{
       const current = Number(dom['season-games'].value);
       const base = Number.isFinite(current) ? current : 30;
@@ -1993,6 +2234,8 @@
       if(playerButton && currentCareer) openPlayerProfile(playerButton.dataset.playerId);
     });
     dom['close-player-profile'].addEventListener('click',()=>dom['player-profile-dialog'].close());
+    dom['close-box-score'].addEventListener('click',()=>dom['box-score-dialog'].close());
+    document.addEventListener('click',(event)=>{ const button=event.target.closest('[data-box-score]'); if(button && currentCareer) openBoxScore(button.dataset.boxScore); });
     dom['manual-save-button'].addEventListener('click',async()=>{await putSave(currentCareer);showToast('Career saved.','success');});
     dom['career-menu-button'].addEventListener('click',()=>dom['career-menu-dialog'].showModal());
     dom['export-current-save'].addEventListener('click',()=>downloadSave(currentCareer));
@@ -2006,9 +2249,10 @@
     dom['sim-playoff-round'].addEventListener('click',simCurrentPlayoffRound);
     dom['sim-all-playoffs'].addEventListener('click',simAllPlayoffs);
     dom['continue-next-season-button'].addEventListener('click',continueNextSeason);
+    dom['request-trade-button'].addEventListener('click',requestTrade);
     dom['retire-career-button'].addEventListener('click',()=>retireCareer());
     dom['free-agency-offers'].addEventListener('click',(event)=>{const button=event.target.closest('[data-free-agent-team]');if(button)selectFreeAgentTeam(Number(button.dataset.freeAgentTeam));});
-    dom['close-retirement-button'].addEventListener('click',()=>{dom['retirement-dialog'].close();if(currentCareer.retirement?.hallOfFame){dom['hall-of-fame-heading'].textContent=`${getUserPlayer().name} is inducted.`;dom['hall-of-fame-copy'].textContent=`A ${currentCareer.retirement.hofProbability}% Hall of Fame case earns a place among HoopLoop's legends.`;dom['hall-of-fame-dialog'].showModal();}});
+    dom['close-retirement-button'].addEventListener('click',()=>{dom['retirement-dialog'].close();if(currentCareer.retirement?.hallOfFame){dom['hall-of-fame-heading'].textContent=`${getUserPlayer().name} is inducted.`;dom['hall-of-fame-copy'].textContent=`A ${currentCareer.retirement.hofProbability}% Hall of Fame case earns a place among HoopLoop's legends.${currentCareer.retirement.jerseyRetirements?.length ? ` Jersey #${getUserPlayer().jerseyNumber} was also retired by ${currentCareer.retirement.jerseyRetirements.map((entry)=>entry.teamName).join(', ')}.` : ''}`;dom['hall-of-fame-dialog'].showModal();}});
     dom['close-hall-of-fame-button'].addEventListener('click',()=>dom['hall-of-fame-dialog'].close());
     dom['save-list'].addEventListener('click',async(event)=>{
       const load=event.target.closest('[data-load-save]');const del=event.target.closest('[data-delete-save]');const exp=event.target.closest('[data-export-save]');

@@ -1,7 +1,7 @@
 {
   "game": "HoopSim",
-  "version": "0.3.0",
-  "release": "Draft, playoffs, profiles and career history polish",
+  "version": "0.4.0",
+  "release": "Playoff box scores, simulation depth, league news and career legacy",
   "teams": 80,
   "minimumLeagueSize": 8,
   "maximumLeagueSize": 50,
@@ -12,7 +12,11 @@
   "multiSeason": true,
   "manualDraft": true,
   "playerProfiles": true,
-  "playoffGameLogs": true,
+  "playoffBoxScores": true,
+  "leagueNews": true,
+  "dynamicFreeAgency": true,
+  "tradeRequests": true,
+  "jerseyRetirement": true,
   "retirement": true,
   "hallOfFame": true
 }
