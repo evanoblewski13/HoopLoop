@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#ff5a1f" />
   <meta name="description" content="HoopLoopSim — a customizable, offline basketball career simulator from HoopLoop." />
-  <title>HoopLoopSim Alpha 0.7 — HoopLoop</title>
-  <link rel="stylesheet" href="hoopsim.css?v=0.7.0" />
+  <title>HoopLoopSim Alpha 0.8 — HoopLoop</title>
+  <link rel="stylesheet" href="hoopsim.css?v=0.8.0" />
 </head>
 <body>
   <div class="page-noise" aria-hidden="true"></div>
@@ -16,7 +16,7 @@
     </a>
     <div class="sim-title">
       <strong>HoopLoopSim</strong>
-      <span>Career Simulator · Alpha 0.7</span>
+      <span>Career Simulator · Alpha 0.8</span>
     </div>
     <div class="header-actions">
       <span id="autosave-status" class="autosave-status">Offline · ready</span>
@@ -37,8 +37,8 @@
           <button id="continue-career-button" class="secondary-button" type="button">Load a save</button>
         </div>
         <div class="feature-row">
-          <div><strong>130</strong><span>team identities</span></div>
-          <div><strong>2</strong><span>league modes</span></div>
+          <div><strong>80</strong><span>domestic teams</span></div>
+          <div><strong>48</strong><span>international nations</span></div>
           <div><strong>10–99</strong><span>attribute range</span></div>
           <div><strong>100%</strong><span>offline simulation</span></div>
         </div>
@@ -58,7 +58,7 @@
           <li>Retirement and Hall of Fame results</li>
           <li>Six offline save files</li>
         </ul>
-        <p>Alpha 0.7 keeps the stable career flow, introduces the +5 displayed overall model, and rebuilds the International Basketball Tournament as a full event experience. Public career cards and deeper transaction systems remain future additions.</p>
+        <p>Alpha 0.8 deepens career and league history, improves early-career progression variance, and turns international medal rounds into a richer tournament finish. Public career cards and deeper transaction systems remain future additions.</p>
       </aside>
     </section>
 
@@ -249,7 +249,8 @@
         <button data-tab="stats" type="button">Stats</button>
         <button data-tab="roster" type="button">Roster</button>
         <button data-tab="news" type="button">News</button>
-        <button data-tab="history" type="button">History</button>
+        <button data-tab="history" type="button">Career</button>
+        <button data-tab="league-history" type="button">League History</button>
       </nav>
 
       <section id="career-home-tab" class="career-tab">
@@ -359,8 +360,22 @@
             <div id="career-collective-summary" class="career-collective-summary"></div>
             <div id="career-hof-outlook" class="career-hof-outlook"></div>
             <div id="career-history-list" class="season-history-list"></div>
+            <div id="career-international-history" class="international-career-history"></div>
           </article>
           <article class="panel"><div class="panel-heading"><div><span class="eyebrow">ACCOLADES</span><h2>Trophy case</h2></div></div><div id="career-accolades" class="trophy-case"></div></article>
+        </div>
+      </section>
+
+      <section id="career-league-history-tab" class="career-tab hidden">
+        <div class="league-history-grid">
+          <article class="panel">
+            <div class="panel-heading"><div><span class="eyebrow">LEAGUE HISTORY</span><h2>Champions & award winners</h2><p>Every completed HoopLoopSim season, preserved in one place.</p></div></div>
+            <div id="league-history-domestic" class="league-history-list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading"><div><span class="eyebrow">INTERNATIONAL HISTORY</span><h2>Tournament medalists</h2><p>Gold, Silver, Bronze, and your national-team runs across the career.</p></div></div>
+            <div id="league-history-international" class="league-history-list"></div>
+          </article>
         </div>
       </section>
     </section>
@@ -454,7 +469,8 @@
             <button id="sim-international-group" class="international-primary-button" type="button">Sim group stage</button>
           </div>
           <div class="tournament-controls hidden" id="international-knockout-controls">
-            <button id="sim-international-knockout-round" class="international-secondary-button" type="button">Sim next knockout round</button>
+            <button id="sim-international-knockout-game" class="international-secondary-button" type="button">Sim 1 game</button>
+            <button id="sim-international-knockout-round" class="international-secondary-button" type="button">Sim current round</button>
             <button id="sim-international-all" class="international-primary-button" type="button">Sim tournament</button>
           </div>
         </div>
@@ -490,6 +506,18 @@
     </div>
   </dialog>
 
+  <dialog id="international-podium-dialog" class="modal international-podium-shell">
+    <div class="international-podium-card">
+      <div class="international-podium-heading">
+        <span class="eyebrow">INTERNATIONAL BASKETBALL TOURNAMENT</span>
+        <h2>Medal podium</h2>
+        <p>The tournament is complete.</p>
+      </div>
+      <div id="international-podium" class="international-podium"></div>
+      <button id="close-international-podium" class="international-primary-button wide" type="button">View tournament results</button>
+    </div>
+  </dialog>
+
   <dialog id="free-agency-dialog" class="modal">
     <div class="modal-card large-modal">
       <div class="modal-heading"><div><span class="eyebrow">FREE AGENCY</span><h2 id="free-agency-heading">Choose your next team</h2><p>Compare projected role, minutes, team strength, and contract length. Salaries are intentionally excluded.</p></div></div>
@@ -516,7 +544,7 @@
 
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-  <script src="hoopsim-teams.js?v=0.7.0"></script>
-  <script src="hoopsim.js?v=0.7.0"></script>
+  <script src="hoopsim-teams.js?v=0.8.0"></script>
+  <script src="hoopsim.js?v=0.8.0"></script>
 </body>
 </html>

@@ -701,3 +701,69 @@ button:disabled { cursor: not-allowed; opacity: .45; transform: none !important;
   .international-bracket-round { min-width:220px; }
 }
 
+
+/* HoopLoopSim Alpha 0.8 · career history and tournament finish */
+.career-international-section { margin-top: 24px; padding-top: 22px; border-top: 1px solid var(--line); }
+.section-divider-heading { margin-bottom: 14px; }
+.section-divider-heading h3 { margin: 3px 0 0; }
+.international-history-cards { display: grid; gap: 12px; }
+.international-history-card { border: 1px solid #dce2ea; border-radius: 15px; padding: 16px; background: linear-gradient(145deg,#fff,#f7f9fc); }
+.international-history-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+.international-history-heading h4 { margin: 3px 0 0; font-size: 1.05rem; }
+.international-history-heading > strong { white-space: nowrap; font-size:.9rem; }
+.international-history-meta { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0; }
+.international-history-meta span { padding:5px 8px; border-radius:999px; background:#eef2f7; color:#4b596c; font-size:.74rem; font-weight:800; }
+.international-history-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
+.international-history-stats span { display:flex; flex-direction:column; padding:8px; border-radius:9px; background:#fff; border:1px solid #e7ebf0; font-size:.69rem; color:#667085; }
+.international-history-stats b { color:#111827; font-size:.9rem; }
+
+.league-history-grid { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr); gap:18px; }
+.league-history-list { display:grid; gap:14px; }
+.league-history-season { border:1px solid var(--line); border-radius:16px; padding:16px; background:#fff; }
+.league-history-season-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+.league-history-season-head h3 { margin:3px 0 0; }
+.champion-chip { padding:7px 10px; border-radius:999px; background:#fff2e9; color:var(--orange-dark); font-size:.78rem; font-weight:900; white-space:nowrap; }
+.league-history-primary { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0; }
+.league-history-primary > div { padding:11px; border-radius:11px; background:var(--soft); display:grid; gap:3px; }
+.league-history-primary span,.league-history-award span { color:var(--muted); font-size:.7rem; font-weight:850; letter-spacing:.05em; text-transform:uppercase; }
+.league-history-awards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+.league-history-award { padding:8px 10px; border:1px solid var(--line); border-radius:10px; display:flex; justify-content:space-between; gap:8px; align-items:center; }
+.league-history-award strong { text-align:right; font-size:.82rem; }
+.international-league-history { border-color:#cfd8e4; background:linear-gradient(145deg,#fff,#f5f8fc); }
+.international-medalist-row { display:grid; gap:8px; margin:13px 0; }
+.international-medalist-row span { padding:9px 10px; border-radius:10px; background:#f4f6f9; }
+
+.international-podium-shell { border:0; padding:0; background:transparent; max-width:none; }
+.international-podium-shell::backdrop { background:rgba(4,10,20,.82); backdrop-filter:blur(4px); }
+.international-podium-card { width:min(760px,calc(100vw - 28px)); border:1px solid rgba(214,177,72,.55); border-radius:22px; padding:28px; background:linear-gradient(160deg,#0b1729,#132a49); color:#fff; box-shadow:0 28px 90px rgba(0,0,0,.42); }
+.international-podium-heading { text-align:center; }
+.international-podium-heading .eyebrow { color:#d8b648; }
+.international-podium-heading h2 { margin:5px 0; font-size:clamp(1.8rem,5vw,2.8rem); }
+.international-podium-heading p { margin:0; color:#bdc8d8; }
+.international-podium { display:grid; grid-template-columns:1fr 1fr 1fr; align-items:end; gap:12px; margin:28px 0 22px; min-height:300px; }
+.podium-place { display:flex; flex-direction:column; align-items:center; text-align:center; gap:5px; min-width:0; }
+.podium-place strong { max-width:100%; font-size:.9rem; overflow-wrap:anywhere; }
+.podium-place small { color:#bdc8d8; }
+.podium-medal { font-size:2rem; }
+.podium-block { width:100%; display:grid; place-items:center; margin-top:7px; border-radius:13px 13px 4px 4px; color:#0b1729; font-size:2rem; font-weight:950; }
+.podium-place.gold { order:2; }
+.podium-place.silver { order:1; }
+.podium-place.bronze { order:3; }
+.podium-place.gold .podium-block { height:160px; background:linear-gradient(#f5d66e,#d6b148); }
+.podium-place.silver .podium-block { height:120px; background:linear-gradient(#edf1f5,#aeb9c7); }
+.podium-place.bronze .podium-block { height:92px; background:linear-gradient(#d9a06c,#a96d3c); }
+
+@media (max-width: 900px) {
+  .league-history-grid { grid-template-columns:1fr; }
+}
+@media (max-width: 620px) {
+  .international-history-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .league-history-primary,.league-history-awards { grid-template-columns:1fr; }
+  .international-podium-card { padding:20px 14px; }
+  .international-podium { gap:6px; min-height:250px; }
+  .podium-place strong { font-size:.75rem; }
+  .podium-medal { font-size:1.6rem; }
+  .podium-place.gold .podium-block { height:135px; }
+  .podium-place.silver .podium-block { height:105px; }
+  .podium-place.bronze .podium-block { height:82px; }
+}

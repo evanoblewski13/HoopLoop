@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '0.7.0';
+  const VERSION = '0.8.0';
   const OVERALL_DISPLAY_BOOST = 5;
   const RATING_MODEL = 'attribute-average-plus-5';
   const DB_NAME = 'hoopsim_alpha_db';
@@ -51,6 +51,8 @@
   const POSITION_WEIGHT = { PG: 190, SG: 205, SF: 220, PF: 235, C: 250 };
   const FIRST_NAMES = ['Aiden','Andre','Amari','Antonio','Brandon','Bryce','Caleb','Cameron','Cedric','Chris','Darius','Darren','Devin','Donovan','Eli','Elijah','Emmett','Eric','Isaiah','Jabari','Jalen','Jamal','Jared','Jaylen','Jordan','Julian','Kaden','Kai','Kendrick','Kevin','Khalil','Lamar','Malachi','Marcus','Mason','Micah','Miles','Nasir','Noah','Omar','Quentin','Rashad','Reggie','Roman','Samir','Terrence','Tobias','Trevor','Tyrese','Xavier','Zion','Mateo','Luka','Nico','Dante','Dominic','Malik','Desmond','Keon','Kobe','Marcel','Tariq','Javon','Jace','Damian','Ty','Jett','Kellan','Armani','Anthony','Jaxson','Vincent','Sebastian'];
   const LAST_NAMES = ['Adams','Baker','Banks','Bennett','Brooks','Brown','Bryant','Butler','Campbell','Carter','Chambers','Clark','Coleman','Collins','Cook','Cooper','Crawford','Daniels','Davis','Dixon','Edwards','Ellis','Evans','Foster','Franklin','Garcia','Gibson','Gordon','Grant','Green','Hall','Hamilton','Harris','Hayes','Henderson','Hill','Howard','Hughes','Jackson','James','Jefferson','Johnson','Jones','King','Lewis','Long','Marshall','Martin','Matthews','Miller','Mitchell','Moore','Morgan','Morris','Murphy','Nelson','Parker','Peterson','Phillips','Porter','Powell','Price','Reed','Reynolds','Richardson','Rivera','Robinson','Ross','Russell','Sanders','Scott','Simmons','Smith','Stewart','Taylor','Thomas','Thompson','Turner','Walker','Washington','Watson','White','Williams','Wilson','Wright','Young','Stone','Cross','Knight','Fields','Cole','Maddox','Sykes','Holland','Vaughn','Mercer','Rowe','Hawkins','Burke'];
+  const INTERNATIONAL_FIRST_NAMES = ['Akira','Arjun','Arda','Chinedu','Diego','Emir','Enzo','Étienne','Hugo','Jian','João','Kenji','Kwame','Lars','Lorenzo','Luis','Mamadou','Marco','Milan','Min-jun','Nils','Oskar','Pierre','Rafael','Rohan','Santiago','Sergio','Sibusiso','Sven','Thiago','Tomas','Wei','Yuto'];
+  const INTERNATIONAL_LAST_NAMES = ['Bianchi','Chen','Demir','Diallo','Dubois','Fischer','Hernandez','Jovanovic','Kim','Kowalski','Kumar','Laurent','Lee','Li','Mensah','Moreau','Muller','Nakamura','Nguyen','Nowak','Okafor','Oliveira','Park','Patel','Pereira','Petrovic','Romano','Rossi','Santos','Sato','Schneider','Silva','Singh','Tanaka','Tran','Wang','Yilmaz','Zhang'];
   const INJURY_TYPES = ['ankle sprain','hamstring strain','wrist injury','knee soreness','back tightness','shoulder strain'];
   const EASTER_EGG_NAMES = ['Parker Fontaine','Bryant Wright','Bryan Stender','Beau Lasky','Dominic Kane','Peyton Kane','James Gross','Michael Tushar','Evan Oblewski','Adam Kane','Will Pollack','Josh Pritzl','Gavin Stelter','Jack Seibs','Brian Huo','Michael Tang','Benjamin Fisher'];
   let easterEggQueue = [];
@@ -115,6 +117,24 @@
     }
     return entries[entries.length - 1][0];
   };
+  function randomGeneratedName() {
+    const international = Math.random() < .22;
+    return international
+      ? `${choose(INTERNATIONAL_FIRST_NAMES)} ${choose(INTERNATIONAL_LAST_NAMES)}`
+      : `${choose(FIRST_NAMES)} ${choose(LAST_NAMES)}`;
+  }
+
+  function generatedHeight(position, creatorRandom = false) {
+    const base = POSITION_HEIGHT[position] || 78;
+    let height = Math.round(base + normalRandom() * (creatorRandom ? 3 : 2.35));
+    const roll = Math.random();
+    // Rare height outliers create the occasional 7'3"–7'9" giant or sub-6' guard without flooding the league.
+    if (roll < .028 && ['PF','C'].includes(position)) height += randInt(3, 7);
+    else if (roll < .012) height += randInt(3, 6);
+    else if (roll > .985 && ['PG','SG'].includes(position)) height -= randInt(4, 8);
+    return clamp(height, 66, 93);
+  }
+
   const binomial = (attempts, probability) => {
     let makes = 0;
     const count = Math.max(0, Math.round(attempts));
@@ -346,14 +366,14 @@
   }
 
   function randomizePlayerIdentity() {
-    const names = EASTER_EGG_NAMES.length && Math.random() < .08 ? EASTER_EGG_NAMES : null;
-    dom['player-name'].value = names ? choose(names) : `${choose(FIRST_NAMES)} ${choose(LAST_NAMES)}`;
+    const names = EASTER_EGG_NAMES.length && Math.random() < .12 ? EASTER_EGG_NAMES : null;
+    dom['player-name'].value = names ? choose(names) : randomGeneratedName();
     dom['player-age'].value = randInt(18, 23);
     dom['player-position'].value = choose(POSITIONS);
     dom['player-playstyle'].value = choose(Object.keys(PLAYSTYLES));
     const position = dom['player-position'].value;
     const baseHeight = POSITION_HEIGHT[position];
-    const height = clamp(Math.round(baseHeight + normalRandom() * 3), 65, 92);
+    const height = generatedHeight(position, true);
     dom['player-height'].value = String(height);
     dom['player-weight'].value = clamp(Math.round(POSITION_WEIGHT[position] + (height - baseHeight) * 5 + normalRandom() * 18), 140, 400);
     dom['player-jersey'].value = String(randInt(0,99));
@@ -486,10 +506,10 @@
 
   function prepareEasterEggQueue(existingNames = new Set()) {
     easterEggQueue = [];
-    if (Math.random() < .32) {
+    if (Math.random() < .42) {
       const available = EASTER_EGG_NAMES.filter((name) => !existingNames.has(name));
       if (available.length) easterEggQueue.push(choose(available));
-      if (Math.random() < .10) {
+      if (Math.random() < .14) {
         const remaining = available.filter((name) => !easterEggQueue.includes(name));
         if (remaining.length) easterEggQueue.push(choose(remaining));
       }
@@ -505,7 +525,7 @@
         return candidate;
       }
     }
-    do name = `${choose(FIRST_NAMES)} ${choose(LAST_NAMES)}`; while (existingNames.has(name));
+    do name = randomGeneratedName(); while (existingNames.has(name));
     existingNames.add(name);
     return name;
   }
@@ -537,8 +557,8 @@
   }
 
   function createGeneratedPlayer({ name, age, position, playstyle, targetOverall, teamId = null, rookie = false, existingNames }) {
-    const height = clamp(Math.round(POSITION_HEIGHT[position] + normalRandom() * 2), 67, 90);
-    const weight = clamp(Math.round(POSITION_WEIGHT[position] + normalRandom() * 16), 150, 360);
+    const height = generatedHeight(position, false);
+    const weight = clamp(Math.round(POSITION_WEIGHT[position] + (height - POSITION_HEIGHT[position]) * 5 + normalRandom() * 16), 145, 390);
     const attributes = generatedAttributes(playstyle, targetOverall);
     const contractYears = rookie ? 4 : weightedChoice([[3,3],[4,5],[5,4],[2,1],[1,.5]]);
     return {
@@ -761,7 +781,7 @@
       version: VERSION, ratingModel:RATING_MODEL, id: uid('career'), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       league: { ...config, season: 1 }, teams, prospects, draftPicks, userPlayerId,
       schedule: [], currentRound: 0, phase: 'preseason', awards: null, playoffs: null,
-      champion: null, finalsMvp: null, completed: false, careerEvents: [],
+      champion: null, finalsMvp: null, completed: false, careerEvents: [], leagueHistory: [],
       settings: { injuriesEnabled: config.injuriesEnabled }, rosterViewTeamId:null, lastKnownUserTeamId:null,
       tradeRequestSeason:null,
       internationalTournament:{ nextSeason:randInt(3,5), nationTeamId:null, programs:null, history:[], active:null }
@@ -1366,6 +1386,7 @@
       if (existingIndex >= 0) player.seasonHistory[existingIndex] = snapshot;
       else player.seasonHistory.push(snapshot);
     });
+    recordLeagueSeasonHistory();
   }
 
   function capturePostseasonScroll(elementId = 'sim-playoff-game') {
@@ -1498,6 +1519,7 @@
     renderRosterSelector(team.id);
     renderLeagueNews();
     renderHistory(user);
+    renderLeagueHistory();
     renderPostseason();
     disableSimButtons(currentCareer.phase !== 'regular');
   }
@@ -1689,6 +1711,66 @@
     return totals;
   }
 
+  function historyPlayerRef(playerId) {
+    const player=playerById(playerId);
+    const team=player?.teamId ? getTeam(player.teamId) : null;
+    return player ? {id:player.id,name:player.name,position:player.position,teamId:team?.id||null,teamName:team?.name||'',teamAbbr:team?.abbr||''} : null;
+  }
+
+  function historyTeamRef(teamId) {
+    const team=getTeam(teamId);
+    return team ? {id:team.id,name:team.name,abbr:team.abbr} : null;
+  }
+
+  function recordLeagueSeasonHistory() {
+    currentCareer.leagueHistory ||= [];
+    const season=currentCareer.league.season;
+    if(currentCareer.leagueHistory.some((entry)=>entry.season===season))return;
+    const awards=currentCareer.awards || {};
+    currentCareer.leagueHistory.push({
+      season,
+      champion:historyTeamRef(currentCareer.champion),
+      finalsMvp:historyPlayerRef(currentCareer.finalsMvp),
+      awards:{
+        mvp:historyPlayerRef(awards.mvp),
+        roty:historyPlayerRef(awards.roty),
+        dpoy:historyPlayerRef(awards.dpoy),
+        sixth:historyPlayerRef(awards.sixth),
+        coty:historyTeamRef(awards.coty)
+      }
+    });
+  }
+
+  function internationalCareerHistoryMarkup() {
+    const history=currentCareer.internationalTournament?.history || [];
+    if(!history.length)return '<div class="career-international-section"><div class="section-divider-heading"><span class="eyebrow">INTERNATIONAL CAREER</span><h3>No tournament appearances yet</h3></div><p class="muted">International history will appear here after your first tournament.</p></div>';
+    return `<div class="career-international-section"><div class="section-divider-heading"><span class="eyebrow">INTERNATIONAL CAREER</span><h3>Tournament history</h3></div><div class="international-history-cards">${[...history].reverse().map((entry)=>{
+      if(entry.skipped)return `<article class="international-history-card"><div class="international-history-heading"><div><span class="eyebrow">SEASON ${entry.season}</span><h4>International Basketball Tournament</h4></div><strong>Skipped</strong></div><p class="muted">You chose not to participate in this international window.</p></article>`;
+      const stats=entry.stats || internationalStatsSnapshotFromGames(entry.userGames || []);
+      const medal=entry.medal ? `${entry.medal==='Gold'?'🥇':entry.medal==='Silver'?'🥈':'🥉'} ${entry.medal}` : 'No medal';
+      return `<article class="international-history-card"><div class="international-history-heading"><div><span class="eyebrow">SEASON ${entry.season}</span><h4>${escapeHtml(entry.nationName || internationalTeamDefinitions().find((team)=>team.id===entry.nationTeamId)?.name || 'International Team')}</h4></div><strong>${medal}</strong></div><div class="international-history-meta"><span>Group seed #${entry.groupSeed || '—'}</span><span>${entry.groupWins ?? '—'}-${entry.groupLosses ?? '—'} group record</span><span>${escapeHtml(entry.finish || 'Tournament')}</span></div><div class="international-history-stats"><span><b>${stats.games||0}</b> GP</span><span><b>${Number(stats.ppg||0).toFixed(1)}</b> PPG</span><span><b>${Number(stats.rpg||0).toFixed(1)}</b> RPG</span><span><b>${Number(stats.apg||0).toFixed(1)}</b> APG</span><span><b>${Number(stats.spg||0).toFixed(1)}</b> SPG</span><span><b>${Number(stats.bpg||0).toFixed(1)}</b> BPG</span><span><b>${Number(stats.fgPct||0).toFixed(1)}%</b> FG</span><span><b>${Number(stats.threePct||0).toFixed(1)}%</b> 3P</span><span><b>${Number(stats.ftPct||0).toFixed(1)}%</b> FT</span></div></article>`;
+    }).join('')}</div></div>`;
+  }
+
+  function leagueAwardLine(label,ref) {
+    if(!ref)return '';
+    const suffix=ref.teamAbbr ? ` · ${escapeHtml(ref.teamAbbr)}` : '';
+    return `<div class="league-history-award"><span>${label}</span><strong>${escapeHtml(ref.name || '—')}${suffix}</strong></div>`;
+  }
+
+  function renderLeagueHistory() {
+    const domestic=currentCareer.leagueHistory || [];
+    dom['league-history-domestic'].innerHTML=domestic.length ? [...domestic].reverse().map((entry)=>{
+      const champion=entry.champion;
+      const fmvp=entry.finalsMvp;
+      const a=entry.awards || {};
+      return `<article class="league-history-season"><div class="league-history-season-head"><div><span class="eyebrow">SEASON ${entry.season}</span><h3>${champion?`${escapeHtml(champion.name)} are champions`:'Season complete'}</h3></div>${champion?`<span class="champion-chip">🏆 ${escapeHtml(champion.abbr)}</span>`:''}</div><div class="league-history-primary"><div><span>Champion</span><strong>${escapeHtml(champion?.name || '—')}</strong></div><div><span>Finals MVP</span><strong>${escapeHtml(fmvp?.name || '—')}${fmvp?.teamAbbr?` · ${escapeHtml(fmvp.teamAbbr)}`:''}</strong></div></div><div class="league-history-awards">${leagueAwardLine('MVP',a.mvp)}${leagueAwardLine('ROTY',a.roty)}${leagueAwardLine('DPOY',a.dpoy)}${leagueAwardLine('6MOTY',a.sixth)}${a.coty?`<div class="league-history-award"><span>COTY</span><strong>${escapeHtml(a.coty.name)}</strong></div>`:''}</div></article>`;
+    }).join('') : '<div class="muted">League History begins recording completed seasons in Alpha 0.8.</div>';
+
+    const international=(currentCareer.internationalTournament?.history || []).filter((entry)=>entry.goldId);
+    dom['league-history-international'].innerHTML=international.length ? [...international].reverse().map((entry)=>`<article class="league-history-season international-league-history"><div class="league-history-season-head"><div><span class="eyebrow">SEASON ${entry.season} TOURNAMENT</span><h3>International medalists</h3></div></div><div class="international-medalist-row"><span>🥇 <strong>${escapeHtml(entry.goldName || internationalTeamDefinitions().find((team)=>team.id===entry.goldId)?.name || '—')}</strong></span><span>🥈 <strong>${escapeHtml(entry.silverName || internationalTeamDefinitions().find((team)=>team.id===entry.silverId)?.name || '—')}</strong></span><span>🥉 <strong>${escapeHtml(entry.bronzeName || internationalTeamDefinitions().find((team)=>team.id===entry.bronzeId)?.name || '—')}</strong></span></div><p>${entry.skipped?'You skipped this international window.':`Your nation: <strong>${escapeHtml(entry.nationName || internationalTeamDefinitions().find((team)=>team.id===entry.nationTeamId)?.name || '—')}</strong> · ${escapeHtml(entry.finish || entry.medal || 'Tournament complete')}`}</p></article>`).join('') : '<div class="muted">No International Basketball Tournament has been completed yet.</div>';
+  }
+
   function careerSummaryMarkup(player) {
     const totals = totalsFromSeasons(player);
     const avg = statsAverages(totals);
@@ -1733,6 +1815,7 @@
     dom['career-history-list'].innerHTML = user.seasonHistory?.length
       ? [...user.seasonHistory].reverse().map(seasonHistoryMarkup).join('')
       : currentCareer.careerEvents.map((event)=>`<div class="list-row"><span><strong>Season ${event.season}</strong><small>${escapeHtml(event.text)}</small></span></div>`).join('');
+    dom['career-international-history'].innerHTML = internationalCareerHistoryMarkup();
     const counts = {};
     user.accolades.forEach((award)=>{counts[award.label]=(counts[award.label]||0)+1;});
     if (currentCareer.retirement?.hallOfFame) counts['HoopLoop Hall of Fame'] = 1;
@@ -1859,24 +1942,33 @@
     const oldOverall = player.overall;
     const performance = performanceDevelopmentSignal(player);
     const age = player.age;
-    const youngVariance = age <= 22 ? 2.15 : age <= 26 ? 1.55 : age <= 31 ? 1.25 : 1.05;
-    const baseAge = age <= 20 ? 1.7 : age <= 22 ? 1.25 : age <= 26 ? .7 : age <= 30 ? .15 : age <= 33 ? -.35 : age <= 36 ? -1.05 : -1.75;
+    const completedSeasons = player.seasonHistory?.length || 0;
+    const lastSeason = completedSeasons ? player.seasonHistory[completedSeasons - 1] : null;
+    const firstYearStarter = completedSeasons === 1 && Number(lastSeason?.games || 0) >= 8 && Number(lastSeason?.starts || 0) >= Number(lastSeason?.games || 1) * .55;
+    const earlyCareer = age <= 24 && completedSeasons <= 3;
+    const youngVariance = age <= 22 ? 2.45 : age <= 24 ? 1.9 : age <= 26 ? 1.55 : age <= 31 ? 1.25 : 1.05;
+    const baseAge = age <= 20 ? 1.75 : age <= 22 ? 1.3 : age <= 26 ? .7 : age <= 30 ? .15 : age <= 33 ? -.35 : age <= 36 ? -1.05 : -1.75;
     const injuryPenalty = player.majorInjuries * .24 + (player.injury ? .25 : 0);
-    const rareBreakout = age <= 22 && Math.random() < .075 ? rand(2.5,5.5) : age <= 31 && Math.random() < .012 ? rand(4,8) : 0;
+    let breakoutChance = firstYearStarter ? .19 : earlyCareer ? .105 : age <= 22 ? .075 : age <= 31 ? .012 : 0;
+    breakoutChance *= clamp(.82 + performance * .1, .58, 1.28);
+    const rareBreakout = Math.random() < breakoutChance
+      ? (firstYearStarter ? rand(3.0, 6.8) : earlyCareer ? rand(2.3, 5.8) : rand(3.5, 7.5))
+      : 0;
+    const firstYearStarterLift = firstYearStarter && !rareBreakout ? .35 : 0;
     const lateLongevity = age >= 34 && player.attributes.durability >= 88 && Math.random() < .055 ? rand(1.5,4) : 0;
     const changes = {};
     ATTRIBUTES.forEach(([key]) => {
       const physicalDecline = age >= 31 && ['dunk','vertical','speed','durability'].includes(key) ? -(age-30)*.2 : 0;
-      const raw = baseAge + performance*.5 + playstyleBonus(player,key) + physicalDecline - injuryPenalty + rareBreakout + lateLongevity + normalRandom()*youngVariance;
+      const raw = baseAge + performance*.5 + playstyleBonus(player,key) + firstYearStarterLift + physicalDecline - injuryPenalty + rareBreakout + lateLongevity + normalRandom()*youngVariance;
       const capDown = age >= 36 ? -8 : -6;
-      const capUp = age <= 22 ? 9 : rareBreakout ? 10 : 7;
+      const capUp = age <= 24 ? (rareBreakout ? 11 : 9) : rareBreakout ? 10 : 7;
       const change = clamp(Math.round(raw), capDown, capUp);
       changes[key] = change;
       player.attributes[key] = clamp(player.attributes[key] + change, 10, 99);
     });
     player.overall = overallFromAttributes(player.attributes);
     player.age += 1;
-    return { before, changes, oldOverall, newOverall:player.overall, performance, rareBreakout:rareBreakout > 0 };
+    return { before, changes, oldOverall, newOverall:player.overall, performance, rareBreakout:rareBreakout > 0, firstYearStarter };
   }
 
   function shouldGeneratedPlayerRetire(player) {
@@ -1901,7 +1993,7 @@
 
   function replenishLeagueRosters() {
     const names = existingLeagueNames();
-    if (Math.random() < .10) {
+    if (Math.random() < .16) {
       const availableEggs = EASTER_EGG_NAMES.filter((name)=>!names.has(name));
       if (availableEggs.length) easterEggQueue = [choose(availableEggs)];
     }
@@ -2033,14 +2125,47 @@
     dom['skip-international-event'].classList.toggle('hidden', Boolean(state.active));
   }
 
+  function simulateSkippedInternationalPodium() {
+    const defs=internationalTeamDefinitions();
+    const programs=internationalPrograms();
+    const table=defs.map((team)=>({id:team.id,name:team.name,strength:programs[team.id]||72,wins:0,losses:0,pf:0,pa:0}));
+    const byId=(id)=>table.find((team)=>team.id===id);
+    const play=(aId,bId)=>{
+      const a=byId(aId),b=byId(bId);
+      let aScore=clamp(Math.round(80+(a.strength-70)*.45+normalRandom()*8),55,125);
+      let bScore=clamp(Math.round(80+(b.strength-70)*.45+normalRandom()*8),55,125);
+      const ratingA=a.strength+normalRandom()*6,ratingB=b.strength+normalRandom()*6;
+      if(aScore===bScore){if(ratingA>=ratingB)aScore+=1;else bScore+=1;}
+      a.pf+=aScore;a.pa+=bScore;b.pf+=bScore;b.pa+=aScore;
+      if(aScore>bScore){a.wins+=1;b.losses+=1;return aId;} b.wins+=1;a.losses+=1;return bId;
+    };
+    buildInternationalGroupSchedule(defs.map((team)=>team.id)).forEach((round)=>round.forEach((game)=>play(game.aId,game.bId)));
+    const seeded=[...table].sort((a,b)=>b.wins-a.wins || (b.pf-b.pa)-(a.pf-a.pa) || b.pf-a.pf).slice(0,12);
+    const knockout=(aId,bId)=>{
+      const a=byId(aId),b=byId(bId);
+      const ratingA=a.strength+normalRandom()*7,ratingB=b.strength+normalRandom()*7;
+      return ratingA>=ratingB?aId:bId;
+    };
+    const r12=[knockout(seeded[4].id,seeded[11].id),knockout(seeded[5].id,seeded[10].id),knockout(seeded[6].id,seeded[9].id),knockout(seeded[7].id,seeded[8].id)];
+    const qf=[knockout(seeded[0].id,r12[3]),knockout(seeded[3].id,r12[0]),knockout(seeded[1].id,r12[2]),knockout(seeded[2].id,r12[1])];
+    const semi1Winner=knockout(qf[0],qf[1]),semi2Winner=knockout(qf[2],qf[3]);
+    const semi1Loser=semi1Winner===qf[0]?qf[1]:qf[0],semi2Loser=semi2Winner===qf[2]?qf[3]:qf[2];
+    const bronzeId=knockout(semi1Loser,semi2Loser);
+    const goldId=knockout(semi1Winner,semi2Winner);
+    const silverId=goldId===semi1Winner?semi2Winner:semi1Winner;
+    return {goldId,silverId,bronzeId,goldName:byId(goldId)?.name||'',silverName:byId(silverId)?.name||'',bronzeName:byId(bronzeId)?.name||''};
+  }
+
   function skipInternationalTournament() {
     const state = ensureInternationalTournamentState();
     if (!internationalEventDue() || state.active) return;
-    state.history.push({ season:currentCareer.league.season, skipped:true, nationTeamId:state.nationTeamId || null });
+    const podium=simulateSkippedInternationalPodium();
+    state.history.push({ season:currentCareer.league.season, skipped:true, nationTeamId:state.nationTeamId || null, ...podium });
     state.nextSeason = currentCareer.league.season + 3;
     updateInternationalEventPanel();
+    renderLeagueHistory();
     putSave(currentCareer);
-    showToast(`International tournament skipped. The next event is after Season ${state.nextSeason}.`, 'neutral');
+    showToast(`International tournament skipped. The world tournament still played out; the next event is after Season ${state.nextSeason}.`, 'neutral');
   }
 
   function internationalPrograms() {
@@ -2200,29 +2325,108 @@
     ]};
   }
 
-  function simulateInternationalKnockoutRound() {
-    const active=ensureInternationalTournamentState().active;
-    if(!active || active.phase!=='knockout' || !active.knockout?.current?.length)return;
-    const k=active.knockout;
-    k.current.forEach((game)=>{if(!game.played){game.result=simulateInternationalMatch(active,game.aId,game.bId,game.stage);game.played=true;}});
-    const finished=k.current.map((game)=>({...game}));
+  function internationalStatsSnapshotFromGames(games = []) {
+    const total = (key) => sum(games.map((game)=>Number(game.box?.[key] || 0)));
+    const g = games.length;
+    const fga=total('fga'), fgm=total('fgm'), threeA=total('threeA'), threeM=total('threeM'), fta=total('fta'), ftm=total('ftm');
+    return {
+      games:g,
+      ppg:g?round1(total('points')/g):0,
+      rpg:g?round1(total('rebounds')/g):0,
+      apg:g?round1(total('assists')/g):0,
+      spg:g?round1(total('steals')/g):0,
+      bpg:g?round1(total('blocks')/g):0,
+      fgPct:fga?round1(fgm/fga*100):0,
+      threePct:threeA?round1(threeM/threeA*100):0,
+      ftPct:fta?round1(ftm/fta*100):0,
+      points:total('points'), rebounds:total('rebounds'), assists:total('assists')
+    };
+  }
+
+  function advanceInternationalKnockoutStage(active) {
+    const k=active?.knockout;
+    if(!k?.current?.length || !k.current.every((game)=>game.played && game.result)) return false;
+    const finished=k.current.map((game)=>structuredClone(game));
     k.history.push({stage:k.stage,games:finished});
-    const winners=finished.map((g)=>g.result.winnerId);
+    const winners=finished.map((game)=>game.result.winnerId);
     if(k.stage==='round12'){
       const seed=(n)=>tournamentStandings(active).slice(0,12)[n-1].id;
       k.stage='quarterfinals';
-      k.current=[createTournamentGame(active,seed(1),winners[3],'Quarterfinal'),createTournamentGame(active,seed(4),winners[0],'Quarterfinal'),createTournamentGame(active,seed(2),winners[2],'Quarterfinal'),createTournamentGame(active,seed(3),winners[1],'Quarterfinal')];
+      k.current=[
+        createTournamentGame(active,seed(1),winners[3],'Quarterfinal'),
+        createTournamentGame(active,seed(4),winners[0],'Quarterfinal'),
+        createTournamentGame(active,seed(2),winners[2],'Quarterfinal'),
+        createTournamentGame(active,seed(3),winners[1],'Quarterfinal')
+      ];
     }else if(k.stage==='quarterfinals'){
       k.stage='semifinals';
-      k.current=[createTournamentGame(active,winners[0],winners[1],'Semifinal'),createTournamentGame(active,winners[2],winners[3],'Semifinal')];
+      k.current=[
+        createTournamentGame(active,winners[0],winners[1],'Semifinal'),
+        createTournamentGame(active,winners[2],winners[3],'Semifinal')
+      ];
     }else if(k.stage==='semifinals'){
-      const semifinalLosers=finished.map((g)=>g.result.loserId);
-      k.stage='medals';
-      k.current=[createTournamentGame(active,winners[0],winners[1],'Gold Medal Game'),createTournamentGame(active,semifinalLosers[0],semifinalLosers[1],'Bronze Medal Game')];
-    }else if(k.stage==='medals'){
-      completeInternationalTournament(active,finished[0].result,finished[1].result);
+      k.goldFinalists=[winners[0],winners[1]];
+      k.bronzeFinalists=finished.map((game)=>game.result.loserId);
+      k.stage='bronze';
+      k.current=[createTournamentGame(active,k.bronzeFinalists[0],k.bronzeFinalists[1],'Bronze Medal Game')];
+    }else if(k.stage==='bronze'){
+      k.bronzeResult=finished[0].result;
+      k.stage='gold';
+      k.current=[createTournamentGame(active,k.goldFinalists[0],k.goldFinalists[1],'Gold Medal Game')];
+    }else if(k.stage==='gold'){
+      k.goldResult=finished[0].result;
+      completeInternationalTournament(active,k.goldResult,k.bronzeResult);
     }
+    return true;
+  }
+
+  function simulateInternationalKnockoutGame() {
+    const active=ensureInternationalTournamentState().active;
+    if(!active || active.phase!=='knockout' || !active.knockout?.current?.length)return;
+    const game=active.knockout.current.find((entry)=>!entry.played);
+    if(game){game.result=simulateInternationalMatch(active,game.aId,game.bId,game.stage);game.played=true;}
+    if(active.knockout.current.every((entry)=>entry.played)) advanceInternationalKnockoutStage(active);
     renderInternationalTournament(); putSave(currentCareer);
+  }
+
+  function simulateInternationalKnockoutRound() {
+    const active=ensureInternationalTournamentState().active;
+    if(!active || active.phase!=='knockout' || !active.knockout?.current?.length)return;
+    active.knockout.current.forEach((game)=>{if(!game.played){game.result=simulateInternationalMatch(active,game.aId,game.bId,game.stage);game.played=true;}});
+    advanceInternationalKnockoutStage(active);
+    renderInternationalTournament(); putSave(currentCareer);
+  }
+
+  function internationalFinishLabel(active) {
+    const nationId=active.nationTeamId;
+    if(active.medals?.goldId===nationId)return 'Gold Medal';
+    if(active.medals?.silverId===nationId)return 'Silver Medal';
+    if(active.medals?.bronzeId===nationId)return 'Bronze Medal';
+    const stages=(active.userGames||[]).map((game)=>game.stage);
+    if(stages.includes('Gold Medal Game'))return 'Gold Medal Game';
+    if(stages.includes('Bronze Medal Game'))return 'Bronze Medal Game';
+    if(stages.includes('Semifinal'))return 'Semifinals';
+    if(stages.includes('Quarterfinal'))return 'Quarterfinals';
+    if(stages.includes('Round of 12'))return 'Round of 12';
+    return 'Group Stage';
+  }
+
+  function internationalMedalEmoji(active, teamId) {
+    if(active?.complete && active.medals){
+      if(active.medals.goldId===teamId)return ' 🥇';
+      if(active.medals.silverId===teamId)return ' 🥈';
+      if(active.medals.bronzeId===teamId)return ' 🥉';
+    }
+    const bronzeWinner=active?.knockout?.bronzeResult?.winnerId;
+    if(bronzeWinner===teamId)return ' 🥉';
+    return '';
+  }
+
+  function showInternationalPodium(active) {
+    if(!active?.complete || !active.medals || !dom['international-podium-dialog'])return;
+    const gold=tournamentTeam(active,active.medals.goldId), silver=tournamentTeam(active,active.medals.silverId), bronze=tournamentTeam(active,active.medals.bronzeId);
+    dom['international-podium'].innerHTML=`<div class="podium-place silver"><span class="podium-medal">🥈</span><strong>${escapeHtml(silver.name)}</strong><small>Silver</small><div class="podium-block">2</div></div><div class="podium-place gold"><span class="podium-medal">🥇</span><strong>${escapeHtml(gold.name)}</strong><small>Gold</small><div class="podium-block">1</div></div><div class="podium-place bronze"><span class="podium-medal">🥉</span><strong>${escapeHtml(bronze.name)}</strong><small>Bronze</small><div class="podium-block">3</div></div>`;
+    if(!dom['international-podium-dialog'].open)dom['international-podium-dialog'].showModal();
   }
 
   function completeInternationalTournament(active, finalResult, bronzeResult) {
@@ -2236,9 +2440,23 @@
       addAccolade(user,`International ${medal} Medal`,currentCareer.league.season,null);
       const award=user.accolades.find((a)=>a.season===currentCareer.league.season&&a.label===`International ${medal} Medal`); if(award){award.internationalTeamId=active.nationTeamId;award.isInternational=true;}
     }
-    state.history.push({season:active.season,nationTeamId:active.nationTeamId,goldId,silverId,bronzeId,medal,userGames:active.userGames.map((game)=>({...game}))});
+    const standings=tournamentStandings(active);
+    const nation=tournamentTeam(active,active.nationTeamId);
+    const groupFinish=Math.max(1,standings.findIndex((team)=>team.id===active.nationTeamId)+1);
+    const stats=internationalStatsSnapshotFromGames(active.userGames);
+    const historyEntry={
+      season:active.season,nationTeamId:active.nationTeamId,nationName:nation?.name || 'International team',
+      groupSeed:groupFinish,groupWins:nation?.wins || 0,groupLosses:nation?.losses || 0,
+      finish:internationalFinishLabel(active),goldId,silverId,bronzeId,
+      goldName:tournamentTeam(active,goldId)?.name || '',silverName:tournamentTeam(active,silverId)?.name || '',bronzeName:tournamentTeam(active,bronzeId)?.name || '',
+      medal,stats,userGames:active.userGames.map((game)=>structuredClone(game))
+    };
+    state.history.push(historyEntry);
     state.nextSeason=currentCareer.league.season+3;
-    recordLeagueNews('signing',`${getUserPlayer().name} represented ${tournamentTeam(active,active.nationTeamId).name} in the International Basketball Tournament${medal?` and won ${medal}.`:'.'}`,currentCareer.league.season);
+    recordLeagueNews('signing',`${getUserPlayer().name} represented ${nation?.name || 'their nation'} in the International Basketball Tournament${medal?` and won ${medal}.`:'.'}`,currentCareer.league.season);
+    renderInternationalTournament();
+    putSave(currentCareer);
+    setTimeout(()=>showInternationalPodium(active),0);
   }
 
   function findInternationalGameResult(gameId) {
@@ -2289,7 +2507,7 @@
     dom['international-player-stats'].innerHTML=`<div class="international-stat-grid"><div><strong>${g}</strong><span>GP</span></div><div><strong>${(total('points')/g).toFixed(1)}</strong><span>PPG</span></div><div><strong>${(total('rebounds')/g).toFixed(1)}</strong><span>RPG</span></div><div><strong>${(total('assists')/g).toFixed(1)}</strong><span>APG</span></div><div><strong>${(total('steals')/g).toFixed(1)}</strong><span>SPG</span></div><div><strong>${(total('blocks')/g).toFixed(1)}</strong><span>BPG</span></div><div><strong>${fga?(fgm/fga*100).toFixed(1):'0.0'}%</strong><span>FG%</span></div><div><strong>${threeA?(threeM/threeA*100).toFixed(1):'0.0'}%</strong><span>3P%</span></div><div><strong>${fta?(ftm/fta*100).toFixed(1):'0.0'}%</strong><span>FT%</span></div></div>`;
   }
 
-  function roundLabel(stage){return {round12:'Round of 12',quarterfinals:'Quarterfinals',semifinals:'Semifinals',medals:'Medal Games'}[stage]||String(stage||'').replace(/([A-Z])/g,' $1');}
+  function roundLabel(stage){return {round12:'Round of 12',quarterfinals:'Quarterfinals',semifinals:'Semifinals',bronze:'Bronze Medal Game',gold:'Gold Medal Game'}[stage]||String(stage||'').replace(/([A-Z])/g,' $1');}
 
   function renderInternationalBracket(active) {
     const k=active.knockout;
@@ -2297,7 +2515,7 @@
     if(!k){dom['international-bracket-panel'].classList.add('hidden');empty?.classList.remove('hidden');return;}
     dom['international-bracket-panel'].classList.remove('hidden');empty?.classList.add('hidden');
     const rounds=[...(k.history||[]),...(active.complete?[]:[{stage:k.stage,games:k.current||[]}])];
-    dom['international-bracket'].innerHTML=`<div class="international-bracket">${rounds.map((round)=>`<section class="international-bracket-round"><h4>${escapeHtml(roundLabel(round.stage))}</h4><div class="international-bracket-round-games">${round.games.map((game)=>{const a=tournamentTeam(active,game.aId),b=tournamentTeam(active,game.bId),r=game.result;return `<article class="international-bracket-game"><div><span><b>${active.seeds[a.id]||'—'}</b> ${escapeHtml(a.name)}</span><strong>${r?r.scoreA:'–'}</strong></div><div><span><b>${active.seeds[b.id]||'—'}</b> ${escapeHtml(b.name)}</span><strong>${r?r.scoreB:'–'}</strong></div>${r?.fullBox?`<button class="international-text-button bracket-box-button" data-international-box-score="${r.id}" type="button">Box score</button>`:''}</article>`;}).join('')}</div></section>`).join('')}</div>`;
+    dom['international-bracket'].innerHTML=`<div class="international-bracket">${rounds.map((round)=>`<section class="international-bracket-round"><h4>${escapeHtml(roundLabel(round.stage))}</h4><div class="international-bracket-round-games">${round.games.map((game)=>{const a=tournamentTeam(active,game.aId),b=tournamentTeam(active,game.bId),r=game.result;return `<article class="international-bracket-game"><div><span><b>${active.seeds[a.id]||'—'}</b> ${escapeHtml(a.name)}${internationalMedalEmoji(active,a.id)}</span><strong>${r?r.scoreA:'–'}</strong></div><div><span><b>${active.seeds[b.id]||'—'}</b> ${escapeHtml(b.name)}${internationalMedalEmoji(active,b.id)}</span><strong>${r?r.scoreB:'–'}</strong></div>${r?.fullBox?`<button class="international-text-button bracket-box-button" data-international-box-score="${r.id}" type="button">Box score</button>`:''}</article>`;}).join('')}</div></section>`).join('')}</div>`;
   }
 
   function renderInternationalOverview(active) {
@@ -2322,7 +2540,7 @@
     if(!active){dom['international-tournament-heading'].textContent='Choose your nation';dom['international-tournament-subtitle'].textContent='Your first selection stays with you for future tournaments.';return;}
     const nation=tournamentTeam(active,active.nationTeamId);
     dom['international-tournament-heading'].textContent=`${nation.name} · Season ${active.season} offseason`;
-    dom['international-tournament-subtitle'].textContent=active.phase==='group'?`Group stage: ${active.currentRound} of 15 games complete.`:active.complete?'Tournament complete.':`Top 12 advanced to the medal bracket.`;
+    dom['international-tournament-subtitle'].textContent=active.phase==='group'?`Group stage: ${active.currentRound} of 15 games complete.`:active.complete?'Tournament complete.':`${roundLabel(active.knockout?.stage)} · medal bracket`;
     dom['international-tournament-summary'].innerHTML=`<div><strong>${escapeHtml(nation.abbr)}</strong><span>${active.phase==='group'?`${nation.wins}-${nation.losses} · ${active.currentRound}/15 group games`:active.complete?'Medal tournament complete':`Seed #${active.seeds[nation.id]||'—'} · knockout stage`}</span></div>`;
     renderInternationalStandings(active);renderInternationalUserGames(active);renderInternationalBracket(active);renderInternationalStats(active);renderInternationalOverview(active);
     dom['international-group-controls'].classList.toggle('hidden',active.phase!=='group');
@@ -2650,6 +2868,7 @@
     career.userGameLogs ||= [];
     career.userPlayoffLogs ||= [];
     career.careerEvents ||= [];
+    career.leagueHistory ||= [];
     career.careerEvents.forEach((event)=>{ event.category ||= event.type === 'signed' ? 'signing' : event.type === 'retired' ? 'retirement' : event.type === 'traded' ? 'trade' : event.category; });
     career.settings ||= { injuriesEnabled: career.league.injuriesEnabled !== false };
     career.tradeRequestSeason ??= null;
@@ -2657,6 +2876,14 @@
     career.internationalTournament ||= { nextSeason:randInt(3,5), nationTeamId:null, programs:null, history:[], active:null };
     career.internationalTournament.nextSeason ||= randInt(Math.max(3, career.league.season), Math.max(5, career.league.season));
     career.internationalTournament.history ||= [];
+    career.internationalTournament.history.forEach((entry)=>{
+      entry.stats ||= internationalStatsSnapshotFromGames(entry.userGames || []);
+      entry.nationName ||= internationalTeamDefinitions().find((team)=>team.id===entry.nationTeamId)?.name || 'International Team';
+      entry.goldName ||= internationalTeamDefinitions().find((team)=>team.id===entry.goldId)?.name || '';
+      entry.silverName ||= internationalTeamDefinitions().find((team)=>team.id===entry.silverId)?.name || '';
+      entry.bronzeName ||= internationalTeamDefinitions().find((team)=>team.id===entry.bronzeId)?.name || '';
+      entry.finish ||= entry.medal ? `${entry.medal} Medal` : 'Tournament complete';
+    });
     career.internationalTournament.active ||= null;
     (career.schedule || []).forEach((round)=>round.forEach((scheduled)=>{
       if (scheduled.result) {
@@ -2878,9 +3105,11 @@
     dom['sim-international-round'].addEventListener('click',()=>simulateInternationalGroupRounds(1));
     dom['sim-international-five'].addEventListener('click',()=>simulateInternationalGroupRounds(5));
     dom['sim-international-group'].addEventListener('click',()=>simulateInternationalGroupRounds(15));
+    dom['sim-international-knockout-game'].addEventListener('click',simulateInternationalKnockoutGame);
     dom['sim-international-knockout-round'].addEventListener('click',simulateInternationalKnockoutRound);
-    dom['sim-international-all'].addEventListener('click',()=>{let guard=0;while(ensureInternationalTournamentState().active?.phase==='knockout'&&guard<8){simulateInternationalKnockoutRound();guard+=1;}});
+    dom['sim-international-all'].addEventListener('click',()=>{let guard=0;while(ensureInternationalTournamentState().active?.phase==='knockout'&&guard<10){simulateInternationalKnockoutRound();guard+=1;}});
     dom['finish-international-event'].addEventListener('click',finishInternationalTournament);
+    dom['close-international-podium'].addEventListener('click',()=>dom['international-podium-dialog'].close());
     document.querySelectorAll('[data-international-tab]').forEach((button)=>button.addEventListener('click',()=>showInternationalTab(button.dataset.internationalTab)));
     dom['retire-career-button'].addEventListener('click',()=>retireCareer());
     dom['free-agency-offers'].addEventListener('click',(event)=>{const button=event.target.closest('[data-free-agent-team]');if(button)selectFreeAgentTeam(Number(button.dataset.freeAgentTeam));});

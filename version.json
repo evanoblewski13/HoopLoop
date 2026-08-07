@@ -1,7 +1,7 @@
 {
   "game": "HoopLoopSim",
-  "version": "0.7.0",
-  "release": "Displayed OVR +5 model and International Tournament redesign",
+  "version": "0.8.0",
+  "release": "Career and league history, separated medal rounds, podium presentation, progression and player-pool variety",
   "domesticTeams": 80,
   "internationalTournamentTeams": 48,
   "overallDisplayBoost": 5,
@@ -16,13 +16,14 @@
   "playerProfiles": true,
   "playoffBoxScores": true,
   "leagueNews": true,
+  "leagueHistory": true,
+  "careerInternationalHistory": true,
   "dynamicFreeAgency": true,
   "tradeRequests": true,
   "tradeConfirmation": true,
   "jerseyRetirement": true,
   "retirement": true,
   "hallOfFame": true,
-  "standaloneInternationalLeague": false,
   "internationalTournament": {
     "firstEventSeasonMinimum": 3,
     "firstEventSeasonMaximum": 5,
@@ -31,10 +32,16 @@
     "qualifiers": 12,
     "topFourByes": true,
     "bronzeParticipants": "semifinal-losers",
+    "medalRoundOrder": ["Bronze", "Gold"],
+    "singleGameSimulation": true,
+    "podiumPresentation": true,
     "dedicatedFullScreen": true,
     "boxScores": "user-group-games-and-all-knockout-games",
     "medals": ["Gold", "Silver", "Bronze"]
   },
   "randomPlayerIdentity": true,
+  "expandedInternationalNames": true,
+  "rareHeightOutliers": true,
+  "easterEggFrequency": "slightly-increased",
   "leagueStatFilters": true
 }
