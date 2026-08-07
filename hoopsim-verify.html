@@ -37,7 +37,11 @@
   try{
     const script=await (await fetch('hoopsim.js?v=0.6.0')).text();
     add('Alpha 0.6 game logic',script.includes("const VERSION = '0.6.0'")&&script.includes('internationalEventDue')&&script.includes('createInternationalTournament')&&script.includes('simulateInternationalGroupRounds'),'Version and tournament engine found');
-    add('Tournament schedule',script.includes('round<15')&&script.includes("nextSeason=currentCareer.league.season+3")&&script.includes("stage='round12'")&&script.includes("'Gold Medal Game'")&&script.includes("'Bronze Medal Game'"),'15-game group phase, three-season recurrence, top-12 knockout, and medal games found');
+    const has15GameGroup = /for\s*\(\s*let\s+round\s*=\s*0\s*;\s*round\s*<\s*15/.test(script);
+    const hasThreeSeasonRecurrence = /nextSeason\s*=\s*currentCareer\.league\.season\s*\+\s*3/.test(script);
+    const hasTop12Knockout = /stage\s*:\s*['"]round12['"]/.test(script) && /slice\(0\s*,\s*12\)/.test(script);
+    const hasMedalGames = script.includes("'Gold Medal Game'") && script.includes("'Bronze Medal Game'");
+    add('Tournament schedule',has15GameGroup&&hasThreeSeasonRecurrence&&hasTop12Knockout&&hasMedalGames,'15-game group phase, three-season recurrence, top-12 knockout, and medal games found');
     add('Domestic draft repair',script.includes("function leagueMode() { return 'domestic'; }")&&script.includes("dom['draft-stage-eyebrow'].textContent"),'Creator is locked to the stable domestic flow and the previously missing draft element is now present');
   }catch(error){add('Alpha 0.6 game logic',false,error.message)}
   document.querySelector('#checks').innerHTML=checks.map(([name,ok,detail])=>`<div class="check ${ok?'pass':'fail'}">${ok?'✓':'✕'} ${name}: ${detail}</div>`).join('');
