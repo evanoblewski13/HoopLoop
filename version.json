@@ -1,9 +1,11 @@
 {
   "game": "HoopLoopSim",
-  "version": "0.6.0",
-  "release": "Offseason International Basketball Tournament and draft-flow repair",
+  "version": "0.7.0",
+  "release": "Displayed OVR +5 model and International Tournament redesign",
   "domesticTeams": 80,
   "internationalTournamentTeams": 48,
+  "overallDisplayBoost": 5,
+  "ratingModel": "attribute-average-plus-5",
   "domesticLeagueSize": {"minimum": 8, "maximum": 50, "evenOnly": true},
   "minimumSeasonGames": 14,
   "maximumSeasonGames": 99,
@@ -28,6 +30,9 @@
     "groupGamesPerTeam": 15,
     "qualifiers": 12,
     "topFourByes": true,
+    "bronzeParticipants": "semifinal-losers",
+    "dedicatedFullScreen": true,
+    "boxScores": "user-group-games-and-all-knockout-games",
     "medals": ["Gold", "Silver", "Bronze"]
   },
   "randomPlayerIdentity": true,

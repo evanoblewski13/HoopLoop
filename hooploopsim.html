@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#ff5a1f" />
   <meta name="description" content="HoopLoopSim — a customizable, offline basketball career simulator from HoopLoop." />
-  <title>HoopLoopSim Alpha 0.6 — HoopLoop</title>
-  <link rel="stylesheet" href="hoopsim.css?v=0.6.0" />
+  <title>HoopLoopSim Alpha 0.7 — HoopLoop</title>
+  <link rel="stylesheet" href="hoopsim.css?v=0.7.0" />
 </head>
 <body>
   <div class="page-noise" aria-hidden="true"></div>
@@ -16,7 +16,7 @@
     </a>
     <div class="sim-title">
       <strong>HoopLoopSim</strong>
-      <span>Career Simulator · Alpha 0.6</span>
+      <span>Career Simulator · Alpha 0.7</span>
     </div>
     <div class="header-actions">
       <span id="autosave-status" class="autosave-status">Offline · ready</span>
@@ -58,7 +58,7 @@
           <li>Retirement and Hall of Fame results</li>
           <li>Six offline save files</li>
         </ul>
-        <p>Alpha 0.6 restores the stable domestic career flow and introduces an optional International Basketball Tournament that appears during selected offseasons. Public career cards and deeper transaction systems remain future additions.</p>
+        <p>Alpha 0.7 keeps the stable career flow, introduces the +5 displayed overall model, and rebuilds the International Basketball Tournament as a full event experience. Public career cards and deeper transaction systems remain future additions.</p>
       </aside>
     </section>
 
@@ -197,7 +197,7 @@
         </div>
 
         <div class="panel attributes-panel">
-          <div class="panel-heading"><div><span class="eyebrow">15 ATTRIBUTES</span><h2>Build without a box.</h2><p>Overall is the true average of all 15 ratings, rounded to the nearest whole number.</p></div></div>
+          <div class="panel-heading"><div><span class="eyebrow">15 ATTRIBUTES</span><h2>Build without a box.</h2></div></div>
           <div id="attribute-grid" class="attribute-grid"></div>
         </div>
 
@@ -430,35 +430,62 @@
     </div>
   </dialog>
 
-  <dialog id="international-tournament-dialog" class="modal">
-    <div class="modal-card tournament-modal-card">
-      <div class="modal-heading">
-        <div><span class="eyebrow">INTERNATIONAL BASKETBALL TOURNAMENT</span><h2 id="international-tournament-heading">Choose your nation</h2><p id="international-tournament-subtitle">Represent one country every three seasons.</p></div>
-        <button id="close-international-tournament" class="icon-button" type="button" aria-label="Close tournament">×</button>
-      </div>
-      <div id="international-nation-picker">
+  <dialog id="international-tournament-dialog" class="modal international-tournament-shell">
+    <div class="tournament-modal-card">
+      <header class="international-tournament-header">
+        <div>
+          <span class="eyebrow">INTERNATIONAL BASKETBALL TOURNAMENT</span>
+          <h2 id="international-tournament-heading">Choose your nation</h2>
+          <p id="international-tournament-subtitle">Represent one country every three seasons.</p>
+        </div>
+        <button id="close-international-tournament" class="icon-button international-close" type="button" aria-label="Close tournament">×</button>
+      </header>
+      <div id="international-nation-picker" class="international-nation-picker">
         <label class="field"><span>National team</span><select id="international-nation-select"></select></label>
         <p class="alpha-note">Your nation is locked after your first tournament. The tournament does not replace your HoopLoopSim club career.</p>
-        <button id="confirm-international-nation" class="primary-button wide" type="button">Represent this nation</button>
+        <button id="confirm-international-nation" class="international-primary-button wide" type="button">Represent this nation</button>
       </div>
-      <div id="international-tournament-content" class="hidden">
-        <div id="international-tournament-summary" class="tournament-summary"></div>
-        <div class="tournament-controls" id="international-group-controls">
-          <button id="sim-international-round" class="secondary-button" type="button">Sim 1 round</button>
-          <button id="sim-international-five" class="secondary-button" type="button">Sim 5 rounds</button>
-          <button id="sim-international-group" class="primary-button" type="button">Sim group stage</button>
+      <div id="international-tournament-content" class="hidden international-tournament-content">
+        <div class="international-tournament-toolbar">
+          <div id="international-tournament-summary" class="tournament-summary"></div>
+          <div class="tournament-controls" id="international-group-controls">
+            <button id="sim-international-round" class="international-secondary-button" type="button">Sim 1 round</button>
+            <button id="sim-international-five" class="international-secondary-button" type="button">Sim 5 rounds</button>
+            <button id="sim-international-group" class="international-primary-button" type="button">Sim group stage</button>
+          </div>
+          <div class="tournament-controls hidden" id="international-knockout-controls">
+            <button id="sim-international-knockout-round" class="international-secondary-button" type="button">Sim next knockout round</button>
+            <button id="sim-international-all" class="international-primary-button" type="button">Sim tournament</button>
+          </div>
         </div>
-        <div class="tournament-controls hidden" id="international-knockout-controls">
-          <button id="sim-international-knockout-round" class="secondary-button" type="button">Sim next knockout round</button>
-          <button id="sim-international-all" class="primary-button" type="button">Sim tournament</button>
-        </div>
-        <div class="tournament-layout">
-          <section class="panel inset-panel"><div class="panel-heading"><div><span class="eyebrow">STANDINGS</span><h3>International table</h3></div></div><div id="international-standings"></div></section>
-          <section class="panel inset-panel"><div class="panel-heading"><div><span class="eyebrow">YOUR GAMES</span><h3 id="international-user-team-label">Tournament log</h3></div></div><div id="international-user-games"></div></section>
-        </div>
-        <section id="international-bracket-panel" class="panel inset-panel hidden"><div class="panel-heading"><div><span class="eyebrow">MEDAL BRACKET</span><h3>Knockout stage</h3></div></div><div id="international-bracket"></div></section>
-        <div id="international-medal-result" class="tournament-medal-result hidden"></div>
-        <div class="modal-actions"><button id="finish-international-event" class="primary-button hidden" type="button">Return to offseason</button></div>
+        <nav class="international-tabs" aria-label="Tournament views">
+          <button class="active" data-international-tab="overview" type="button">Overview</button>
+          <button data-international-tab="standings" type="button">Standings</button>
+          <button data-international-tab="schedule" type="button">Schedule</button>
+          <button data-international-tab="bracket" type="button">Bracket</button>
+          <button data-international-tab="stats" type="button">Stats</button>
+        </nav>
+        <section id="international-tab-overview" class="international-tab-pane">
+          <div class="tournament-layout">
+            <section class="international-panel"><div class="panel-heading"><div><span class="eyebrow">YOUR RUN</span><h3 id="international-user-team-label">Tournament log</h3></div></div><div id="international-user-games"></div></section>
+            <section class="international-panel"><div class="panel-heading"><div><span class="eyebrow">TOURNAMENT SNAPSHOT</span><h3>Road to the medals</h3></div></div><div id="international-overview-snapshot"></div></section>
+          </div>
+          <div id="international-medal-result" class="tournament-medal-result hidden"></div>
+        </section>
+        <section id="international-tab-standings" class="international-tab-pane hidden">
+          <section class="international-panel"><div class="panel-heading"><div><span class="eyebrow">GROUP STAGE</span><h3>International table</h3></div></div><div id="international-standings"></div></section>
+        </section>
+        <section id="international-tab-schedule" class="international-tab-pane hidden">
+          <section class="international-panel"><div class="panel-heading"><div><span class="eyebrow">RESULTS</span><h3>Your schedule & box scores</h3></div></div><div id="international-schedule"></div></section>
+        </section>
+        <section id="international-tab-bracket" class="international-tab-pane hidden">
+          <section id="international-bracket-panel" class="international-panel hidden"><div class="panel-heading"><div><span class="eyebrow">MEDAL BRACKET</span><h3>Knockout stage</h3></div></div><div id="international-bracket"></div></section>
+          <div id="international-bracket-empty" class="international-empty-state">Finish the 15-game group stage to reveal the medal bracket.</div>
+        </section>
+        <section id="international-tab-stats" class="international-tab-pane hidden">
+          <section class="international-panel"><div class="panel-heading"><div><span class="eyebrow">YOUR TOURNAMENT</span><h3>International statistics</h3></div></div><div id="international-player-stats"></div></section>
+        </section>
+        <div class="international-footer-actions"><button id="finish-international-event" class="international-primary-button hidden" type="button">Return to offseason</button></div>
       </div>
     </div>
   </dialog>
@@ -489,7 +516,7 @@
 
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-  <script src="hoopsim-teams.js?v=0.6.0"></script>
-  <script src="hoopsim.js?v=0.6.0"></script>
+  <script src="hoopsim-teams.js?v=0.7.0"></script>
+  <script src="hoopsim.js?v=0.7.0"></script>
 </body>
 </html>
