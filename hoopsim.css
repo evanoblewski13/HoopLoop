@@ -518,3 +518,35 @@ button:disabled { cursor: not-allowed; opacity: .45; transform: none !important;
   .jersey-retirement-section article { align-items: flex-start; flex-direction: column; }
   .jersey-retirement-section small { text-align: left; }
 }
+
+/* HoopLoopSim Alpha 0.5 polish */
+.stats-heading { align-items: flex-end; gap: 18px; }
+.stats-filter-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; justify-content: flex-end; }
+.stats-filter-row .field { min-width: 135px; }
+.single-column-standings { grid-template-columns: 1fr; }
+.international-standings-panel { max-width: 920px; width: 100%; margin: 0 auto; }
+.trophy, .award-card { min-width: 0; overflow: hidden; }
+.trophy span, .award-card strong, .award-card small { overflow-wrap: anywhere; word-break: normal; line-height: 1.28; }
+.award-card strong { font-size: 15px; }
+
+@media (max-width: 760px) {
+  .stats-heading { align-items: stretch; }
+  .stats-filter-row { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .stats-filter-row .field:last-child { grid-column: 1 / -1; }
+  .bracket-scroll { align-items: stretch !important; }
+  .bracket-round { align-self: stretch; }
+  .bracket-round-list { min-height: var(--bracket-height, 360px) !important; justify-content: space-around !important; }
+}
+
+@media (max-width: 480px) {
+  .stats-filter-row { grid-template-columns: 1fr; }
+  .stats-filter-row .field:last-child { grid-column: auto; }
+}
+
+/* Award/trophy text protection */
+.awards-grid { align-items: stretch; }
+.award-card { display: flex; flex-direction: column; justify-content: flex-start; min-height: 92px; }
+.award-card span { display: block; }
+.trophy-case { align-items: stretch; }
+.trophy { display: flex; flex-direction: column; justify-content: center; min-height: 74px; }
+.trophy span { display: block; font-size: 12px; font-weight: 750; }

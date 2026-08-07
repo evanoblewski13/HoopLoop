@@ -1,10 +1,12 @@
 {
-  "game": "HoopSim",
-  "version": "0.4.0",
-  "release": "Playoff box scores, simulation depth, league news and career legacy",
-  "teams": 80,
-  "minimumLeagueSize": 8,
-  "maximumLeagueSize": 50,
+  "game": "HoopLoopSim",
+  "version": "0.5.0",
+  "release": "International League debut and league-stat realism pass",
+  "domesticTeams": 80,
+  "internationalTeams": 50,
+  "domesticLeagueSize": {"minimum": 8, "maximum": 50, "evenOnly": true},
+  "internationalLeagueSize": {"minimum": 16, "default": 24, "maximum": 36, "evenOnly": true},
+  "internationalPlayoffs": {"teams": 12, "byes": 4},
   "minimumSeasonGames": 14,
   "maximumSeasonGames": 99,
   "attributes": 15,
@@ -16,7 +18,11 @@
   "leagueNews": true,
   "dynamicFreeAgency": true,
   "tradeRequests": true,
+  "tradeConfirmation": true,
   "jerseyRetirement": true,
   "retirement": true,
-  "hallOfFame": true
+  "hallOfFame": true,
+  "internationalMode": true,
+  "randomPlayerIdentity": true,
+  "leagueStatFilters": true
 }

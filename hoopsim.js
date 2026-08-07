@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '0.4.0';
+  const VERSION = '0.5.0';
   const DB_NAME = 'hoopsim_alpha_db';
   const DB_STORE = 'careers';
   const MAX_SAVES = 6;
@@ -55,6 +55,8 @@
   let draftSession = null;
   let statsSortKey = 'ppg';
   let statsSortDirection = -1;
+  let statsScope = 'all';
+  let statsTeamFilter = 'all';
 
   const dom = {};
   const creator = {
@@ -144,7 +146,7 @@
       button.classList.toggle('active', name === step);
       button.disabled = name === 'draft' || (name === 'player' && !creator.leagueConfig);
     });
-    dom['creator-step-title'].textContent = step === 'league' ? 'Build your league' : step === 'player' ? 'Create your player' : 'Enter the draft';
+    dom['creator-step-title'].textContent = step === 'league' ? 'Build your league' : step === 'player' ? 'Create your player' : (leagueMode() === 'international' ? 'Join your country team' : 'Enter the draft');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -222,71 +224,122 @@
     dom['continue-career-button'].textContent = saves.length ? `Load a save (${saves.length})` : 'No saves yet';
   }
 
+  function leagueMode() { return dom['league-mode']?.value || 'domestic'; }
+
+  function teamPool() {
+    return leagueMode() === 'international' ? (window.HOOPLOOPSIM_INTERNATIONAL_TEAMS || []) : window.HOOPSIM_TEAMS;
+  }
+
+  function updateLeagueModeUi(resetSelection = false) {
+    const international = leagueMode() === 'international';
+    if (resetSelection) creator.selectedTeamIds = new Set();
+    const sizes = international ? Array.from({length:11},(_,i)=>16+i*2) : Array.from({length:22},(_,i)=>8+i*2);
+    const previous = Number(dom['league-size'].value);
+    const defaultSize = international ? 24 : 16;
+    const selectedSize = resetSelection ? defaultSize : (sizes.includes(previous) ? previous : defaultSize);
+    dom['league-size'].innerHTML = sizes.map((size)=>`<option value="${size}" ${size===selectedSize?'selected':''}>${size} teams</option>`).join('');
+    dom['league-mode-help'].textContent = international
+      ? 'Country teams · one table · 16–36 teams · fixed 12-team playoff with top-four byes.'
+      : 'US-city franchises · East/West conferences · 8–50 teams.';
+    dom['international-team-field'].classList.toggle('hidden', !international);
+    dom['west-summary'].classList.toggle('hidden', international);
+    dom['east-summary'].classList.toggle('hidden', international);
+    dom['team-helper-copy'].textContent = international
+      ? 'Choose your country-team field. International mode uses one standings table and no East/West alignment.'
+      : 'Select any even-sized group. HoopLoopSim sorts the westernmost half into the West and the easternmost half into the East.';
+    const draftStepButton = document.querySelector('.step[data-step="draft"]');
+    if (draftStepButton) draftStepButton.innerHTML = international ? '<span>3</span> Team' : '<span>3</span> Draft';
+    if (international && dom['league-name'].value === 'HoopLoopSim League') dom['league-name'].value = 'International HoopLoop League';
+    if (!international && dom['league-name'].value === 'International HoopLoop League') dom['league-name'].value = 'HoopLoopSim League';
+    updatePlayoffOptions();
+  }
+
   function fillSelects() {
-    dom['league-size'].innerHTML = Array.from({ length: 22 }, (_, index) => 8 + index * 2)
-      .map((size) => `<option value="${size}" ${size === 16 ? 'selected' : ''}>${size} teams</option>`).join('');
     dom['player-playstyle'].innerHTML = Object.keys(PLAYSTYLES).map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
     const heightOptions = [];
     for (let inches = 65; inches <= 92; inches += 1) heightOptions.push(`<option value="${inches}" ${inches === 75 ? 'selected' : ''}>${formatHeight(inches)}</option>`);
     dom['player-height'].innerHTML = heightOptions.join('');
-    updatePlayoffOptions();
+    updateLeagueModeUi(false);
   }
 
   function updatePlayoffOptions() {
-    const leagueSize = Number(dom['league-size'].value || 16);
-    const valid = [4, 8, 16, 32].filter((size) => size <= leagueSize);
-    const previous = Number(dom['playoff-size'].value || 8);
-    dom['playoff-size'].innerHTML = valid.map((size) => `<option value="${size}" ${size === previous || (!valid.includes(previous) && size === valid[valid.length - 1]) ? 'selected' : ''}>${size} teams</option>`).join('');
-    if (!valid.includes(previous)) dom['playoff-size'].value = String(valid[Math.min(valid.length - 1, 1)] || valid[0]);
+    const international = leagueMode() === 'international';
+    const leagueSize = Number(dom['league-size'].value || (international ? 24 : 16));
+    if (international) {
+      dom['playoff-size'].innerHTML = '<option value="12" selected>12 teams · top 4 byes</option>';
+      dom['playoff-size'].value = '12';
+      dom['playoff-size'].disabled = true;
+    } else {
+      dom['playoff-size'].disabled = false;
+      const valid = [4, 8, 16, 32].filter((size) => size <= leagueSize);
+      const previous = Number(dom['playoff-size'].value || 8);
+      dom['playoff-size'].innerHTML = valid.map((size) => `<option value="${size}" ${size === previous || (!valid.includes(previous) && size === valid[valid.length - 1]) ? 'selected' : ''}>${size} teams</option>`).join('');
+      if (!valid.includes(previous)) dom['playoff-size'].value = String(valid[Math.min(valid.length - 1, 1)] || valid[0]);
+    }
     trimTeamSelection();
     renderTeams();
   }
 
   function autoSelectTeams() {
     const target = Number(dom['league-size'].value);
-    creator.selectedTeamIds = new Set(shuffle(window.HOOPSIM_TEAMS).slice(0, target).map((team) => team.id));
+    creator.selectedTeamIds = new Set(shuffle(teamPool()).slice(0, target).map((team) => String(team.id)));
     renderTeams();
   }
 
   function trimTeamSelection() {
-    const target = Number(dom['league-size'].value || 16);
-    const ids = [...creator.selectedTeamIds];
-    if (ids.length > target) creator.selectedTeamIds = new Set(ids.slice(0, target));
+    const target = Number(dom['league-size'].value || (leagueMode()==='international'?24:16));
+    const validIds = new Set(teamPool().map((team)=>String(team.id)));
+    const ids = [...creator.selectedTeamIds].filter((id)=>validIds.has(String(id)));
+    creator.selectedTeamIds = new Set(ids.slice(0, target).map(String));
   }
 
   function selectedTeamDefinitions() {
-    return window.HOOPSIM_TEAMS.filter((team) => creator.selectedTeamIds.has(team.id));
+    const selectedStrings = new Set([...creator.selectedTeamIds].map(String));
+    return teamPool().filter((team) => selectedStrings.has(String(team.id)));
   }
 
   function conferenceMapForTeams(teams) {
+    const map = new Map();
+    if (leagueMode() === 'international') {
+      teams.forEach((team)=>map.set(team.id, null));
+      return map;
+    }
     const sorted = [...teams].sort((a, b) => a.longitude - b.longitude);
     const halfway = sorted.length / 2;
-    const map = new Map();
     sorted.forEach((team, index) => map.set(team.id, index < halfway ? 'West' : 'East'));
     return map;
   }
 
   function renderTeams() {
-    const target = Number(dom['league-size'].value || 16);
+    const international = leagueMode() === 'international';
+    const target = Number(dom['league-size'].value || (international ? 24 : 16));
     const search = (dom['team-search'].value || '').trim().toLowerCase();
     const selected = selectedTeamDefinitions();
     const conferences = conferenceMapForTeams(selected);
-    dom['team-grid'].innerHTML = window.HOOPSIM_TEAMS
-      .filter((team) => `${team.name} ${team.city} ${team.state}`.toLowerCase().includes(search))
+    dom['team-grid'].innerHTML = teamPool()
+      .filter((team) => `${team.name} ${team.city||''} ${team.state||''} ${team.country||''}`.toLowerCase().includes(search))
       .map((team) => {
-        const isSelected = creator.selectedTeamIds.has(team.id);
+        const isSelected = [...creator.selectedTeamIds].map(String).includes(String(team.id));
+        const location = international ? team.country : `${team.city}, ${team.state}`;
+        const chip = international ? 'Selected' : conferences.get(team.id);
         return `<button class="team-card ${isSelected ? 'selected' : ''}" data-team-id="${team.id}" type="button">
           <span class="team-token">${escapeHtml(team.abbr)}</span>
-          <span><strong>${escapeHtml(team.name)}</strong><small>${escapeHtml(team.city)}, ${escapeHtml(team.state)}</small></span>
-          ${isSelected ? `<span class="conference-chip">${conferences.get(team.id)}</span>` : ''}
+          <span><strong>${escapeHtml(team.name)}</strong><small>${escapeHtml(location)}</small></span>
+          ${isSelected ? `<span class="conference-chip">${escapeHtml(chip)}</span>` : ''}
         </button>`;
       }).join('');
-    const west = selected.filter((team) => conferences.get(team.id) === 'West').length;
-    const east = selected.length - west;
+    const west = international ? 0 : selected.filter((team) => conferences.get(team.id) === 'West').length;
+    const east = international ? 0 : selected.length - west;
     dom['selected-team-count'].textContent = `${selected.length} / ${target}`;
     dom['west-count'].textContent = west;
     dom['east-count'].textContent = east;
-    dom['continue-to-player'].disabled = selected.length !== target;
+    if (international) {
+      const current = dom['international-user-team'].value;
+      dom['international-user-team'].innerHTML = selected.length
+        ? selected.map((team)=>`<option value="${team.id}" ${String(team.id)===String(current)?'selected':''}>${escapeHtml(team.name)}</option>`).join('')
+        : '<option value="">Select teams first</option>';
+    }
+    dom['continue-to-player'].disabled = selected.length !== target || (international && !dom['international-user-team'].value);
   }
 
   function toggleTeam(teamId) {
@@ -324,6 +377,23 @@
     const base = PLAYSTYLES[style].ratings;
     ATTRIBUTES.forEach(([key], index) => { creator.attributes[key] = clamp(Math.round(base[index] + normalRandom() * 9), 10, 99); });
     renderAttributeEditor();
+  }
+
+  function randomizePlayerIdentity() {
+    const names = EASTER_EGG_NAMES.length && Math.random() < .08 ? EASTER_EGG_NAMES : null;
+    dom['player-name'].value = names ? choose(names) : `${choose(FIRST_NAMES)} ${choose(LAST_NAMES)}`;
+    dom['player-age'].value = randInt(18, 23);
+    dom['player-position'].value = choose(POSITIONS);
+    dom['player-playstyle'].value = choose(Object.keys(PLAYSTYLES));
+    const position = dom['player-position'].value;
+    const baseHeight = POSITION_HEIGHT[position];
+    const height = clamp(Math.round(baseHeight + normalRandom() * 3), 65, 92);
+    dom['player-height'].value = String(height);
+    dom['player-weight'].value = clamp(Math.round(POSITION_WEIGHT[position] + (height - baseHeight) * 5 + normalRandom() * 18), 140, 400);
+    dom['player-jersey'].value = String(randInt(0,99));
+    randomizeAttributes();
+    updatePlayerProjection();
+    showToast('Random player generated. Change anything you want.', 'success');
   }
 
   function setAllAttributes(value) {
@@ -407,6 +477,7 @@
   }
 
   function validateLeagueConfig() {
+    const mode = leagueMode();
     const size = Number(dom['league-size'].value);
     const games = clampSeasonGamesInput();
     if (creator.selectedTeamIds.size !== size) {
@@ -415,14 +486,21 @@
     }
     const selected = selectedTeamDefinitions();
     const conferenceMap = conferenceMapForTeams(selected);
+    const internationalUserTeamId = mode === 'international' ? dom['international-user-team'].value : null;
+    if (mode === 'international' && !selected.some((team)=>String(team.id)===String(internationalUserTeamId))) {
+      showToast('Choose your country team before continuing.', 'error');
+      return false;
+    }
     creator.leagueConfig = {
-      name: dom['league-name'].value.trim() || 'HoopSim League',
+      mode,
+      name: dom['league-name'].value.trim() || (mode === 'international' ? 'International HoopLoop League' : 'HoopLoopSim League'),
       size,
       games,
-      playoffSize: Number(dom['playoff-size'].value),
+      playoffSize: mode === 'international' ? 12 : Number(dom['playoff-size'].value),
       seriesLength: Number(dom['series-length'].value),
       injuriesEnabled: dom['injuries-enabled'].checked,
-      teams: selected.map((team) => ({ ...team, conference: conferenceMap.get(team.id) }))
+      internationalUserTeamId,
+      teams: selected.map((team) => ({ ...team, conference: mode === 'international' ? null : conferenceMap.get(team.id) }))
     };
     return true;
   }
@@ -585,11 +663,37 @@
     dom['manual-draft-controls'].classList.add('hidden');
     dom['draft-selection-detail'].classList.add('hidden');
     dom['draft-headline'].textContent = 'Generating your basketball world…';
+    dom['draft-stage-eyebrow'].textContent = creator.leagueConfig.mode === 'international' ? 'INTERNATIONAL TEAM SELECTION' : 'INAUGURAL HOOPLOOPSIM DRAFT';
 
     const userPlayer = createUserPlayer(creator.playerConfig);
     const existingNames = new Set([userPlayer.name]);
     prepareEasterEggQueue(existingNames);
     const teams = generateLeagueTeams(creator.leagueConfig, existingNames);
+
+    if (creator.leagueConfig.mode === 'international') {
+      const selectedTeam = teams.find((team)=>String(team.id)===String(creator.leagueConfig.internationalUserTeamId)) || teams[0];
+      const lowest = [...selectedTeam.roster].sort((a,b)=>a.overall-b.overall)[0];
+      selectedTeam.roster = selectedTeam.roster.filter((player)=>player.id!==lowest.id);
+      userPlayer.teamId = selectedTeam.id;
+      userPlayer.contractYears = 99;
+      userPlayer.contractLength = 99;
+      userPlayer.isRookie = true;
+      selectedTeam.roster.push(userPlayer);
+      currentCareer = buildCareerState(creator.leagueConfig, teams, [userPlayer], [], userPlayer.id);
+      currentCareer.phase = 'preseason';
+      currentCareer.rosterViewTeamId = selectedTeam.id;
+      currentCareer.lastKnownUserTeamId = selectedTeam.id;
+      currentCareer.careerEvents.push({ type:'selection', category:'signing', season:1, text:`${userPlayer.name} joined ${selectedTeam.name} for the International HoopLoop League.` });
+      finalizeLeagueAfterRosterChoice();
+      await sleep(180);
+      dom['draft-headline'].textContent = `${selectedTeam.name} roster selection`;
+      dom['draft-result'].innerHTML = `<span class="eyebrow">COUNTRY TEAM SELECTED</span><h2>${escapeHtml(userPlayer.name)} joins ${escapeHtml(selectedTeam.name)}.</h2><p>International careers skip the draft. Your role and minutes are determined by rating, age, team strength, and performance just like the domestic simulator.</p>`;
+      dom['draft-result'].classList.remove('hidden');
+      dom['continue-after-draft'].classList.remove('hidden');
+      draftSession = null;
+      return;
+    }
+
     const prospects = generateDraftClass(Math.ceil(teams.length * 1.35), userPlayer, existingNames);
     const draftOrder = shuffle(teams.map((team) => team.id));
     const draftPicks = [];
@@ -731,13 +835,30 @@
     dom['continue-after-draft'].classList.remove('hidden');
   }
 
+  function assignSeasonVariance() {
+    allPlayers().forEach((player)=>{
+      const scoringSkill = mean([player.attributes.layup,player.attributes.dunk,player.attributes.midrange,player.attributes.threePoint,player.attributes.postMoves]);
+      const rareScoring = scoringSkill >= 82 && Math.random() < .012 ? rand(1.15,1.28) : 1;
+      const rareDefense = Math.max(player.attributes.interiorDefense, player.attributes.perimeterDefense) >= 86 && Math.random() < .008 ? rand(1.35,1.85) : 1;
+      player.seasonVariance = {
+        scoring: rareScoring * rand(.97,1.03),
+        rebounding: rand(.96,1.04),
+        assists: rand(.95,1.05),
+        defense: rareDefense * rand(.95,1.05)
+      };
+    });
+  }
+
   function finalizeLeagueAfterRosterChoice() {
     currentCareer.teams.forEach((team) => updateTeamRotation(team));
     currentCareer.schedule = buildSchedule(currentCareer.teams.map((team) => team.id), currentCareer.league.games);
     currentCareer.phase = 'regular';
+    assignSeasonVariance();
     const user = getUserPlayer();
     const team = getTeam(user.teamId);
-    currentCareer.careerEvents.push({ type:'draft', season:1, text:user.draftPick ? `Drafted #${user.draftPick} by ${team.name}.` : `Signed with ${team.name} after the draft.` });
+    if (currentCareer.league.mode !== 'international' && !currentCareer.careerEvents.some((event)=>event.type==='draft')) {
+      currentCareer.careerEvents.push({ type:'draft', season:1, text:user.draftPick ? `Drafted #${user.draftPick} by ${team.name}.` : `Signed with ${team.name} after the draft.` });
+    }
   }
 
   function buildSchedule(teamIds, gamesPerTeam) {
@@ -774,7 +895,7 @@
     }
     return currentCareer?.prospects?.find((entry) => entry.id === currentCareer.userPlayerId) || null;
   }
-  function getTeam(teamId) { return currentCareer.teams.find((team) => team.id === teamId); }
+  function getTeam(teamId) { return currentCareer.teams.find((team) => String(team.id) === String(teamId)); }
   function allPlayers() { return currentCareer.teams.flatMap((team) => team.roster); }
 
   function recordLeagueNews(category, text, season = currentCareer?.league?.season || 1) {
@@ -885,23 +1006,27 @@
     const fta = Math.round(ftaPer36 * minutes / 36 * rand(.68,1.32));
     const ftPct = clamp(.45 + a.freeThrow * .005, .50, .96);
     const ftm = binomial(fta, ftPct);
-    const points = twoM * 2 + threeM * 3 + ftm;
-    const positionReb = { PG:.15, SG:.35, SF:.85, PF:1.75, C:2.8 }[player.position];
-    const heightReb = Math.max(-.6, (player.height - POSITION_HEIGHT[player.position]) * .30);
-    const verticalReb = (a.vertical - 50) / 30;
-    const eliteSizeBonus = Math.max(0, player.height - 86) * .50 + Math.max(0, a.rebounding - 85) * .20;
-    const reboundPer36 = .2 + a.rebounding / 12 + positionReb + heightReb + verticalReb + eliteSizeBonus + (player.playstyle === 'Uber Athlete' ? .8 : 0);
-    const rebounds = Math.max(0, Math.round(reboundPer36 * minutes / 36 * rand(.78,1.22)));
-    const posAst = player.position === 'PG' ? 1.45 : player.position === 'SG' ? .55 : player.position === 'SF' ? .2 : 0;
-    const playmakerBonus = player.playstyle === 'Pure Playmaker' ? 2.1 : player.playstyle === 'Offensive Engine' ? 1.05 : 0;
-    const assistPer36 = .15 + a.passing / 14.2 + a.dribbling / 60 + posAst + playmakerBonus;
-    const passingLeverage = clamp(.78 + (a.passing - 50) * .006, .65, 1.08);
-    const talentMultiplier = clamp(1 + (offenseSupport - 1) * passingLeverage, .68, 1.34);
-    const assists = Math.max(0, Math.round(assistPer36 * talentMultiplier * minutes / 36 * rand(.72,1.28)));
-    const steals = Math.max(0, Math.round((.12 + a.perimeterDefense / 76 + a.iq / 205 + (player.playstyle === 'Lockdown Defender' ? .52 : 0)) * minutes / 36 * rand(.55,1.45)));
-    const heightBonus = Math.max(-.15, (player.height - POSITION_HEIGHT[player.position]) / 8);
-    const verticalBlock = Math.max(0, (a.vertical - 55) / 80);
-    const blocks = Math.max(0, Math.round((.03 + a.interiorDefense / 78 + heightBonus + verticalBlock + (player.position === 'C' ? .42 : player.position === 'PF' ? .18 : 0)) * minutes / 36 * rand(.52,1.48)));
+    const seasonVariance = player.seasonVariance || { scoring:1, rebounding:1, assists:1, defense:1 };
+    const points = Math.max(0, Math.round((twoM * 2 + threeM * 3 + ftm) * seasonVariance.scoring));
+    const positionReb = { PG:-.55, SG:-.15, SF:.80, PF:3.40, C:4.90 }[player.position];
+    const absoluteHeightReb = clamp((player.height - 76) * .19, -.80, 2.90);
+    const eliteHeightReb = Math.max(0, player.height - 86) * .16;
+    const weightReb = clamp((player.weight - 190) * .0045, -.35, .95);
+    const verticalReb = clamp((a.vertical - 60) / 190, -.16, .18);
+    const reboundPer36 = .10 + a.rebounding / 11.5 + positionReb + absoluteHeightReb + eliteHeightReb + weightReb + verticalReb + (player.playstyle === 'Uber Athlete' ? .05 : 0);
+    const rebounds = Math.max(0, Math.round(reboundPer36 * seasonVariance.rebounding * minutes / 36 * rand(.72,1.25)));
+    const posAst = player.position === 'PG' ? 1.10 : player.position === 'SG' ? .45 : player.position === 'SF' ? .18 : 0;
+    const playmakerBonus = player.playstyle === 'Pure Playmaker' ? 1.55 : player.playstyle === 'Offensive Engine' ? .78 : 0;
+    const assistPer36 = .08 + a.passing / 16.5 + a.dribbling / 82 + posAst + playmakerBonus;
+    const passingLeverage = clamp(.75 + (a.passing - 50) * .0055, .64, 1.04);
+    const talentMultiplier = clamp(1 + (offenseSupport - 1) * passingLeverage, .72, 1.24);
+    const assists = Math.max(0, Math.round(assistPer36 * talentMultiplier * seasonVariance.assists * minutes / 36 * rand(.68,1.32)));
+    const stealRate = .05 + a.perimeterDefense / 96 + a.iq / 265 + (player.playstyle === 'Lockdown Defender' ? .34 : 0);
+    const steals = Math.max(0, Math.round(stealRate * seasonVariance.defense * minutes / 36 * rand(.40,1.62)));
+    const heightBonus = clamp((player.height - 78) / 15, -.22, .82);
+    const verticalBlock = clamp((a.vertical - 60) / 180, -.08, .22);
+    const blockRate = .01 + a.interiorDefense / 108 + heightBonus + verticalBlock + (player.position === 'C' ? .28 : player.position === 'PF' ? .12 : 0);
+    const blocks = Math.max(0, Math.round(blockRate * seasonVariance.defense * minutes / 36 * rand(.35,1.75)));
     const turnovers = Math.max(0, Math.round((.35 + fga / 17 + assists / 4 + creation / 155 - a.iq / 215) * rand(.65,1.35)));
     const fouls = Math.max(0, Math.round((1.1 + (100-a.iq)/62) * minutes / 36 * rand(.55,1.45)));
     return { playerId:player.id, playerName:player.name, position:player.position, overall:player.overall, minutes, points, rebounds, assists, steals, blocks, turnovers, fgm:twoM+threeM, fga, threeM, threeA, ftm, fta, fouls, starter:player.role==='Starter' };
@@ -1096,19 +1221,41 @@
     });
   }
 
-  function standingsForConference(conference) {
-    return currentCareer.teams.filter((team) => team.conference === conference).sort((a,b) => {
-      if (b.record.wins !== a.record.wins) return b.record.wins-a.record.wins;
-      return (b.record.pointsFor-b.record.pointsAgainst)-(a.record.pointsFor-a.record.pointsAgainst);
-    });
+  function compareStandings(a,b) {
+    if (b.record.wins !== a.record.wins) return b.record.wins-a.record.wins;
+    return (b.record.pointsFor-b.record.pointsAgainst)-(a.record.pointsFor-a.record.pointsAgainst);
   }
 
+  function standingsForConference(conference) {
+    return currentCareer.teams.filter((team) => team.conference === conference).sort(compareStandings);
+  }
+
+  function allLeagueStandings() { return [...currentCareer.teams].sort(compareStandings); }
+
   function createInitialPlayoffs() {
+    const seedByTeam = {};
+    if (currentCareer.league.mode === 'international') {
+      const seeded = allLeagueStandings().slice(0, 12);
+      seeded.forEach((team,index)=>{ seedByTeam[team.id]=index+1; });
+      const bySeed = (seed)=>seeded[seed-1];
+      currentCareer.playoffs = {
+        bestOf:currentCareer.league.seriesLength, winsNeeded:Math.floor(currentCareer.league.seriesLength/2)+1,
+        stage:'international-opening', roundNumber:1,
+        currentSeries:[
+          createSeries(bySeed(5),bySeed(12),'International',5,12),
+          createSeries(bySeed(6),bySeed(11),'International',6,11),
+          createSeries(bySeed(7),bySeed(10),'International',7,10),
+          createSeries(bySeed(8),bySeed(9),'International',8,9)
+        ],
+        byeTeamIds: seeded.slice(0,4).map((team)=>team.id), history:[], finals:null, complete:false, seedByTeam
+      };
+      currentCareer.phase='playoffs';
+      return;
+    }
     const slots = currentCareer.league.playoffSize / 2;
     const west = standingsForConference('West').slice(0, slots);
     const east = standingsForConference('East').slice(0, slots);
     const pair = (teams, conference) => Array.from({ length: teams.length/2 }, (_, i) => createSeries(teams[i], teams[teams.length-1-i], conference, i+1, teams.length-i));
-    const seedByTeam = {};
     west.forEach((team,index)=>{ seedByTeam[team.id] = index + 1; });
     east.forEach((team,index)=>{ seedByTeam[team.id] = index + 1; });
     currentCareer.playoffs = {
@@ -1158,6 +1305,38 @@
       currentCareer.finalsMvp = calculateFinalsMvp(finals);
       currentCareer.phase = 'complete';
       finalizeSeasonHistory();
+      return;
+    }
+    if (currentCareer.league.mode === 'international') {
+      const seed = (teamId)=>playoffs.seedByTeam?.[teamId] ?? 99;
+      if (playoffs.stage === 'international-opening') {
+        const winnerBySeedPair = new Map();
+        playoffs.currentSeries.forEach((series)=>winnerBySeedPair.set(`${Math.min(series.seedA,series.seedB)}-${Math.max(series.seedA,series.seedB)}`, getTeam(series.winnerId)));
+        const top = playoffs.byeTeamIds.map(getTeam).sort((a,b)=>seed(a.id)-seed(b.id));
+        const w89 = winnerBySeedPair.get('8-9');
+        const w512 = winnerBySeedPair.get('5-12');
+        const w710 = winnerBySeedPair.get('7-10');
+        const w611 = winnerBySeedPair.get('6-11');
+        playoffs.stage = 'international-quarterfinals'; playoffs.roundNumber += 1;
+        playoffs.currentSeries = [
+          createSeries(top[0],w89,'International',seed(top[0].id),seed(w89.id)),
+          createSeries(top[3],w512,'International',seed(top[3].id),seed(w512.id)),
+          createSeries(top[1],w710,'International',seed(top[1].id),seed(w710.id)),
+          createSeries(top[2],w611,'International',seed(top[2].id),seed(w611.id))
+        ];
+        return;
+      }
+      const winners = playoffs.currentSeries.map((series)=>getTeam(series.winnerId));
+      if (winners.length === 4) {
+        playoffs.stage = 'international-semifinals'; playoffs.roundNumber += 1;
+        playoffs.currentSeries = [
+          createSeries(winners[0],winners[1],'International',seed(winners[0].id),seed(winners[1].id)),
+          createSeries(winners[2],winners[3],'International',seed(winners[2].id),seed(winners[3].id))
+        ];
+      } else if (winners.length === 2) {
+        playoffs.stage = 'finals'; playoffs.roundNumber += 1;
+        playoffs.currentSeries = [createSeries(winners[0],winners[1],'Finals',seed(winners[0].id),seed(winners[1].id))];
+      }
       return;
     }
     const westWinners = playoffs.currentSeries.filter((s)=>s.conference==='West').map((s)=>getTeam(s.winnerId));
@@ -1214,7 +1393,7 @@
   function finalizeSeasonHistory() {
     const user = getUserPlayer();
     const season = currentCareer.league.season;
-    if (currentCareer.champion === user.teamId) addAccolade(user, 'HoopSim Champion', season, user.teamId);
+    if (currentCareer.champion === user.teamId) addAccolade(user, 'HoopLoopSim Champion', season, user.teamId);
     if (currentCareer.finalsMvp === user.id) addAccolade(user, 'Finals MVP', season, user.teamId);
     allPlayers().forEach((player)=>{
       player.seasonHistory ||= [];
@@ -1337,7 +1516,9 @@
     dom['player-team-mark'].textContent = team.abbr;
     dom['player-team-name'].textContent = team.name;
     const contractYear = Math.max(1, (user.contractLength || user.contractYears || 1) - user.contractYears + 1);
-    dom['player-contract'].textContent = `${user.draftPick ? 'Career contract' : 'Player contract'} · Year ${contractYear} · ${user.contractYears} remaining`;
+    dom['player-contract'].textContent = currentCareer.league.mode === 'international'
+      ? 'National-team selection · roster spot earned each season'
+      : `${user.draftPick ? 'Career contract' : 'Player contract'} · Year ${contractYear} · ${user.contractYears} remaining`;
     dom['career-overall'].textContent = user.overall;
     dom['career-player-name'].textContent = user.name;
     dom['career-player-meta'].textContent = `#${user.jerseyNumber ?? '0'} · ${user.position} · Age ${user.age} · ${formatHeight(user.height)} · ${user.weight} lbs · ${user.playstyle}`;
@@ -1411,10 +1592,26 @@
 
   function renderStandings() {
     const userTeam = getTeam(getUserPlayer().teamId);
-    const conference = standingsForConference(userTeam.conference);
-    dom['standings-preview'].innerHTML = renderStandingsRows(conference.slice(0,6));
-    dom['west-standings'].innerHTML = renderStandingsRows(standingsForConference('West'), true);
-    dom['east-standings'].innerHTML = renderStandingsRows(standingsForConference('East'), true);
+    const international = currentCareer.league.mode === 'international';
+    if (international) {
+      const standings = allLeagueStandings();
+      dom['standings-preview'].innerHTML = renderStandingsRows(standings.slice(0,6));
+      dom['west-standings-label'].textContent = 'INTERNATIONAL LEAGUE';
+      dom['west-standings'].innerHTML = renderStandingsRows(standings, true);
+      dom['west-standings-panel'].classList.add('international-standings-panel');
+      dom['east-standings-panel'].classList.add('hidden');
+      dom['league-standings-columns'].classList.add('single-column-standings');
+    } else {
+      const conference = standingsForConference(userTeam.conference);
+      dom['standings-preview'].innerHTML = renderStandingsRows(conference.slice(0,6));
+      dom['west-standings-label'].textContent = 'WESTERN CONFERENCE';
+      dom['east-standings-label'].textContent = 'EASTERN CONFERENCE';
+      dom['west-standings'].innerHTML = renderStandingsRows(standingsForConference('West'), true);
+      dom['east-standings'].innerHTML = renderStandingsRows(standingsForConference('East'), true);
+      dom['east-standings-panel'].classList.remove('hidden');
+      dom['west-standings-panel'].classList.remove('international-standings-panel');
+      dom['league-standings-columns'].classList.remove('single-column-standings');
+    }
   }
 
   function qualifiedPlayersForDisplay() {
@@ -1449,7 +1646,19 @@
 
   function renderStatsTable() {
     if (dom['stats-sort'].value !== statsSortKey && [...dom['stats-sort'].options].some((option)=>option.value===statsSortKey)) dom['stats-sort'].value = statsSortKey;
-    const players = qualifiedPlayersForDisplay().sort((a,b)=>{
+    const userTeam = getTeam(getUserPlayer().teamId);
+    if (currentCareer.league.mode === 'international' && statsScope === 'my-conference') statsScope = 'all';
+    if (statsTeamFilter !== 'all' && !currentCareer.teams.some((team)=>String(team.id)===String(statsTeamFilter))) statsTeamFilter = 'all';
+    dom['stats-scope'].value = statsScope;
+    const teamFilterCurrent = statsTeamFilter;
+    dom['stats-team-filter'].innerHTML = `<option value="all">All teams</option>` + [...currentCareer.teams].sort((a,b)=>a.name.localeCompare(b.name)).map((team)=>`<option value="${team.id}" ${String(team.id)===String(teamFilterCurrent)?'selected':''}>${escapeHtml(team.name)}</option>`).join('');
+    const conferenceOption = dom['stats-scope'].querySelector('option[value="my-conference"]');
+    if (conferenceOption) conferenceOption.disabled = currentCareer.league.mode === 'international';
+    let pool = qualifiedPlayersForDisplay();
+    if (statsTeamFilter !== 'all') pool = pool.filter((player)=>String(player.teamId)===String(statsTeamFilter));
+    else if (statsScope === 'my-team') pool = pool.filter((player)=>String(player.teamId)===String(userTeam.id));
+    else if (statsScope === 'my-conference' && currentCareer.league.mode !== 'international') pool = pool.filter((player)=>getTeam(player.teamId)?.conference===userTeam.conference);
+    const players = pool.sort((a,b)=>{
       const av=statSortValue(a,statsSortKey), bv=statSortValue(b,statsSortKey);
       if (typeof av === 'string') return av.localeCompare(bv) * statsSortDirection;
       return (av-bv) * statsSortDirection;
@@ -1471,11 +1680,12 @@
   }
 
   function renderRosterSelector(defaultTeamId) {
-    const currentValue = Number(dom['roster-team-select'].value || currentCareer.rosterViewTeamId || defaultTeamId);
+    const requestedValue = currentCareer.rosterViewTeamId || dom['roster-team-select'].value || defaultTeamId;
+    const selectedTeam = currentCareer.teams.find((team)=>String(team.id)===String(requestedValue)) || getTeam(defaultTeamId);
+    const selectedId = selectedTeam?.id ?? defaultTeamId;
     dom['roster-team-select'].innerHTML = [...currentCareer.teams]
       .sort((a,b)=>a.name.localeCompare(b.name))
-      .map((team)=>`<option value="${team.id}" ${team.id===currentValue?'selected':''}>${escapeHtml(team.name)}</option>`).join('');
-    const selectedId = currentCareer.teams.some((team)=>team.id===currentValue) ? currentValue : defaultTeamId;
+      .map((team)=>`<option value="${team.id}" ${String(team.id)===String(selectedId)?'selected':''}>${escapeHtml(team.name)}</option>`).join('');
     dom['roster-team-select'].value = String(selectedId);
     currentCareer.rosterViewTeamId = selectedId;
     renderRoster(getTeam(selectedId));
@@ -1487,7 +1697,7 @@
     const roster = [...team.roster].sort((a,b)=>b.projectedMinutes-a.projectedMinutes || b.overall-a.overall);
     dom['roster-table'].innerHTML = `<table class="data-table"><thead><tr><th>Player</th><th>Pos</th><th>Age</th><th>OVR</th><th>Role</th><th>MPG</th><th>Contract</th><th>Status</th></tr></thead><tbody>${roster.map((player)=>`<tr class="${player.isUser?'user-row':''}">
       <td><button class="player-name-button" data-player-id="${player.id}" type="button"><strong>${escapeHtml(player.name)}</strong><small>${escapeHtml(player.playstyle)}</small></button></td>
-      <td>${player.position}</td><td>${player.age}</td><td>${player.overall}</td><td>${player.role}</td><td>${player.projectedMinutes}</td><td>${player.contractYears} yr</td><td>${player.injury?`${escapeHtml(player.injury.label)} (${player.injury.gamesRemaining})`:'Healthy'}</td></tr>`).join('')}</tbody></table>`;
+      <td>${player.position}</td><td>${player.age}</td><td>${player.overall}</td><td>${player.role}</td><td>${player.projectedMinutes}</td><td>${currentCareer.league.mode==='international'?'Country roster':`${player.contractYears} yr`}</td><td>${player.injury?`${escapeHtml(player.injury.label)} (${player.injury.gamesRemaining})`:'Healthy'}</td></tr>`).join('')}</tbody></table>`;
   }
 
   function renderLeagueNews() {
@@ -1633,7 +1843,7 @@
     const maxSeries = Math.max(1, ...rounds.map((round)=>round.series.length));
     const bracketHeight = Math.max(190, maxSeries * 176);
     dom['playoff-bracket'].innerHTML = `<div class="bracket-scroll" style="--bracket-height:${bracketHeight}px">${rounds.map((round)=>`<section class="bracket-round ${round.current?'current':'complete'}">
-      <h3 class="bracket-round-label">${round.stage==='finals'?'HoopSim Finals':`Round ${round.roundNumber}`}</h3>
+      <h3 class="bracket-round-label">${round.stage==='finals'?'HoopLoopSim Finals':`Round ${round.roundNumber}`}</h3>
       <div class="bracket-round-list">${round.series.map((series)=>{
         const a=getTeam(series.teamAId), b=getTeam(series.teamBId);
         const userSeries = [a.id,b.id].includes(userTeamId);
@@ -1659,7 +1869,7 @@
     const champion = getTeam(currentCareer.champion);
     const fmvp = playerById(currentCareer.finalsMvp);
     const user = getUserPlayer();
-    dom['season-finale'].innerHTML = `<span class="eyebrow">CHAMPIONS</span><h2>${escapeHtml(champion.name)} win the HoopSim title.</h2><p><strong>${escapeHtml(fmvp.name)}</strong> is Finals MVP.${champion.id===user.teamId?' Your team ends the season as champion.':''}</p><button id="open-offseason-button" class="primary-button" type="button">Enter offseason</button>`;
+    dom['season-finale'].innerHTML = `<span class="eyebrow">CHAMPIONS</span><h2>${escapeHtml(champion.name)} win the HoopLoopSim title.</h2><p><strong>${escapeHtml(fmvp.name)}</strong> is Finals MVP.${champion.id===user.teamId?' Your team ends the season as champion.':''}</p><button id="open-offseason-button" class="primary-button" type="button">Enter offseason</button>`;
     dom['season-finale'].classList.remove('hidden');
   }
 
@@ -1780,6 +1990,44 @@
     });
   }
 
+  function refreshInternationalRosters() {
+    const names = existingLeagueNames();
+    currentCareer.teams.forEach((team)=>{
+      const user = getUserPlayer();
+      while (team.roster.length < 12) {
+        const newcomer = createGeneratedPlayer({
+          age:randInt(18,24), position:choose(POSITIONS), playstyle:choose(Object.keys(PLAYSTYLES)),
+          targetOverall:clamp(Math.round(team.quality - 5 + normalRandom()*5),50,84), teamId:team.id, rookie:true, existingNames:names
+        });
+        newcomer.contractYears = 99; newcomer.contractLength = 99;
+        team.roster.push(newcomer);
+        recordLeagueNews('signing', `${team.name} added rising player ${newcomer.name} to its national-team pool.`, currentCareer.league.season + 1);
+      }
+      const candidates = team.roster.filter((player)=>!player.isUser).sort((a,b)=>a.overall-b.overall || b.age-a.age);
+      const weakest = candidates[0];
+      if (weakest) {
+        const margin = team.quality - weakest.overall;
+        const replacementChance = weakest.age >= 34 ? .48 : margin >= 10 ? .38 : margin >= 7 ? .18 : .04;
+        if (Math.random() < replacementChance) {
+          const newcomer = createGeneratedPlayer({
+            age:randInt(18,24), position:weakest.position, playstyle:choose(Object.keys(PLAYSTYLES)),
+            targetOverall:clamp(Math.round(Math.max(weakest.overall+2, team.quality-5) + normalRandom()*3),52,86), teamId:team.id, rookie:true, existingNames:names
+          });
+          newcomer.contractYears = 99; newcomer.contractLength = 99;
+          team.roster = team.roster.filter((player)=>player.id!==weakest.id);
+          team.roster.push(newcomer);
+          recordLeagueNews('signing', `${team.name} replaced ${weakest.name} with younger selection ${newcomer.name}.`, currentCareer.league.season + 1);
+        }
+      }
+      if (team.id === user.teamId && !team.roster.some((player)=>player.id===user.id)) team.roster.push(user);
+      if (team.roster.length > 12) {
+        const keep = [...team.roster].sort((a,b)=>b.overall-a.overall).slice(0,12);
+        if (team.id===user.teamId && !keep.some((player)=>player.id===user.id)) keep[keep.length-1]=user;
+        team.roster=keep;
+      }
+    });
+  }
+
   function prepareOffseason() {
     if (currentCareer.offseasonPreparedSeason === currentCareer.league.season) return currentCareer.development;
     const user = getUserPlayer();
@@ -1799,8 +2047,8 @@
       });
       team.roster = survivors;
     });
-    moveExpiredGeneratedPlayers();
-    replenishLeagueRosters();
+    if (currentCareer.league.mode === 'international') refreshInternationalRosters();
+    else { moveExpiredGeneratedPlayers(); replenishLeagueRosters(); }
     currentCareer.development = userDevelopment;
     currentCareer.offseasonPreparedSeason = currentCareer.league.season;
     currentCareer.forcedRetirementReason = shouldForceUserRetirement(user);
@@ -1820,11 +2068,13 @@
       return `<div class="development-change ${change>0?'positive':change<0?'negative':''}"><span>${label}</span><div class="development-values"><b>${oldValue}</b><i>→</i><strong>${newValue}</strong><em>(${change>0?'+':''}${change})</em></div></div>`;
     }).join('')}</div>`;
     const forced = currentCareer.forcedRetirementReason;
+    const international = currentCareer.league.mode === 'international';
     const offerCount = freeAgencyOfferCount(user.overall);
-    dom['offseason-note'].textContent = forced || (user.contractYears <= 0 ? `Your contract has expired. Your ${user.overall} OVR reputation has generated up to ${offerCount} free-agent options.` : `You have ${user.contractYears} season${user.contractYears===1?'':'s'} remaining on your contract.`);
-    dom['continue-next-season-button'].textContent = forced ? 'Finalize retirement' : user.contractYears <= 0 ? 'Review contract offers' : `Continue to Season ${currentCareer.league.season + 1}`;
+    dom['offseason-note'].textContent = forced || (international ? `Your country-team career continues with ${getTeam(user.teamId).name}. National rosters can refresh around you each offseason.` : user.contractYears <= 0 ? `Your contract has expired. Your ${user.overall} OVR reputation has generated up to ${offerCount} free-agent options.` : `You have ${user.contractYears} season${user.contractYears===1?'':'s'} remaining on your contract.`);
+    dom['continue-next-season-button'].textContent = forced ? 'Finalize retirement' : international ? `Continue to Season ${currentCareer.league.season + 1}` : user.contractYears <= 0 ? 'Review contract offers' : `Continue to Season ${currentCareer.league.season + 1}`;
     dom['retire-career-button'].classList.toggle('hidden', Boolean(forced));
-    const tradeAvailable = !forced && user.contractYears > 0 && currentCareer.tradeRequestSeason !== currentCareer.league.season;
+    dom['trade-request-panel'].classList.toggle('hidden', international);
+    const tradeAvailable = !international && !forced && user.contractYears > 0 && currentCareer.tradeRequestSeason !== currentCareer.league.season;
     dom['request-trade-button'].disabled = !tradeAvailable;
     dom['request-trade-button'].textContent = currentCareer.tradeRequestSeason === currentCareer.league.season ? 'Trade request used' : user.contractYears <= 0 ? 'Use free agency instead' : 'Request trade';
     dom['trade-request-result'].classList.add('hidden');
@@ -1844,6 +2094,7 @@
       });
       updateTeamRotation(team);
     });
+    assignSeasonVariance();
     currentCareer.schedule = buildSchedule(currentCareer.teams.map((team)=>team.id), currentCareer.league.games);
     currentCareer.currentRound = 0;
     currentCareer.phase = 'regular';
@@ -1964,7 +2215,7 @@
     dom['offseason-dialog'].close();
     if (currentCareer.forcedRetirementReason) return retireCareer(currentCareer.forcedRetirementReason);
     const user = getUserPlayer();
-    if (user.contractYears <= 0) return showFreeAgencyOffers();
+    if (currentCareer.league.mode !== 'international' && user.contractYears <= 0) return showFreeAgencyOffers();
     resetForNextSeason();
     await putSave(currentCareer);
     renderCareer();
@@ -1988,7 +2239,7 @@
     let score = user.seasonHistory.length * 1.7;
     score += (totals.points/games)*.7 + (totals.rebounds/games)*.35 + (totals.assists/games)*.45;
     score += (counts['MVP']||0)*15 + (counts['Finals MVP']||0)*11 + (counts['Defensive Player of the Year']||0)*9;
-    score += (counts['HoopSim Champion']||0)*7 + (counts['All-HoopLoop First Team']||0)*5;
+    score += (counts['HoopLoopSim Champion']||0)*7 + (counts['All-HoopLoop First Team']||0)*5;
     score += (counts['All-HoopLoop Second Team']||0)*3 + (counts['All-HoopLoop Third Team']||0)*1.5;
     score += (counts['Rookie of the Year']||0)*4 + (counts['All-Defensive First Team']||0)*2.5;
     if (totals.points >= 25000) score += 13; else if (totals.points >= 18000) score += 8; else if (totals.points >= 12000) score += 4;
@@ -2052,6 +2303,7 @@
   function migrateCareer(career) {
     career.version = VERSION;
     career.league.season ||= 1;
+    career.league.mode ||= 'domestic';
     career.league.games = clamp(Number(career.league.games || 30), 14, 99);
     career.userGameLogs ||= [];
     career.userPlayoffLogs ||= [];
@@ -2108,6 +2360,7 @@
         player.stats ||= {regular:createStats(),playoffs:createStats()};
         player.stats.regular ||= createStats();
         player.stats.playoffs ||= createStats();
+        player.seasonVariance ||= {scoring:1,rebounding:1,assists:1,defense:1};
       });
     });
     return career;
@@ -2124,7 +2377,7 @@
       const player = save.teams?.flatMap((team)=>team.roster).find((entry)=>entry.id===save.userPlayerId);
       const team = save.teams?.find((entry)=>entry.id===player?.teamId);
       return `<article class="save-card"><div><strong>${escapeHtml(player?.name || 'Unnamed Career')}</strong><small>${escapeHtml(team?.name || 'Pre-draft')} · ${player?.overall || '--'} OVR · Season ${save.league?.season || 1} · ${escapeHtml(save.phase || 'creator')} · Updated ${formatDate(save.updatedAt)}</small></div><div class="save-actions"><button class="primary-button" data-load-save="${save.id}" type="button">Load</button><button class="ghost-button" data-export-save="${save.id}" type="button">Export</button><button class="danger-button" data-delete-save="${save.id}" type="button">Delete</button></div></article>`;
-    }).join('') : '<div class="muted">No HoopSim careers saved on this device.</div>';
+    }).join('') : '<div class="muted">No HoopLoopSim careers saved on this device.</div>';
     if (!dom['saves-dialog'].open) dom['saves-dialog'].showModal();
   }
 
@@ -2140,7 +2393,7 @@
     const blob = new Blob([JSON.stringify(save,null,2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
-    anchor.href = url; anchor.download = `hoopsim-${(getPlayerNameFromSave(save)||'career').toLowerCase().replace(/[^a-z0-9]+/g,'-')}.json`;
+    anchor.href = url; anchor.download = `hooploopsim-${(getPlayerNameFromSave(save)||'career').toLowerCase().replace(/[^a-z0-9]+/g,'-')}.json`;
     anchor.click(); URL.revokeObjectURL(url);
   }
 
@@ -2152,7 +2405,7 @@
     try {
       const text = await file.text();
       const save = JSON.parse(text);
-      if (!save.id || !save.teams || !save.userPlayerId) throw new Error('Not a HoopSim save');
+      if (!save.id || !save.teams || !save.userPlayerId) throw new Error('Not a HoopLoopSim save');
       const saves = await getAllSaves();
       if (saves.length >= MAX_SAVES && !saves.some((entry)=>entry.id===save.id)) throw new Error(`Maximum ${MAX_SAVES} saves reached`);
       save.updatedAt = new Date().toISOString();
@@ -2165,7 +2418,8 @@
     draftSession = null;
     creator.leagueConfig = null; creator.playerConfig = null;
     creator.selectedTeamIds.clear();
-    dom['league-size'].value = '16'; dom['season-games'].value='30'; dom['league-name'].value='HoopSim League';
+    dom['league-mode'].value = 'domestic'; updateLeagueModeUi(true);
+    dom['league-size'].value = '16'; dom['season-games'].value='30'; dom['league-name'].value='HoopLoopSim League';
     updatePlayoffOptions(); autoSelectTeams();
     dom['player-name'].value='Evan Oblewski';
     dom['player-jersey'].value='1';
@@ -2178,6 +2432,7 @@
     dom['continue-career-button'].addEventListener('click', renderSaveDialog);
     dom['open-saves-button'].addEventListener('click', renderSaveDialog);
     dom['new-save-from-dialog'].addEventListener('click', () => { dom['saves-dialog'].close(); startNewCareer(); });
+    dom['league-mode'].addEventListener('change',()=>updateLeagueModeUi(true));
     dom['league-size'].addEventListener('change', updatePlayoffOptions);
     dom['season-games'].addEventListener('input',()=>{ dom['season-games'].value = dom['season-games'].value.replace(/\D/g,'').slice(0,2); previewSeasonGamesInput(); });
     ['change','blur'].forEach((eventName)=>dom['season-games'].addEventListener(eventName,clampSeasonGamesInput));
@@ -2191,15 +2446,16 @@
       clampSeasonGamesInput();
     }));
     dom['team-search'].addEventListener('input', renderTeams);
-    dom['team-grid'].addEventListener('click', (event) => { const button=event.target.closest('[data-team-id]'); if(button)toggleTeam(Number(button.dataset.teamId)); });
+    dom['team-grid'].addEventListener('click', (event) => { const button=event.target.closest('[data-team-id]'); if(button)toggleTeam(button.dataset.teamId); });
     dom['auto-select-teams'].addEventListener('click', autoSelectTeams);
     dom['clear-team-selection'].addEventListener('click',()=>{creator.selectedTeamIds.clear();renderTeams();});
     dom['randomize-league-button'].addEventListener('click',()=>{
-      const sizes=Array.from({length:22},(_,i)=>8+i*2);dom['league-size'].value=String(choose(sizes));dom['season-games'].value=randInt(14,99);updatePlayoffOptions();dom['series-length'].value=String(choose([1,3,5,7,9]));autoSelectTeams();clampSeasonGamesInput();
+      const sizes=leagueMode()==='international'?Array.from({length:11},(_,i)=>16+i*2):Array.from({length:22},(_,i)=>8+i*2);dom['league-size'].value=String(choose(sizes));dom['season-games'].value=randInt(14,99);updatePlayoffOptions();dom['series-length'].value=String(choose([1,3,5,7,9]));autoSelectTeams();clampSeasonGamesInput();
     });
     dom['cancel-creator-button'].addEventListener('click',()=>showView('landing-view'));
     dom['continue-to-player'].addEventListener('click',()=>{if(validateLeagueConfig()){showCreatorStep('player');updatePlayerProjection();}});
     dom['back-to-league'].addEventListener('click',()=>showCreatorStep('league'));
+    dom['randomize-player-button'].addEventListener('click',randomizePlayerIdentity);
     dom['apply-template-button'].addEventListener('click',applyPlaystyleTemplate);
     dom['randomize-attributes-button'].addEventListener('click',randomizeAttributes);
     dom['reset-attributes-button'].addEventListener('click',()=>setAllAttributes(50));
@@ -2219,6 +2475,8 @@
     }));
     document.querySelectorAll('.career-tabs button').forEach((button)=>button.addEventListener('click',()=>showCareerTab(button.dataset.tab)));
     document.querySelectorAll('[data-open-tab]').forEach((button)=>button.addEventListener('click',()=>showCareerTab(button.dataset.openTab)));
+    dom['stats-scope'].addEventListener('change',()=>{statsScope=dom['stats-scope'].value;statsTeamFilter='all';renderStatsTable();});
+    dom['stats-team-filter'].addEventListener('change',()=>{statsTeamFilter=dom['stats-team-filter'].value;renderStatsTable();});
     dom['stats-sort'].addEventListener('change',()=>{statsSortKey=dom['stats-sort'].value;statsSortDirection=-1;renderStatsTable();});
     dom['stats-table'].addEventListener('click',(event)=>{
       const sortButton=event.target.closest('[data-stat-sort]');
@@ -2228,7 +2486,7 @@
         renderStatsTable();
       }
     });
-    dom['roster-team-select'].addEventListener('change',()=>{currentCareer.rosterViewTeamId=Number(dom['roster-team-select'].value);renderRoster(getTeam(currentCareer.rosterViewTeamId));});
+    dom['roster-team-select'].addEventListener('change',()=>{currentCareer.rosterViewTeamId=dom['roster-team-select'].value;renderRoster(getTeam(currentCareer.rosterViewTeamId));});
     document.addEventListener('click',(event)=>{
       const playerButton=event.target.closest('[data-player-id]');
       if(playerButton && currentCareer) openPlayerProfile(playerButton.dataset.playerId);
@@ -2240,7 +2498,7 @@
     dom['career-menu-button'].addEventListener('click',()=>dom['career-menu-dialog'].showModal());
     dom['export-current-save'].addEventListener('click',()=>downloadSave(currentCareer));
     dom['return-to-title'].addEventListener('click',()=>{dom['career-menu-dialog'].close();currentCareer=null;showView('landing-view');refreshContinueButton();});
-    dom['delete-current-save'].addEventListener('click',async()=>{if(confirm('Delete this HoopSim career from this device?')){await deleteSave(currentCareer.id);currentCareer=null;dom['career-menu-dialog'].close();showView('landing-view');refreshContinueButton();}});
+    dom['delete-current-save'].addEventListener('click',async()=>{if(confirm('Delete this HoopLoopSim career from this device?')){await deleteSave(currentCareer.id);currentCareer=null;dom['career-menu-dialog'].close();showView('landing-view');refreshContinueButton();}});
     dom['postseason-panel'].addEventListener('click',(event)=>{
       if(event.target.id==='begin-playoffs-button'){createInitialPlayoffs();putSave(currentCareer);renderCareer();}
       if(event.target.id==='open-offseason-button')openOffseason();
@@ -2249,7 +2507,10 @@
     dom['sim-playoff-round'].addEventListener('click',simCurrentPlayoffRound);
     dom['sim-all-playoffs'].addEventListener('click',simAllPlayoffs);
     dom['continue-next-season-button'].addEventListener('click',continueNextSeason);
-    dom['request-trade-button'].addEventListener('click',requestTrade);
+    dom['request-trade-button'].addEventListener('click',()=>dom['trade-confirm-dialog'].showModal());
+    dom['close-trade-confirm'].addEventListener('click',()=>dom['trade-confirm-dialog'].close());
+    dom['cancel-trade-request'].addEventListener('click',()=>dom['trade-confirm-dialog'].close());
+    dom['confirm-trade-request'].addEventListener('click',()=>{dom['trade-confirm-dialog'].close();requestTrade();});
     dom['retire-career-button'].addEventListener('click',()=>retireCareer());
     dom['free-agency-offers'].addEventListener('click',(event)=>{const button=event.target.closest('[data-free-agent-team]');if(button)selectFreeAgentTeam(Number(button.dataset.freeAgentTeam));});
     dom['close-retirement-button'].addEventListener('click',()=>{dom['retirement-dialog'].close();if(currentCareer.retirement?.hallOfFame){dom['hall-of-fame-heading'].textContent=`${getUserPlayer().name} is inducted.`;dom['hall-of-fame-copy'].textContent=`A ${currentCareer.retirement.hofProbability}% Hall of Fame case earns a place among HoopLoop's legends.${currentCareer.retirement.jerseyRetirements?.length ? ` Jersey #${getUserPlayer().jerseyNumber} was also retired by ${currentCareer.retirement.jerseyRetirements.map((entry)=>entry.teamName).join(', ')}.` : ''}`;dom['hall-of-fame-dialog'].showModal();}});
@@ -2267,7 +2528,7 @@
   async function init() {
     cacheDom(); fillSelects();
     ATTRIBUTES.forEach(([key])=>{creator.attributes[key]=60;});
-    renderAttributeEditor(); autoSelectTeams(); bindEvents(); await refreshContinueButton();
+    renderAttributeEditor(); autoSelectTeams(); bindEvents(); renderTeams(); await refreshContinueButton();
     clampSeasonGamesInput();
     dom['autosave-status'].textContent = 'Offline · ready';
   }

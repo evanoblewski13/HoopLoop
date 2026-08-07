@@ -1,7 +1,46 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HoopSim Alpha 0.4 Verification</title>
-<style>body{font-family:system-ui,sans-serif;background:#f5f5f3;color:#111;margin:0;padding:40px}.card{max-width:780px;margin:auto;background:#fff;border:1px solid #ddd;border-radius:22px;padding:28px}.check{padding:14px;margin:9px 0;border-radius:12px;background:#f2f3f5;font-weight:750}.pass{background:#eaf7ee;color:#146b34}.fail{background:#fff0ed;color:#9d2418}a{color:#e64810}</style></head>
-<body><main class="card"><p>HOOPLOOP · HOOPSIM</p><h1>Alpha 0.4 verification</h1><div id="checks">Checking files…</div><p><a href="hoopsim.html">Open HoopSim</a></p></main>
-<script src="hoopsim-teams.js?v=0.4.0"></script><script>
-(async()=>{const checks=[];checks.push(['Team database',Array.isArray(window.HOOPSIM_TEAMS)&&window.HOOPSIM_TEAMS.length===80,`${window.HOOPSIM_TEAMS?.length||0} of 80 teams loaded`]);for(const file of ['hoopsim.css','hoopsim.js','hoopsim.html','version.json']){try{const response=await fetch(`${file}?v=0.4.0`);checks.push([file,response.ok,response.ok?'Available':`HTTP ${response.status}`])}catch(error){checks.push([file,false,error.message])}}try{const html=await (await fetch('hoopsim.html?v=0.4.0')).text();checks.push(['Alpha 0.4 interface',html.includes('box-score-dialog')&&html.includes('career-news-tab')&&html.includes('request-trade-button')&&html.includes('player-jersey'),'Box score, League News, trade request, and jersey creator found']);}catch(error){checks.push(['Alpha 0.4 interface',false,error.message])}try{const script=await (await fetch('hoopsim.js?v=0.4.0')).text();checks.push(['Alpha 0.4 game logic',script.includes("const VERSION = '0.4.0'")&&script.includes('teamOffensiveSupport')&&script.includes('freeAgencyOfferCount')&&script.includes('jerseyRetirementTeams')&&script.includes('recordLeagueNews'),'Version, stat model, free agency, legacy, and news logic found']);checks.push(['Playoff depth',script.includes('playoffSlotsBySize')&&script.includes('openBoxScore')&&script.includes('seedByTeam')&&script.includes('Sim one game per series')===false,'Playoff rotations, box scores, and persistent seeds found']);}catch(error){checks.push(['Alpha 0.4 game logic',false,error.message])}document.querySelector('#checks').innerHTML=checks.map(([name,ok,detail])=>`<div class="check ${ok?'pass':'fail'}">${ok?'✓':'✕'} ${name}: ${detail}</div>`).join('')})()
-</script></body></html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>HoopLoopSim Alpha 0.5 Verification</title>
+  <style>
+    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f3;color:#111;margin:0;padding:40px 18px}
+    .card{max-width:820px;margin:auto;background:#fff;border:1px solid #ddd;border-radius:22px;padding:28px;box-shadow:0 12px 36px rgba(0,0,0,.06)}
+    .check{padding:14px;margin:9px 0;border-radius:12px;background:#f2f3f5;font-weight:750}.pass{background:#eaf7ee;color:#146b34}.fail{background:#fff0ed;color:#9d2418}
+    a{color:#e64810;font-weight:800}.sub{color:#686868;line-height:1.55}
+  </style>
+</head>
+<body>
+<main class="card">
+  <p>HOOPLOOP · HOOPLOOPSIM</p>
+  <h1>Alpha 0.5 verification</h1>
+  <p class="sub">This page verifies the rebrand, both team pools, International League interface, and the major Alpha 0.5 logic files.</p>
+  <div id="checks">Checking files…</div>
+  <p><a href="hooploopsim.html">Open HoopLoopSim</a></p>
+</main>
+<script src="hoopsim-teams.js?v=0.5.0"></script>
+<script>
+(async()=>{
+  const checks=[];
+  const add=(name,ok,detail)=>checks.push([name,Boolean(ok),detail]);
+  add('Domestic team database',Array.isArray(window.HOOPSIM_TEAMS)&&window.HOOPSIM_TEAMS.length===80,`${window.HOOPSIM_TEAMS?.length||0} of 80 teams loaded`);
+  add('International team database',Array.isArray(window.HOOPLOOPSIM_INTERNATIONAL_TEAMS)&&window.HOOPLOOPSIM_INTERNATIONAL_TEAMS.length===50,`${window.HOOPLOOPSIM_INTERNATIONAL_TEAMS?.length||0} of 50 teams loaded`);
+  for(const file of ['hoopsim.css','hoopsim.js','hooploopsim.html','hoopsim.html','version.json']){
+    try{const response=await fetch(`${file}?v=0.5.0`);add(file,response.ok,response.ok?'Available':`HTTP ${response.status}`)}catch(error){add(file,false,error.message)}
+  }
+  try{
+    const html=await (await fetch('hooploopsim.html?v=0.5.0')).text();
+    add('HoopLoopSim interface',html.includes('<h1>HoopLoopSim</h1>')&&html.includes('league-mode')&&html.includes('international-user-team')&&html.includes('randomize-player-button')&&html.includes('stats-scope')&&html.includes('trade-confirm-dialog'),'Rebrand, league modes, player randomizer, stat filters, and trade confirmation found');
+  }catch(error){add('HoopLoopSim interface',false,error.message)}
+  try{
+    const script=await (await fetch('hoopsim.js?v=0.5.0')).text();
+    add('Alpha 0.5 game logic',script.includes("const VERSION = '0.5.0'")&&script.includes('assignSeasonVariance')&&script.includes('refreshInternationalRosters')&&script.includes('randomizePlayerIdentity')&&script.includes("currentCareer.league.mode === 'international'"),'Version, variance, international rosters, and player randomization logic found');
+    add('International postseason',script.includes("stage:'international-opening'")&&script.includes('byeTeamIds')&&script.includes('international-quarterfinals')&&script.includes('international-semifinals'),'12-team playoff with top-four byes found');
+    add('Stat rebalance',script.includes('absoluteHeightReb')&&script.includes('weightReb')&&script.includes('talentMultiplier')&&script.includes('seasonVariance.defense'),'Height/weight rebounding, teammate-assisted passing, and defensive variance found');
+  }catch(error){add('Alpha 0.5 game logic',false,error.message)}
+  document.querySelector('#checks').innerHTML=checks.map(([name,ok,detail])=>`<div class="check ${ok?'pass':'fail'}">${ok?'✓':'✕'} ${name}: ${detail}</div>`).join('');
+})()
+</script>
+</body>
+</html>
