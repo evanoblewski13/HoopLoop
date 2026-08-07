@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#ff5a1f" />
   <meta name="description" content="HoopLoopSim — a customizable, offline basketball career simulator from HoopLoop." />
-  <title>HoopLoopSim Alpha 0.5 — HoopLoop</title>
-  <link rel="stylesheet" href="hoopsim.css?v=0.5.0" />
+  <title>HoopLoopSim Alpha 0.6 — HoopLoop</title>
+  <link rel="stylesheet" href="hoopsim.css?v=0.6.0" />
 </head>
 <body>
   <div class="page-noise" aria-hidden="true"></div>
@@ -16,7 +16,7 @@
     </a>
     <div class="sim-title">
       <strong>HoopLoopSim</strong>
-      <span>Career Simulator · Alpha 0.5</span>
+      <span>Career Simulator · Alpha 0.6</span>
     </div>
     <div class="header-actions">
       <span id="autosave-status" class="autosave-status">Offline · ready</span>
@@ -58,7 +58,7 @@
           <li>Retirement and Hall of Fame results</li>
           <li>Six offline save files</li>
         </ul>
-        <p>Alpha 0.5 rebrands the game as HoopLoopSim, rebalances league statistics, adds better stat filters and player randomization, and debuts the International HoopLoop League with a 12-team postseason and top-four byes. Public career cards and deeper transaction systems remain future additions.</p>
+        <p>Alpha 0.6 restores the stable domestic career flow and introduces an optional International Basketball Tournament that appears during selected offseasons. Public career cards and deeper transaction systems remain future additions.</p>
       </aside>
     </section>
 
@@ -84,23 +84,8 @@
             </div>
 
             <label class="field">
-              <span>League format</span>
-              <select id="league-mode">
-                <option value="domestic" selected>HoopLoopSim League</option>
-                <option value="international">International HoopLoop League</option>
-              </select>
-              <small id="league-mode-help" class="field-help">US-city franchises · East/West conferences · 8–50 teams.</small>
-            </label>
-
-            <label class="field">
               <span>League name</span>
               <input id="league-name" type="text" maxlength="40" value="HoopLoopSim League" />
-            </label>
-
-            <label id="international-team-field" class="field hidden">
-              <span>Your country team</span>
-              <select id="international-user-team"></select>
-              <small class="field-help">International careers skip the draft and place your player directly on this national team.</small>
             </label>
 
             <div class="field-row">
@@ -225,7 +210,7 @@
 
       <section id="draft-step" class="creator-step hidden">
         <div class="draft-stage panel">
-          <span class="eyebrow">INAUGURAL HOOPLOOPSIM DRAFT</span>
+          <span id="draft-stage-eyebrow" class="eyebrow">INAUGURAL HOOPLOOPSIM DRAFT</span>
           <h2 id="draft-headline">The league is generating.</h2>
           <p id="draft-subhead" class="hidden" aria-hidden="true"></p>
           <div id="draft-mode-controls" class="draft-mode-controls hidden">
@@ -422,6 +407,13 @@
       <div class="modal-heading"><div><span class="eyebrow">OFFSEASON DEVELOPMENT</span><h2 id="offseason-heading">Season 1 complete</h2><p>Your performance, age, durability, injuries, and variance shaped this development roll.</p></div></div>
       <div id="development-summary" class="development-summary"></div>
       <p id="offseason-note" class="alpha-note">Continue into the next season or retire and finalize your career.</p>
+      <div id="international-event-panel" class="international-event-panel hidden">
+        <div><strong>International Basketball Tournament</strong><span id="international-event-copy">A global tournament is scheduled for this offseason.</span></div>
+        <div class="international-event-actions">
+          <button id="skip-international-event" class="ghost-button" type="button">Skip tournament</button>
+          <button id="enter-international-event" class="secondary-button" type="button">Enter tournament</button>
+        </div>
+      </div>
       <div id="trade-request-panel" class="trade-request-panel">
         <div><strong>Want a change of scenery?</strong><span>Request one random offseason trade. The request has a 33% chance to be denied.</span></div>
         <button id="request-trade-button" class="secondary-button" type="button">Request trade</button>
@@ -435,6 +427,39 @@
     <div class="modal-card">
       <div class="modal-heading"><div><span class="eyebrow">CONFIRM TRADE REQUEST</span><h2>Ask for a new team?</h2><p>This can only be attempted once this offseason. There is a 33% chance the front office denies the request.</p></div><button id="close-trade-confirm" class="icon-button" type="button" aria-label="Cancel trade request">×</button></div>
       <div class="modal-actions"><button id="cancel-trade-request" class="ghost-button" type="button">Cancel</button><button id="confirm-trade-request" class="primary-button" type="button">Request trade</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="international-tournament-dialog" class="modal">
+    <div class="modal-card tournament-modal-card">
+      <div class="modal-heading">
+        <div><span class="eyebrow">INTERNATIONAL BASKETBALL TOURNAMENT</span><h2 id="international-tournament-heading">Choose your nation</h2><p id="international-tournament-subtitle">Represent one country every three seasons.</p></div>
+        <button id="close-international-tournament" class="icon-button" type="button" aria-label="Close tournament">×</button>
+      </div>
+      <div id="international-nation-picker">
+        <label class="field"><span>National team</span><select id="international-nation-select"></select></label>
+        <p class="alpha-note">Your nation is locked after your first tournament. The tournament does not replace your HoopLoopSim club career.</p>
+        <button id="confirm-international-nation" class="primary-button wide" type="button">Represent this nation</button>
+      </div>
+      <div id="international-tournament-content" class="hidden">
+        <div id="international-tournament-summary" class="tournament-summary"></div>
+        <div class="tournament-controls" id="international-group-controls">
+          <button id="sim-international-round" class="secondary-button" type="button">Sim 1 round</button>
+          <button id="sim-international-five" class="secondary-button" type="button">Sim 5 rounds</button>
+          <button id="sim-international-group" class="primary-button" type="button">Sim group stage</button>
+        </div>
+        <div class="tournament-controls hidden" id="international-knockout-controls">
+          <button id="sim-international-knockout-round" class="secondary-button" type="button">Sim next knockout round</button>
+          <button id="sim-international-all" class="primary-button" type="button">Sim tournament</button>
+        </div>
+        <div class="tournament-layout">
+          <section class="panel inset-panel"><div class="panel-heading"><div><span class="eyebrow">STANDINGS</span><h3>International table</h3></div></div><div id="international-standings"></div></section>
+          <section class="panel inset-panel"><div class="panel-heading"><div><span class="eyebrow">YOUR GAMES</span><h3 id="international-user-team-label">Tournament log</h3></div></div><div id="international-user-games"></div></section>
+        </div>
+        <section id="international-bracket-panel" class="panel inset-panel hidden"><div class="panel-heading"><div><span class="eyebrow">MEDAL BRACKET</span><h3>Knockout stage</h3></div></div><div id="international-bracket"></div></section>
+        <div id="international-medal-result" class="tournament-medal-result hidden"></div>
+        <div class="modal-actions"><button id="finish-international-event" class="primary-button hidden" type="button">Return to offseason</button></div>
+      </div>
     </div>
   </dialog>
 
@@ -464,7 +489,7 @@
 
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-  <script src="hoopsim-teams.js?v=0.5.0"></script>
-  <script src="hoopsim.js?v=0.5.0"></script>
+  <script src="hoopsim-teams.js?v=0.6.0"></script>
+  <script src="hoopsim.js?v=0.6.0"></script>
 </body>
 </html>

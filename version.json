@@ -1,12 +1,10 @@
 {
   "game": "HoopLoopSim",
-  "version": "0.5.0",
-  "release": "International League debut and league-stat realism pass",
+  "version": "0.6.0",
+  "release": "Offseason International Basketball Tournament and draft-flow repair",
   "domesticTeams": 80,
-  "internationalTeams": 50,
+  "internationalTournamentTeams": 48,
   "domesticLeagueSize": {"minimum": 8, "maximum": 50, "evenOnly": true},
-  "internationalLeagueSize": {"minimum": 16, "default": 24, "maximum": 36, "evenOnly": true},
-  "internationalPlayoffs": {"teams": 12, "byes": 4},
   "minimumSeasonGames": 14,
   "maximumSeasonGames": 99,
   "attributes": 15,
@@ -22,7 +20,16 @@
   "jerseyRetirement": true,
   "retirement": true,
   "hallOfFame": true,
-  "internationalMode": true,
+  "standaloneInternationalLeague": false,
+  "internationalTournament": {
+    "firstEventSeasonMinimum": 3,
+    "firstEventSeasonMaximum": 5,
+    "recurrenceSeasons": 3,
+    "groupGamesPerTeam": 15,
+    "qualifiers": 12,
+    "topFourByes": true,
+    "medals": ["Gold", "Silver", "Bronze"]
+  },
   "randomPlayerIdentity": true,
   "leagueStatFilters": true
 }

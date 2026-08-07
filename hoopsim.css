@@ -550,3 +550,52 @@ button:disabled { cursor: not-allowed; opacity: .45; transform: none !important;
 .trophy-case { align-items: stretch; }
 .trophy { display: flex; flex-direction: column; justify-content: center; min-height: 74px; }
 .trophy span { display: block; font-size: 12px; font-weight: 750; }
+
+/* Alpha 0.6 · offseason international tournament */
+.international-event-panel {
+  margin-top: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--border, #d9d9d9);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(244, 112, 20, .08), rgba(255,255,255,.98));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.international-event-panel > div:first-child { display:flex; flex-direction:column; gap:4px; }
+.international-event-panel strong { font-size: 1rem; }
+.international-event-panel span { color: var(--muted, #626262); font-size: .92rem; line-height:1.45; }
+.international-event-actions, .tournament-controls { display:flex; gap:10px; flex-wrap:wrap; }
+.tournament-modal-card { width:min(1120px, 94vw); max-height:90vh; overflow:auto; }
+.tournament-summary { margin: 8px 0 16px; }
+.tournament-layout { display:grid; grid-template-columns: minmax(0,1.05fr) minmax(0,.95fr); gap:14px; margin-top:16px; }
+.inset-panel { padding:16px; }
+.international-standings-table { display:flex; flex-direction:column; gap:5px; }
+.international-standing-row { display:grid; grid-template-columns:34px minmax(0,1fr) 58px 58px; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; font-size:.88rem; }
+.international-standing-row:nth-child(odd) { background:#f6f6f6; }
+.international-standing-row.qualified { border-left:3px solid #111; }
+.international-standing-row.user-team { background:rgba(244,112,20,.11); outline:1px solid rgba(244,112,20,.28); }
+.international-game-row { display:flex; justify-content:space-between; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid #ececec; }
+.international-game-row > div { display:flex; flex-direction:column; gap:2px; }
+.international-game-row span, .international-game-row small { color:var(--muted,#666); }
+.international-bracket { display:flex; gap:16px; overflow-x:auto; padding:8px 2px 12px; }
+.international-bracket > section { min-width:205px; display:flex; flex-direction:column; gap:9px; }
+.international-bracket h4 { margin:0 0 2px; font-size:.8rem; text-transform:uppercase; letter-spacing:.08em; color:#666; }
+.international-bracket-game { border:1px solid #dedede; border-radius:10px; padding:9px 10px; display:grid; grid-template-columns:minmax(0,1fr) 28px; gap:5px 8px; background:#fff; }
+.international-bracket-game span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.international-bracket-game b { display:inline-flex; width:20px; color:#888; }
+.international-bracket-game strong { text-align:right; }
+.tournament-medal-result { margin-top:16px; border:1px solid #dcdcdc; border-radius:14px; padding:18px; background:#fafafa; }
+.tournament-medal-result h3 { margin:6px 0; font-size:1rem; line-height:1.5; }
+
+@media (max-width: 760px) {
+  .international-event-panel { align-items:stretch; flex-direction:column; }
+  .international-event-actions { width:100%; }
+  .international-event-actions button { flex:1; }
+  .tournament-layout { grid-template-columns:1fr; }
+  .tournament-controls { display:grid; grid-template-columns:1fr; }
+  .tournament-controls button { width:100%; }
+  .international-standing-row { grid-template-columns:28px minmax(0,1fr) 48px 48px; font-size:.82rem; padding:8px 6px; }
+  .international-game-row { align-items:flex-start; flex-direction:column; }
+}

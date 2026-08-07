@@ -641,7 +641,7 @@ window.HOOPSIM_TEAMS = [
   }
 ];
 
-window.HOOPLOOPSIM_INTERNATIONAL_TEAMS = [
+window.HOOPLOOPSIM_TOURNAMENT_TEAMS = [
   {id:'intl-1',name:'USA Rangers',country:'United States',abbr:'USA'},
   {id:'intl-2',name:'Canada Lumberjacks',country:'Canada',abbr:'CAN'},
   {id:'intl-3',name:'Mexico Meteors',country:'Mexico',abbr:'MEX'},
@@ -670,7 +670,6 @@ window.HOOPLOOPSIM_INTERNATIONAL_TEAMS = [
   {id:'intl-26',name:'Ukraine Nightingales',country:'Ukraine',abbr:'UKR'},
   {id:'intl-27',name:'Egypt Temple',country:'Egypt',abbr:'EGY'},
   {id:'intl-28',name:'Nigeria Noble',country:'Nigeria',abbr:'NGA'},
-  {id:'intl-29',name:'Madagascar',country:'Madagascar',abbr:'MAD'},
   {id:'intl-30',name:'South Africa Antelopes',country:'South Africa',abbr:'RSA'},
   {id:'intl-31',name:'China Tigers',country:'China',abbr:'CHN'},
   {id:'intl-32',name:'Japan Speed',country:'Japan',abbr:'JPN'},
@@ -679,7 +678,6 @@ window.HOOPLOOPSIM_INTERNATIONAL_TEAMS = [
   {id:'intl-35',name:'Vietnam Emerald',country:'Vietnam',abbr:'VIE'},
   {id:'intl-36',name:'Thailand Smile',country:'Thailand',abbr:'THA'},
   {id:'intl-37',name:'Australia Reefs',country:'Australia',abbr:'AUS'},
-  {id:'intl-38',name:'New Zealand Peaks',country:'New Zealand',abbr:'NZL'},
   {id:'intl-39',name:'Costa Rica Quetzals',country:'Costa Rica',abbr:'CRC'},
   {id:'intl-40',name:'Panama Connection',country:'Panama',abbr:'PAN'},
   {id:'intl-41',name:'Cuba Crocodiles',country:'Cuba',abbr:'CUB'},
