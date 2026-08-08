@@ -6,7 +6,8 @@
   <meta name="theme-color" content="#ff5a1f" />
   <meta name="description" content="HoopLoop — clean, competitive basketball knowledge games." />
   <title>HoopLoop — Basketball Knowledge Games</title>
-  <link rel="stylesheet" href="styles.css?v=8.1.0" />
+  <script src="theme.js?v=9.0.0"></script>
+  <link rel="stylesheet" href="styles.css?v=9.0.0" />
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
@@ -22,13 +23,13 @@
       <span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span>
     </a>
 
-    <nav class="desktop-nav" aria-label="Primary navigation">
-      <a class="active" href="#play">Daily</a>
-      <a href="#practice">Practice</a>
+    <nav class="desktop-nav" aria-label="HoopLoop games">
+      <a class="active" href="index.html">Name Rush</a>
       <a href="start-bench-cut.html">Start, Bench, Cut</a>
-      <a href="#leaderboard">Leaderboard</a>
+      <a href="cash-grab.html">Cash Grab</a>
+      <a href="hooploopsim.html">HoopLoopSim</a>
+      <span class="soon-nav">Higher or Lower <small>SOON</small></span>
       <button id="friends-nav" type="button">Friends</button>
-      <button id="race-nav" type="button">Race</button>
     </nav>
 
     <button class="account-control" id="account-button" type="button">
@@ -234,9 +235,9 @@
       <div class="section-heading compact-heading"><div><span class="overline">HOOPLOOP GAMES</span><h2>Built to keep expanding.</h2></div></div>
       <div class="game-preview-grid">
         <article class="live-game-card"><span>02</span><h3>Start, Bench, Cut</h3><p>Assign three players a role, then compare your choices with the HoopLoop community.</p><a href="start-bench-cut.html">PLAY NOW →</a></article>
-        <article><span>03</span><h3>Higher or Lower</h3><p>Build a streak by deciding which player owns the higher NBA total or average.</p><small>COMING SOON</small></article>
-        <article><span>04</span><h3>NBA Cash Grab</h3><p>Build the strongest roster you can while every choice changes your remaining salary cap.</p><small>COMING SOON</small></article>
-        <article class="live-game-card"><span>05</span><h3>HoopSim</h3><p>Create a player, build a custom league, enter the draft, and simulate a full basketball career.</p><a href="hoopsim.html">PLAY ALPHA →</a></article>
+        <article class="live-game-card"><span>03</span><h3>Cash Grab</h3><p>Spend a virtual $15 across five players, then test whether talent and team fit can survive the Gauntlet.</p><a href="cash-grab.html">PLAY NOW →</a></article>
+        <article><span>04</span><h3>Higher or Lower</h3><p>Build a streak by deciding which player owns the higher NBA total or average.</p><small>COMING SOON</small></article>
+        <article class="live-game-card"><span>SIM</span><h3>HoopLoopSim</h3><p>Create a league, build a player, and simulate a full customizable basketball career offline.</p><a href="hooploopsim.html">PLAY NOW →</a></article>
       </div>
     </section>
   </main>
@@ -244,7 +245,7 @@
   <footer>
     <a class="brand footer-brand" href="#top" aria-label="HoopLoop home"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a>
     <p>Clean competition for basketball fans.</p>
-    <span id="build-status">Version 8.0.0 · loading database…</span>
+    <span id="build-status">Version 9.0.0 · loading database…</span>
     <span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span>
   </footer>
 
@@ -295,8 +296,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="players-data.js?v=8.0.0"></script>
-  <script src="config.js?v=8.0.0"></script>
-  <script src="script.js?v=8.0.0"></script>
+  <script src="players-data.js?v=9.0.0"></script>
+  <script src="config.js?v=9.0.0"></script>
+  <script src="script.js?v=9.0.0"></script>
 </body>
 </html>

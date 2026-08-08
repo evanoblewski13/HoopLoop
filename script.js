@@ -1,7 +1,7 @@
 'use strict';
 
 const CONFIG = window.HOOPLOOP_CONFIG || {};
-const BUILD_VERSION = '8.0.0';
+const BUILD_VERSION = '9.0.0';
 const HINT_INTERVAL_MS = 20000;
 const LAUNCH_DATE = CONFIG.LAUNCH_DATE || '2026-08-01';
 const DAILY_TIME_ZONE = CONFIG.DAILY_TIME_ZONE || 'America/Chicago';
@@ -645,6 +645,7 @@ async function loadProfile() {
   const { data, error } = await db.from('profiles').select('*').eq('id', state.user.id).single();
   if (error) { console.warn(error); state.profile = null; }
   else state.profile = data;
+  if (state.profile?.accent_color && window.HoopLoopTheme) window.HoopLoopTheme.apply(state.profile.accent_color);
   renderAccount();
 }
 async function checkUsernameAvailable(username) {
@@ -727,7 +728,17 @@ async function openProfileModal() {
     getFriendIds()
   ]);
   const bestPractice = (practice || []).reduce((best,row) => row.best_round_ms ? Math.min(best,row.best_round_ms) : best, Infinity);
-  openModal(`<span class="overline">PLAYER PROFILE</span><h2>${escapeHtml(state.profile.username)}</h2><p>${escapeHtml(state.user.email || '')}</p><div class="profile-grid"><div><strong>${scoreCount || 0}</strong><span>daily scores</span></div><div><strong>${friendIds.length}</strong><span>friends</span></div><div><strong>${Number.isFinite(bestPractice) ? formatTime(bestPractice) : '--'}</strong><span>practice best</span></div></div><div class="inline-actions"><button class="primary-button" id="profile-friends" type="button">Friends</button><button class="secondary-button" id="profile-races" type="button">Race invites</button></div><button class="secondary-button wide" id="logout-button" style="margin-top:10px" type="button">Log out</button><button class="danger-text-button wide" id="clear-local-button" type="button">Clear local Version 7 practice data</button>`);
+  const accent = state.profile.accent_color || window.HoopLoopTheme?.current?.() || 'orange';
+  const accentMarkup = window.HoopLoopTheme ? window.HoopLoopTheme.optionsMarkup(accent) : '';
+  openModal(`<span class="overline">PLAYER PROFILE</span><h2>${escapeHtml(state.profile.username)}</h2><p>${escapeHtml(state.user.email || '')}</p><div class="profile-grid"><div><strong>${scoreCount || 0}</strong><span>daily scores</span></div><div><strong>${friendIds.length}</strong><span>friends</span></div><div><strong>${Number.isFinite(bestPractice) ? formatTime(bestPractice) : '--'}</strong><span>practice best</span></div></div><div class="accent-picker"><span>HoopLoop accent color</span><div class="accent-options">${accentMarkup}</div></div><div class="inline-actions"><button class="primary-button" id="profile-friends" type="button">Friends</button><button class="secondary-button" id="profile-races" type="button">Race invites</button></div><button class="secondary-button wide" id="logout-button" style="margin-top:10px" type="button">Log out</button><button class="danger-text-button wide" id="clear-local-button" type="button">Clear local practice data</button>`);
+  qsa('[data-accent-choice]').forEach(button => button.onclick = async () => {
+    const color = button.dataset.accentChoice;
+    window.HoopLoopTheme?.apply(color);
+    qsa('[data-accent-choice]').forEach(item => { item.classList.toggle('active', item === button); item.setAttribute('aria-pressed', String(item === button)); });
+    const { error } = await db.from('profiles').update({ accent_color: color, updated_at: new Date().toISOString() }).eq('id', state.user.id);
+    if (error) toast('Color saved locally', 'Run the Platform 9 SQL migration to sync it across devices.', 'error');
+    else { state.profile.accent_color = color; toast('Accent updated', `HoopLoop now uses ${window.HoopLoopTheme.PRESETS[color].label}.`); }
+  });
   $('profile-friends').onclick = openFriendsModal;
   $('profile-races').onclick = openRaceInvitations;
   $('logout-button').onclick = async () => { await db.auth.signOut(); closeModal(); };
@@ -1055,7 +1066,6 @@ function wireStaticControls() {
   els.accountButton.onclick = () => state.profile ? openProfileModal() : openAccountModal('login');
   els.accountCta.onclick = () => state.profile ? openProfileModal() : openAccountModal('create');
   $('friends-nav').onclick = openFriendsModal;
-  $('race-nav').onclick = () => document.querySelector('#race').scrollIntoView({ behavior:'smooth' });
   $('view-all-leaderboard').onclick = openLeaderboardModal;
   $('quick-match-button').onclick = quickMatch;
   $('friend-race-button').onclick = chooseFriendRace;
@@ -1107,7 +1117,10 @@ async function init() {
   subscribeLeaderboard();
   await loadPracticeStats();
   await renderArchive();
-  console.info('HoopLoop Version 7', { database:PLAYER_DB.meta, online:ONLINE_CONFIGURED, timezone:DAILY_TIME_ZONE });
+  const openTarget = new URLSearchParams(window.location.search).get('open');
+  if (openTarget === 'friends') setTimeout(openFriendsModal, 120);
+  if (openTarget === 'account') setTimeout(() => state.profile ? openProfileModal() : openAccountModal('login'), 120);
+  console.info('HoopLoop Platform 9', { database:PLAYER_DB.meta, online:ONLINE_CONFIGURED, timezone:DAILY_TIME_ZONE });
 }
 
 init().catch(error => {

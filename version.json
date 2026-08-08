@@ -1,62 +1,22 @@
 {
-  "game": "HoopLoopSim",
-  "version": "0.9.0",
-  "release": "Final alpha balance pass: +10 displayed OVR model, elite-rating diminishing returns, volatile progression, and lower/more varied game pace",
-  "domesticTeams": 80,
-  "internationalTournamentTeams": 48,
-  "overallDisplayBoost": 10,
-  "ratingModel": "attribute-average-plus-10",
-  "domesticLeagueSize": {
-    "minimum": 8,
-    "maximum": 50,
-    "evenOnly": true
-  },
-  "minimumSeasonGames": 14,
-  "maximumSeasonGames": 99,
-  "attributes": 15,
-  "offlineSaves": 6,
-  "multiSeason": true,
-  "manualDraft": true,
-  "playerProfiles": true,
-  "playoffBoxScores": true,
-  "leagueNews": true,
-  "leagueHistory": true,
-  "careerInternationalHistory": true,
-  "dynamicFreeAgency": true,
-  "tradeRequests": true,
-  "tradeConfirmation": true,
-  "jerseyRetirement": true,
-  "retirement": true,
-  "hallOfFame": true,
-  "internationalTournament": {
-    "firstEventSeasonMinimum": 3,
-    "firstEventSeasonMaximum": 5,
-    "recurrenceSeasons": 3,
-    "groupGamesPerTeam": 15,
-    "qualifiers": 12,
-    "topFourByes": true,
-    "bronzeParticipants": "semifinal-losers",
-    "medalRoundOrder": [
-      "Bronze",
-      "Gold"
-    ],
-    "singleGameSimulation": true,
-    "podiumPresentation": true,
-    "dedicatedFullScreen": true,
-    "boxScores": "user-group-games-and-all-knockout-games",
-    "medals": [
-      "Gold",
-      "Silver",
-      "Bronze"
-    ]
-  },
-  "randomPlayerIdentity": true,
-  "expandedInternationalNames": true,
-  "rareHeightOutliers": true,
-  "easterEggFrequency": "slightly-increased",
-  "leagueStatFilters": true,
-  "eliteAttributeDiminishingReturns": true,
-  "developmentVariance": "expanded",
-  "gamePaceModel": "lower-average-with-slow-game-and-shootout-outliers",
-  "targetTypicalTeamScore": "115-140"
+  "version": "9.0.0",
+  "release": "Cash Grab v1 + HoopLoop platform navigation/theme overhaul",
+  "games": [
+    "Name Rush",
+    "Start, Bench, Cut",
+    "Cash Grab",
+    "HoopLoopSim"
+  ],
+  "coming_soon": ["Higher or Lower"],
+  "features": [
+    "Cash Grab 5x5 current, all-time, and mixed boards",
+    "$15 virtual roster budget and five-player lineups",
+    "fit-first matchup engine with talent and versatility factors",
+    "random CPU matchups and ten-round Gauntlet",
+    "shared top navigation across current HoopLoop games",
+    "account-synced accent colors with local fallback",
+    "existing Name Rush accounts, leaderboards, practice, friends, and races",
+    "existing Start, Bench, Cut daily and playground modes",
+    "existing HoopLoopSim Alpha 0.9 career simulator"
+  ]
 }

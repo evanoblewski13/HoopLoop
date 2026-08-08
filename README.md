@@ -1,13 +1,25 @@
-# HoopLoopSim Alpha 0.9
+# HoopLoop Platform 9 — Cash Grab v1
 
-Final alpha balance-focused HoopLoopSim update.
+This package is a safe update for the existing HoopLoop GitHub Pages project.
 
-Highlights:
-- +10 displayed OVR model while preserving visible league rating bands.
-- One-time migration for +5-model saves.
-- Heavy diminishing returns for naturally developing elite attributes.
-- More year-to-year progression fluctuation, including slumps and rare veteran renaissances.
-- Lower, more varied game pace aimed at a typical 115–140 team-score range with occasional sub-100 games and rare shootouts.
-- All Alpha 0.8 career history and international tournament systems retained.
+## New
 
-See `HOOPLOOPSIM-0.9-UPDATE-GUIDE.md` and `HOOPLOOPSIM-0.9-TEST-CHECKLIST.md`.
+- Cash Grab 5×5 roster-budget game
+- Current, All-Time, and Mixed player boards
+- $15 virtual roster cap
+- fit-first game simulation
+- random CPU matchups
+- ten-round Gauntlet
+- standardized top game navigation
+- account accent color choices stored in Supabase with local fallback
+
+## Preserved
+
+- Name Rush Daily / Practice / Race
+- accounts, leaderboards, friends, Realtime races
+- Start Bench Cut Daily and Playground
+- HoopLoopSim Alpha 0.9
+
+Read `V9-UPDATE-GUIDE.md` before copying files.
+
+The first Cash Grab price tiers are intentionally provisional. Review `CASH-GRAB-PLAYER-TIERS.md` and send back any changes before the tier system is treated as final.

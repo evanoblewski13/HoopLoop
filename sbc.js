@@ -1,6 +1,6 @@
 'use strict';
 
-const BUILD_VERSION = '8.0.0';
+const BUILD_VERSION = '9.0.0';
 const DATA = window.HOOPLOOP_SBC_DATA || { meta: {}, players: [] };
 const CONFIG = window.HOOPLOOP_CONFIG || {};
 const ONLINE_CONFIGURED = /^https:\/\/.+\.supabase\.co$/i.test(CONFIG.SUPABASE_URL || '')
@@ -415,12 +415,23 @@ async function handleAuthSubmit(event) {
 
 function accountModal() {
   if (!state.session) return authModal('login');
+  const accent = state.profile?.accent_color || window.HoopLoopTheme?.current?.() || 'orange';
+  const accentMarkup = window.HoopLoopTheme ? window.HoopLoopTheme.optionsMarkup(accent) : '';
   openModal(`
     <span class="overline">YOUR HOOPLOOP</span>
     <h2 id="modal-title">${escapeHTML(state.profile?.username || 'Signed in')}</h2>
     <p>${escapeHTML(state.session.user.email || '')}</p>
     <p>Your Start, Bench, Cut Daily votes are saved with this account and remain available across devices.</p>
+    <div class="accent-picker"><span>HoopLoop accent color</span><div class="accent-options">${accentMarkup}</div></div>
     <button class="secondary-button wide" id="sign-out-button" type="button">Sign out</button>`);
+  document.querySelectorAll('[data-accent-choice]').forEach(button => button.onclick = async () => {
+    const color = button.dataset.accentChoice;
+    window.HoopLoopTheme?.apply(color);
+    document.querySelectorAll('[data-accent-choice]').forEach(item => { item.classList.toggle('active', item === button); item.setAttribute('aria-pressed', String(item === button)); });
+    const { error } = await db.from('profiles').update({ accent_color: color, updated_at: new Date().toISOString() }).eq('id', state.session.user.id);
+    if (!error && state.profile) state.profile.accent_color = color;
+    toast(error ? 'Color saved on this browser.' : 'Accent color saved.');
+  });
   $('sign-out-button').onclick = async () => {
     await db.auth.signOut();
     closeModal();
@@ -431,8 +442,9 @@ function accountModal() {
 async function loadProfile() {
   state.profile = null;
   if (!db || !state.session) return;
-  const { data } = await db.from('profiles').select('username').eq('id', state.session.user.id).maybeSingle();
+  const { data } = await db.from('profiles').select('*').eq('id', state.session.user.id).maybeSingle();
   state.profile = data || null;
+  if (state.profile?.accent_color && window.HoopLoopTheme) window.HoopLoopTheme.apply(state.profile.accent_color);
 }
 
 function updateAccountUI() {
