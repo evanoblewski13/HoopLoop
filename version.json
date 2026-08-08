@@ -1,22 +1,24 @@
 {
-  "version": "9.0.0",
-  "release": "Cash Grab v1 + HoopLoop platform navigation/theme overhaul",
+  "version": "10.0.0",
+  "release": "Cash Grab v2 \u2014 expanded Current pool, Daily/Random boards, real-player matchups",
   "games": [
     "Name Rush",
     "Start, Bench, Cut",
     "Cash Grab",
     "HoopLoopSim"
   ],
-  "coming_soon": ["Higher or Lower"],
+  "coming_soon": [
+    "Higher or Lower"
+  ],
   "features": [
-    "Cash Grab 5x5 current, all-time, and mixed boards",
-    "$15 virtual roster budget and five-player lineups",
-    "fit-first matchup engine with talent and versatility factors",
-    "random CPU matchups and ten-round Gauntlet",
-    "shared top navigation across current HoopLoop games",
-    "account-synced accent colors with local fallback",
-    "existing Name Rush accounts, leaderboards, practice, friends, and races",
-    "existing Start, Bench, Cut daily and playground modes",
-    "existing HoopLoopSim Alpha 0.9 career simulator"
+    "192-player Current Cash Grab pool",
+    "Daily and endless Random 5x5 boards",
+    "$15 five-player roster budget",
+    "50% fit / 30% talent / 20% versatility matchup model",
+    "bot quick matches",
+    "friend challenges and random-player matchmaking",
+    "simplified ten-round Gauntlet checklist",
+    "existing account-synced accent colors",
+    "existing HoopLoop games preserved"
   ]
 }

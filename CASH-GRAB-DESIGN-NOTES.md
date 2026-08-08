@@ -1,70 +1,41 @@
-# Cash Grab v1 — Design Notes
+# Cash Grab v2 — Design Notes
 
-## Core rules
+## Core loop
+- 5×5 board: five players at each $1–$5 price tier.
+- Build any five-player roster with a maximum virtual budget of $15.
+- User rosters have no forced positions.
+- Generated board columns use 2–3 guards among their five options to preserve useful variety.
 
-- Virtual roster budget: $15
-- Draft exactly five players
-- The board is 5 columns ($1–$5) × 5 players per column
-- Modes: Current, All-Time, Mixed
-- No forced positional restrictions
-- Poor lineup construction is handled by the fit model rather than blocking the user's choices
+## Board types
+### Daily Board
+- Same board for every player on the same Chicago-calendar date and player pool.
+- Available in Current, All-Time, and Mixed.
+- Useful for friends/community comparison.
+
+### Random Board
+- Reroll infinitely.
+- Same Current / All-Time / Mixed choices.
+- Current pool contains 192 players in v2.
 
 ## Matchup model
+- 50% Fit
+- 30% Talent
+- 20% Versatility / diversity
 
-The first tuning model intentionally makes team construction more important than just buying the five most expensive names.
+Fit considers lineup shape, spacing, creation, perimeter defense, rim protection, rebounding, off-ball value, and ball-dominance conflicts.
 
-Approximate team power weights:
+## Opponents
+### Bots
+Immediate generated opponent from the same player-pool mode.
 
-- Fit: 60%
-- Talent: 31%
-- Versatility: 9%
-
-Fit examines:
-
-- guard / forward / big balance
-- shooting and number of non-shooters
-- primary and secondary playmaking
-- perimeter defense
-- rim protection
-- rebounding
-- off-ball value
-- high-usage redundancy
-
-After both teams are rated, a smaller matchup adjustment compares shooting/finishing against perimeter/rim defense. Normal basketball variance is then added so the favored team is not guaranteed to win.
-
-## Quick Match
-
-- CPU opponent comes from the same Current / All-Time / Mixed mode.
-- CPU must have five unique players.
-- CPU budget cannot exceed $15.
-- Generator strongly prefers spending the full $15.
-- Wins and losses are saved locally in the browser.
+### Real players
+Requires the existing HoopLoop account/Supabase connection plus `supabase/cash-grab-v2.sql`.
+- Invite Friend: friend receives the inviter's exact board and builds a five-player response.
+- Face Random Player: submits the current roster to matchmaking. Players are paired by board type and player-pool mode.
+- Daily players naturally share the same board. Random-board opponents may have different random boards, but both retain the same $15 cap.
 
 ## Gauntlet
+The exact ten-round player-price ladder from v1 is preserved internally, but the interface is intentionally just a 1–10 checklist. Completed rounds receive ✓ and the failed round receives ×.
 
-One loss ends the run.
-
-1. 5 × $1
-2. 3 × $1 + 2 × $2
-3. 5 × $2
-4. 3 × $2 + 2 × $3
-5. 1 × $2 + 4 × $3
-6. 5 × $3
-7. 3 × $3 + 2 × $4
-8. 5 × $4
-9. 3 × $4 + 2 × $5
-10. 5 × $5
-
-Best cleared round is stored locally.
-
-## Future additions intentionally postponed
-
-- online PvP rosters
-- daily Cash Grab board
-- shared lineup percentages
-- friend challenges
-- historical win/loss profile stats
-- player headshots
-- deeper position-specific matchup logic
-
-Those should wait until the user approves the price tiers and first fit-engine playtests.
+## Player card cleanup
+The four unexplained mini ability bars from v1 were removed. The archetype text (e.g. `Stretch Big`, `Two-Way Wing`) is now the quick scouting preview.

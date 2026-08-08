@@ -1,25 +1,18 @@
-# HoopLoop Platform 9 — Cash Grab v1
+# HoopLoop Platform 10 — Cash Grab v2
 
-This package is a safe update for the existing HoopLoop GitHub Pages project.
+Main update files:
+- `cash-grab.html`
+- `cash-grab.css`
+- `cash-grab.js`
+- `cash-grab-data.js`
+- `verify.html`
+- `version.json`
+- `supabase/cash-grab-v2.sql`
 
-## New
+Documentation:
+- `PLATFORM-10-UPDATE-GUIDE.md`
+- `PLATFORM-10-TEST-CHECKLIST.md`
+- `CASH-GRAB-PLAYER-TIERS.md`
+- `CASH-GRAB-DESIGN-NOTES.md`
 
-- Cash Grab 5×5 roster-budget game
-- Current, All-Time, and Mixed player boards
-- $15 virtual roster cap
-- fit-first game simulation
-- random CPU matchups
-- ten-round Gauntlet
-- standardized top game navigation
-- account accent color choices stored in Supabase with local fallback
-
-## Preserved
-
-- Name Rush Daily / Practice / Race
-- accounts, leaderboards, friends, Realtime races
-- Start Bench Cut Daily and Playground
-- HoopLoopSim Alpha 0.9
-
-Read `V9-UPDATE-GUIDE.md` before copying files.
-
-The first Cash Grab price tiers are intentionally provisional. Review `CASH-GRAB-PLAYER-TIERS.md` and send back any changes before the tier system is treated as final.
+The user's existing `config.js` is deliberately not included.

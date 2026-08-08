@@ -7,7 +7,7 @@
   <meta name="description" content="Cash Grab by HoopLoop — build a five-player basketball lineup with a $15 virtual roster budget, then test the fit." />
   <title>Cash Grab — HoopLoop</title>
   <script src="theme.js?v=9.0.0"></script>
-  <link rel="stylesheet" href="cash-grab.css?v=1.0.0" />
+  <link rel="stylesheet" href="cash-grab.css?v=2.0.0" />
 </head>
 <body>
   <div class="page-noise" aria-hidden="true"></div>
@@ -34,7 +34,7 @@
       <div class="hero-copy">
         <div class="game-pill"><span></span> HoopLoop Game 03</div>
         <h1>Spend <em>$15.</em><br />Build five.</h1>
-        <p>Talent matters. Fit matters more. Draft any five players from the 5×5 board without going over your virtual $15 roster budget, then test the lineup against a random opponent or the ten-round Gauntlet.</p>
+        <p>Build any five-player roster for $15. Fit matters most. Play the Daily board, generate endless Random boards, face bots or real HoopLoop players, or try to survive the ten-round Gauntlet.</p>
         <div class="hero-actions">
           <button class="primary-button" id="jump-board" type="button">Build a team <span>↘</span></button>
           <button class="text-button" id="how-button" type="button">How matchups work</button>
@@ -43,7 +43,7 @@
       <aside class="hero-preview">
         <span class="preview-label">THE CAP</span>
         <strong>$15</strong>
-        <p>Five roster spots. Five price tiers. No positional requirement—the fit engine decides whether your weird lineup actually works.</p>
+        <p>Five roster spots. Five price tiers. Daily boards stay the same all day; Random boards keep the player pool fresh.</p>
         <div class="mini-prices"><span>$1</span><span>$2</span><span>$3</span><span>$4</span><span>$5</span></div>
       </aside>
     </section>
@@ -53,12 +53,19 @@
         <div>
           <span class="overline">BUILD YOUR FIVE</span>
           <h2>Cash Grab Board</h2>
-          <p>The first player prices are a provisional HoopLoop list built for testing. The tier file is designed to be edited after your review.</p>
+          <p id="board-label">DAILY</p>
         </div>
-        <div class="mode-switch" role="group" aria-label="Player pool">
-          <button class="active" data-mode="current" type="button">Current</button>
-          <button data-mode="alltime" type="button">All-Time</button>
-          <button data-mode="mixed" type="button">Mixed</button>
+        <div class="builder-switches">
+          <div class="mode-switch" role="group" aria-label="Board type">
+            <button class="active" data-board-type="daily" type="button">Daily Board</button>
+            <button data-board-type="random" type="button">Random Board</button>
+          </div>
+          <div class="mode-switch" role="group" aria-label="Player pool">
+            <button class="active" data-mode="current" type="button">Current</button>
+            <button data-mode="alltime" type="button">All-Time</button>
+            <button data-mode="mixed" type="button">Mixed</button>
+          </div>
+          <button class="secondary-button challenge-button" id="challenges-button" type="button">Online Challenges <span class="challenge-count hidden" id="challenge-count"></span></button>
         </div>
       </div>
 
@@ -67,7 +74,7 @@
         <div><span>ROSTER</span><strong id="roster-count">0 / 5</strong></div>
         <div class="budget-meter"><span id="budget-meter"></span></div>
         <button class="secondary-button" id="clear-team" type="button">Clear team</button>
-        <button class="secondary-button hidden" id="shuffle-mixed" type="button">Shuffle Mixed board</button>
+        <button class="secondary-button hidden" id="shuffle-board" type="button">New Random Board</button>
       </div>
 
       <div class="price-board" id="price-board" aria-live="polite"></div>
@@ -85,20 +92,31 @@
           <div class="grade-box"><span>TEAM GRADE</span><strong id="team-grade">--</strong></div>
         </div>
         <div class="fit-notes hidden" id="fit-notes"></div>
+        <button class="primary-button wide hidden" id="submit-challenge-lineup" type="button">Submit friend challenge lineup</button>
       </section>
 
       <section class="battle-select hidden" id="battle-select">
         <div class="battle-card">
-          <span class="overline">QUICK MATCH</span>
-          <h3>Random Opponent</h3>
-          <p>Face a freshly generated CPU roster from the same mode. The opponent also has a $15 cap.</p>
-          <button class="primary-button" id="quick-match" type="button">Find opponent</button>
+          <span class="overline">BOTS</span>
+          <h3>Quick Match</h3>
+          <p>Play instantly against a generated CPU roster using the same player pool.</p>
+          <button class="primary-button" id="bot-match" type="button">Play a bot</button>
           <div class="record-line" id="quick-record">Record: 0–0</div>
+        </div>
+        <div class="battle-card online-battle-card">
+          <span class="overline">REAL PLAYERS</span>
+          <h3>HoopLoop Matchup</h3>
+          <p>Invite a friend or submit your five to random matchmaking. Daily and Random boards both work.</p>
+          <div class="online-status" id="online-status">Checking account…</div>
+          <div class="battle-inline-actions">
+            <button class="primary-button" id="invite-friend" type="button">Invite Friend</button>
+            <button class="secondary-button" id="random-player" type="button">Face Random Player</button>
+          </div>
         </div>
         <div class="battle-card gauntlet-card">
           <span class="overline">TEN ROUNDS</span>
           <h3>Run the Gauntlet</h3>
-          <p>Start against five $1 players and climb until Round 10: five $5 superstars. One loss ends the run.</p>
+          <p>One loss ends the run. Clear all ten rounds to finish the ladder.</p>
           <button class="primary-button" id="start-gauntlet" type="button">Start Gauntlet</button>
           <div class="record-line" id="gauntlet-best">Best: Not started</div>
         </div>
@@ -135,7 +153,7 @@
 
     <section class="section gauntlet-map-section" id="gauntlet-map-section">
       <div class="section-heading">
-        <div><span class="overline">THE LADDER</span><h2>Gauntlet difficulty map</h2><p>Every round follows your exact player-price composition.</p></div>
+        <div><span class="overline">THE LADDER</span><h2>Gauntlet checklist</h2><p>Beat a round and check it off. One loss ends the run.</p></div>
       </div>
       <div class="gauntlet-map" id="gauntlet-map"></div>
     </section>
@@ -144,7 +162,7 @@
   <footer>
     <a class="brand footer-brand" href="index.html"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a>
     <p>Cash Grab uses a virtual roster budget only—no wagering or real-money play.</p>
-    <span>Cash Grab v1.0 · HoopLoop Platform 9</span>
+    <span>Cash Grab v2.0 · HoopLoop Platform 10</span>
     <span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span>
   </footer>
 
@@ -157,9 +175,9 @@
   <div class="toast-region" id="toast-region" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=9.0.0"></script>
-  <script src="theme-account-sync.js?v=9.0.0"></script>
-  <script src="cash-grab-data.js?v=1.0.0"></script>
-  <script src="cash-grab.js?v=1.0.0"></script>
+  <script src="config.js?v=10.0.0"></script>
+  <script src="cash-grab-data.js?v=2.0.0"></script>
+  <script src="cash-grab.js?v=2.0.0"></script>
+  <script src="theme-account-sync.js?v=10.0.0"></script>
 </body>
 </html>

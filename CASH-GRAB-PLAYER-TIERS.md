@@ -1,85 +1,67 @@
-# Cash Grab v1 — Provisional Player Price Board
+# Cash Grab v2 — Player Tier Review
 
-These prices are deliberately **not final**. They exist so Cash Grab can be tested as a complete game before the HoopLoop owner locks the player values.
+The Current pool below is based on the exact dollar tiers supplied for this update. Random and Daily boards draw **five players from each dollar tier**, with **2–3 guards in each five-player price column** when the pool allows it. User-built rosters themselves remain unrestricted.
 
-The file that controls these prices is `cash-grab-data.js`. Each mode has exactly five players at each price, making the board a literal 5×5 grid.
-
-## Current Players — provisional
+## Current Players
 
 ### $5
-- Shai Gilgeous-Alexander — G — Two-way scoring engine
-- Nikola Jokić — C — Point center
-- Luka Dončić — G — Helocentric creator
-- Victor Wembanyama — Big — Two-way unicorn
-- Giannis Antetokounmpo — F — Transition force
+- **PG:** Stephen Curry, Shai Gilgeous-Alexander, Jalen Brunson, Luka Dončić, Cade Cunningham
+- **SG:** Anthony Edwards, Devin Booker, Donovan Mitchell
+- **SF:** LeBron James, Jaylen Brown, Kawhi Leonard, Kevin Durant
+- **PF:** Giannis Antetokounmpo, Jayson Tatum, Anthony Davis
+- **C:** Nikola Jokić, Victor Wembanyama, Joel Embiid
 
 ### $4
-- Anthony Edwards — G — Power scoring guard
-- Cade Cunningham — G — Big lead guard
-- Jalen Brunson — G — Half-court creator
-- Donovan Mitchell — G — Three-level scorer
-- Jaylen Brown — F — Two-way slasher
+- **PG:** Tyrese Haliburton, Ja Morant, Trae Young, LaMelo Ball, Tyrese Maxey
+- **SG:** Kyrie Irving, Austin Reaves, Stephon Castle
+- **SF:** Jalen Williams, Franz Wagner, OG Anunoby, Cooper Flagg
+- **PF:** Evan Mobley, Paolo Banchero, Chet Holmgren, Scottie Barnes, Deni Avdija, Jalen Johnson
+- **C:** Karl-Anthony Towns, Bam Adebayo, Rudy Gobert
 
 ### $3
-- Kevin Durant — F — Elite shooting forward
-- Tyrese Maxey — G — Speed scoring guard
-- Chet Holmgren — Big — Stretch rim protector
-- Jalen Johnson — F — Point forward
-- Jamal Murray — G — Pick-and-roll scorer
+- **PG:** James Harden, Damian Lillard, Darius Garland, Jamal Murray, De’Aaron Fox, Jrue Holiday, Dylan Harper, Keyonte George
+- **SG:** Amen Thompson, Derrick White, Tyler Herro, Zach LaVine, Norman Powell, Dyson Daniels, Desmond Bane, Jalen Green, Herbert Jones, Kon Knueppel
+- **SF:** Jimmy Butler, DeMar DeRozan, Brandon Ingram, Mikal Bridges, Lauri Markkanen, Brandon Miller, Jaden McDaniels, Michael Porter Jr., RJ Barrett, Ausar Thompson, Josh Hart, Paul George
+- **PF:** Jaren Jackson Jr., Pascal Siakam, Zion Williamson, Julius Randle, Kristaps Porziņģis, Aaron Gordon, Matas Buzelis
+- **C:** Alperen Şengün, Domantas Sabonis, Ivica Zubac, Jarrett Allen, Jalen Duren, Zach Edey
 
 ### $2
-- Bam Adebayo — Big — Switch big
-- Evan Mobley — Big — Mobile defensive big
-- Devin Booker — G — Scoring connector
-- Cooper Flagg — F — Two-way connector
-- Jalen Duren — Big — Interior force
+- **PG:** Jalen Suggs, Josh Giddey, Coby White, Dejounte Murray, Immanuel Quickley, Jared McCain, D’Angelo Russell, Ayo Dosunmu, Ajay Mitchell
+- **SG:** Anfernee Simons, Andrew Nembhard, CJ McCollum, Devin Vassell, Luguentz Dort, Alex Caruso, Shaedon Sharpe, Bradley Beal, Cason Wallace, Bilal Coulibaly, Nickeil Alexander-Walker, VJ Edgecombe
+- **SF:** Cameron Johnson, Toumani Camara, Aaron Nesmith, Trey Murphy III, Andrew Wiggins, Bennedict Mathurin, Dillon Brooks, Harrison Barnes, Cam Whitmore
+- **PF:** John Collins, Draymond Green, PJ Washington, Jonathan Kuminga, Peyton Watson
+- **C:** Myles Turner, Isaiah Hartenstein, Naz Reid, Nikola Vučević, Walker Kessler, Alex Sarr, Bobby Portis, Onyeka Okongwu, Daniel Gafford, Dereck Lively II, Deandre Ayton, Kel’el Ware, Nic Claxton, Mitchell Robinson, Donovan Clingan
 
 ### $1
-- Derrick White — G — Two-way connector
-- Alex Caruso — G — Defensive glue
-- Herb Jones — F — Wing stopper
-- Myles Turner — Big — Stretch rim protector
-- Josh Hart — F — Rebounding utility wing
+- **PG:** Fred VanVleet, Jordan Poole, Payton Pritchard, Russell Westbrook, T.J. McConnell, Ty Jerome, Anthony Black, Marcus Smart, Lonzo Ball, Ryan Rollins, Devin Carter, Brandon Williams, Jamal Shead, Jeremiah Fears
+- **SG:** Cam Thomas, Christian Braun, Collin Sexton, Malik Monk, Quentin Grimes, Brandin Podziemski, Klay Thompson, Tim Hardaway Jr., Jordan Clarkson, Buddy Hield, Duncan Robinson, Tre Johnson
+- **SF:** De’Andre Hunter, Rui Hachimura, Zaccharie Risacher, Jerami Grant, Khris Middleton, Keldon Johnson, Ace Bailey, Dalton Knecht, Sam Hauser, Saddiq Bey, Carter Bryant, Ousmane Dieng
+- **PF:** Jabari Smith Jr., Keegan Murray, Obi Toppin, Tari Eason, Tobias Harris, Aaron Wiggins, Jarred Vanderbilt, Kyle Kuzma, Patrick Williams, Ryan Dunn, Ron Holland
+- **C:** Brook Lopez, Jakob Poeltl, Al Horford, Mark Williams, Yves Missi, Clint Capela, Jaylin Williams, Jaxson Hayes, Steven Adams, Neemias Queta, Marvin Bagley III
 
-## All-Time Players — provisional
+## All-Time starter pool
+
+The All-Time list remains the original 25-player starter pool for now. It can be expanded with the same pricing format later.
 
 ### $5
-- Michael Jordan — G — Two-way scoring apex
-- LeBron James — F — Complete engine
-- Kareem Abdul-Jabbar — Big — Interior scoring anchor
-- Magic Johnson — G — Oversized maestro
-- Larry Bird — F — Complete skill forward
+Michael Jordan, LeBron James, Kareem Abdul-Jabbar, Magic Johnson, Larry Bird
 
 ### $4
-- Kobe Bryant — G — Two-way shot creator
-- Tim Duncan — Big — Fundamental two-way anchor
-- Shaquille O'Neal — Big — Interior wrecking ball
-- Stephen Curry — G — Gravity playmaker
-- Hakeem Olajuwon — Big — Two-way post superstar
+Kobe Bryant, Tim Duncan, Shaquille O’Neal, Stephen Curry, Hakeem Olajuwon
 
 ### $3
-- Kevin Garnett — F — Switchable two-way big
-- Dwyane Wade — G — Slashing two-way creator
-- Dirk Nowitzki — F — Stretch scoring big
-- Oscar Robertson — G — All-around lead guard
-- Julius Erving — F — Athletic scoring wing
+Kevin Garnett, Dwyane Wade, Dirk Nowitzki, Oscar Robertson, Julius Erving
 
 ### $2
-- Scottie Pippen — F — Two-way point forward
-- David Robinson — Big — Athletic two-way center
-- Steve Nash — G — Efficiency playmaker
-- Charles Barkley — F — Undersized power force
-- John Stockton — G — Pure floor general
+Scottie Pippen, David Robinson, Steve Nash, Charles Barkley, John Stockton
 
 ### $1
-- Dennis Rodman — F — Defense and rebounding specialist
-- Reggie Miller — G — Movement shooter
-- Ray Allen — G — Elite spacer
-- Dikembe Mutombo — Big — Rim protection specialist
-- Ben Wallace — Big — Defensive anchor
+Dennis Rodman, Reggie Miller, Ray Allen, Dikembe Mutombo, Ben Wallace
 
-## Mixed Mode
+## Match model
 
-Mixed Mode does not have a separate price list. It takes the Current and All-Time lists above and builds a new 5×5 board by selecting three Current players and two All-Time players from each price tier, then shuffling them.
+- **50% Fit**
+- **30% Talent**
+- **20% Versatility / diversity
 
-This means changing a player's price in either base list automatically changes their Mixed Mode price.
+The short archetype label on each card is the scouting preview. The unexplained four-line ability indicator from v1 has been removed.

@@ -3,23 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>HoopLoop Platform 9 Verification</title>
+  <title>HoopLoop Platform 10 Verification</title>
   <style>
     :root{font-family:Inter,system-ui,sans-serif;color:#111;background:#f3f1ec}*{box-sizing:border-box}body{margin:0;padding:32px}main{max-width:900px;margin:auto;background:#fff;padding:32px;border-radius:22px;box-shadow:0 22px 70px #0001}h1{font-size:clamp(2.5rem,8vw,5rem);margin:0 0 8px;text-transform:uppercase}.sub{color:#666;line-height:1.6}.check{display:grid;grid-template-columns:28px 1fr;gap:12px;padding:16px 0;border-top:1px solid #ddd}.icon{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;font-weight:900}.pending .icon{background:#eee}.pass .icon{color:#fff;background:#18864c}.fail .icon{color:#fff;background:#bd3328}.check strong,.check small{display:block}.check small{margin-top:4px;color:#666;line-height:1.45}code{padding:2px 5px;background:#eee;border-radius:5px}a{color:#df4c15;font-weight:800}button{padding:12px 16px;border:0;border-radius:9px;background:#ff5a1f;color:#fff;font-weight:900;cursor:pointer}.links{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
   </style>
 </head>
 <body>
 <main>
-  <h1>Platform 9 Check</h1>
-  <p class="sub">Checks Name Rush, Start Bench Cut, Cash Grab, Supabase, the account accent migration, and Realtime. HoopLoopSim keeps its separate <code>hoopsim-verify.html</code> page.</p>
+  <h1>Platform 10 Check</h1>
+  <p class="sub">Checks Name Rush, Start Bench Cut, Cash Grab v2, Supabase, real-player Cash Grab, account colors, and Realtime. HoopLoopSim keeps its separate <code>hoopsim-verify.html</code> page.</p>
   <div id="checks"></div>
   <p class="links"><button id="rerun">Run checks again</button><a href="index.html">Name Rush</a><a href="start-bench-cut.html">Start, Bench, Cut</a><a href="cash-grab.html">Cash Grab</a><a href="hooploopsim.html">HoopLoopSim</a></p>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="players-data.js?v=9.0.0"></script>
 <script src="sbc-player-data.js?v=9.0.0"></script>
-<script src="cash-grab-data.js?v=1.0.0"></script>
-<script src="config.js?v=9.0.0"></script>
+<script src="cash-grab-data.js?v=2.0.0"></script>
+<script src="config.js?v=10.0.0"></script>
 <script>
 const checks=document.getElementById('checks');
 function row(name){const node=document.createElement('div');node.className='check pending';node.innerHTML='<span class="icon">…</span><span><strong>'+name+'</strong><small>Checking…</small></span>';checks.appendChild(node);return node}
@@ -27,15 +27,16 @@ function set(node,pass,message){node.className='check '+(pass?'pass':'fail');nod
 async function run(){checks.innerHTML='';
  const nameRush=row('Name Rush player database'); const nr=window.HOOPLOOP_PLAYER_DATA?.meta; set(nameRush,(nr?.playerCount||0)>=5000,nr?`${nr.playerCount.toLocaleString()} names and ${nr.aliasCount} official former names loaded.`:'players-data.js did not load.');
  const sbc=row('Start, Bench, Cut player pools'); const sm=window.HOOPLOOP_SBC_DATA?.meta; const sbcPass=(sm?.playerCount||0)>=2800&&sm?.allStarCount===466&&(sm?.activeCount||0)>=500; set(sbc,sbcPass,sm?`${sm.playerCount.toLocaleString()} card records: ${sm.activeCount} active, ${sm.allStarCount} All-Stars, and ${sm.randomEligibleCount.toLocaleString()} Random-eligible.`:'sbc-player-data.js did not load.');
- const cash=row('Cash Grab 5×5 tier boards'); const cg=window.HOOPLOOP_CASH_GRAB_DATA; const current=cg?.current||[],all=cg?.allTime||[]; const tiersOk=[1,2,3,4,5].every(p=>current.filter(x=>x.price===p).length===5&&all.filter(x=>x.price===p).length===5); set(cash,current.length===25&&all.length===25&&tiersOk,`Current: ${current.length}/25 · All-Time: ${all.length}/25 · five players per dollar tier: ${tiersOk?'yes':'no'}.`);
- const files=row('Cash Grab engine + theme files'); try{const [cashJs,themeJs]=await Promise.all([fetch('cash-grab.js?v=1.0.0').then(r=>r.text()),fetch('theme.js?v=9.0.0').then(r=>r.text())]);const gauntlet=cashJs.includes('[5,5,5,5,5]')&&cashJs.includes('[1,1,1,1,1]')&&cashJs.includes('fit*.60');set(files,gauntlet&&themeJs.includes('HoopLoopTheme'),gauntlet?'Gauntlet ladder, fit-first engine, and shared theme system found.':'One of the Platform 9 files is stale or missing.');}catch(e){set(files,false,e.message)}
+ const cash=row('Cash Grab expanded player pools'); const cg=window.HOOPLOOP_CASH_GRAB_DATA; const current=cg?.current||[],all=cg?.allTime||[]; const currentTiers=[1,2,3,4,5].every(p=>current.filter(x=>x.price===p).length>=15); const allTiers=[1,2,3,4,5].every(p=>all.filter(x=>x.price===p).length===5); set(cash,current.length>=190&&all.length===25&&currentTiers&&allTiers,`Current: ${current.length} players · All-Time: ${all.length} · every Current tier has 15+ options: ${currentTiers?'yes':'no'}.`);
+ const files=row('Cash Grab v2 engine + Daily/Random boards'); try{const [cashJs,themeJs]=await Promise.all([fetch('cash-grab.js?v=2.0.0').then(r=>r.text()),fetch('theme.js?v=9.0.0').then(r=>r.text())]);const engine=cashJs.includes('[5,5,5,5,5]')&&cashJs.includes('fit*WEIGHTS.fit')&&cashJs.includes("fit:.50")&&cashJs.includes("boardType:'daily'")&&cashJs.includes('create_cash_grab_friend_match');set(files,engine&&themeJs.includes('HoopLoopTheme'),engine?'10-round Gauntlet, 50/30/20 model, Daily/Random boards, and real-player hooks found.':'One of the Cash Grab v2 files is stale or missing.');}catch(e){set(files,false,e.message)}
  const config=row('Supabase configuration'); const cfg=window.HOOPLOOP_CONFIG||{}; const configured=/^https:\/\/.+\.supabase\.co$/i.test(cfg.SUPABASE_URL||'')&&Boolean(cfg.SUPABASE_ANON_KEY)&&!String(cfg.SUPABASE_ANON_KEY).includes('PASTE_'); set(config,configured,configured?'Project URL and browser key are present.':'Your existing config.js is missing or still contains placeholders.'); if(!configured)return;
  const client=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
  const auth=row('Authentication service'); try{const {error}=await client.auth.getSession();set(auth,!error,error?error.message:'Supabase Auth responded correctly.')}catch(e){set(auth,false,e.message)}
  const tables=row('Online platform tables'); try{for(const name of ['profiles','daily_scores']){const {error}=await client.from(name).select('*',{head:true,count:'exact'}).limit(1);if(error)throw new Error(name+': '+error.message)}set(tables,true,'Profiles and Name Rush score tables are reachable through the Data API.')}catch(e){set(tables,false,e.message+' Confirm the original setup.sql was run.');}
  const accent=row('Account accent-color migration'); try{const {error}=await client.from('profiles').select('accent_color').limit(1);if(error)throw error;set(accent,true,'profiles.accent_color exists. Account colors can sync across devices.')}catch(e){set(accent,false,(e.message||String(e))+' Run supabase/platform-v9-accent.sql once.');}
+ const cashOnline=row('Cash Grab real-player migration'); try{const {data,error}=await client.rpc('cash_grab_version');if(error)throw error;set(cashOnline,data==='cash-grab-v2',data==='cash-grab-v2'?'Cash Grab friend challenges and random matchmaking are installed.':'Unexpected Cash Grab migration version.')}catch(e){set(cashOnline,false,(e.message||String(e))+' Run supabase/cash-grab-v2.sql once.');}
  const sbcRpc=row('Start, Bench, Cut voting'); try{const {data,error}=await client.rpc('get_sbc_daily_results',{p_puzzle_date:'2026-08-02',p_puzzle_signature:'verification-only'});if(error)throw error;set(sbcRpc,Boolean(data&&typeof data.totalVotes!=='undefined'),'The anonymous community-results function responded correctly.')}catch(e){set(sbcRpc,false,(e.message||String(e))+' Run supabase/sbc-v8.sql if needed.');}
- const realtime=row('Realtime channel'); let settled=false; const channel=client.channel('hooploop-v9-verify-'+Date.now()).subscribe((status,error)=>{if(settled)return;if(status==='SUBSCRIBED'){settled=true;set(realtime,true,'Realtime WebSocket subscription connected.');client.removeChannel(channel)}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){settled=true;set(realtime,false,error?.message||status);client.removeChannel(channel)}}); setTimeout(()=>{if(!settled){settled=true;set(realtime,false,'Realtime did not subscribe within 8 seconds.');client.removeChannel(channel)}},8000);
+ const realtime=row('Realtime channel'); let settled=false; const channel=client.channel('hooploop-v10-verify-'+Date.now()).subscribe((status,error)=>{if(settled)return;if(status==='SUBSCRIBED'){settled=true;set(realtime,true,'Realtime WebSocket subscription connected.');client.removeChannel(channel)}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){settled=true;set(realtime,false,error?.message||status);client.removeChannel(channel)}}); setTimeout(()=>{if(!settled){settled=true;set(realtime,false,'Realtime did not subscribe within 8 seconds.');client.removeChannel(channel)}},8000);
 }
 document.getElementById('rerun').onclick=run;run();
 </script>
