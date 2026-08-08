@@ -1,5 +1,13 @@
-# HoopLoop Platform 11 — Cash Grab v3
+# HoopLoop Platform 12 — Cash Grab v4
 
-Cash Grab v3 adds 40-minute 5v5 box scores, fixed G-G-F-F-C boards, Current/All-Time-only pools, one-attempt Daily Gauntlet standings, no-overlap opponents, and snake-draft battles against CPU, friends, or random HoopLoop players.
+Cash Grab v4 is a box-score realism and matchup update.
 
-Run `supabase/cash-grab-v3.sql` once before publishing the update.
+Highlights:
+- Shared-possession game engine so FGA differences come from turnovers, offensive rebounds, and free throws.
+- PG → SG → SF → PF → C matchup slots for both teams.
+- Direct defender quality changes shot volume and shooting efficiency.
+- More individual variance, including occasional 40–50+ point explosions.
+- Game Story notes use actual box-score events instead of generic model explanations.
+- Hall of Five saves each user's best five unique Gauntlet lineups.
+
+Run `supabase/cash-grab-v4.sql` once after the existing v3 migration.

@@ -4,7 +4,7 @@ const DATA = window.HOOPLOOP_CASH_GRAB_DATA || { current: [], allTime: [] };
 const CONFIG = window.HOOPLOOP_CONFIG || {};
 const $ = id => document.getElementById(id);
 const qsa = selector => [...document.querySelectorAll(selector)];
-const STORAGE = 'hooploop_cash_grab_v3';
+const STORAGE = 'hooploop_cash_grab_v3'; // kept for seamless v3 -> v4 local-history migration
 const BUDGET = 15;
 const ROSTER_SIZE = 5;
 const LAUNCH_DATE = '2026-08-08';
@@ -24,7 +24,7 @@ const state = {
   gauntletTotals:{for:0,against:0}, gauntletTeam:[], officialDaily:false, dailyRunId:null, dailyAttemptUsed:false,
   currentBattle:null, currentOpponent:null,
   user:null, profile:null, onlineChannel:null,
-  draft:null
+  draft:null, hof:[]
 };
 
 function escapeHtml(value=''){return String(value).replace(/[&<>'"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[c]));}
@@ -54,10 +54,10 @@ function isPast(){return state.selectedDate<chicagoDate();}
 function loadLocal(){
   try{
     const saved=JSON.parse(localStorage.getItem(STORAGE)||'{}');
-    state.quickWins=Number(saved.quickWins)||0; state.quickLosses=Number(saved.quickLosses)||0; state.bestRound=Number(saved.bestRound)||0;
+    state.quickWins=Number(saved.quickWins)||0; state.quickLosses=Number(saved.quickLosses)||0; state.bestRound=Number(saved.bestRound)||0; state.hof=Array.isArray(saved.hof)?saved.hof:[];
   }catch{}
 }
-function saveLocal(){try{localStorage.setItem(STORAGE,JSON.stringify({quickWins:state.quickWins,quickLosses:state.quickLosses,bestRound:state.bestRound}));}catch{}}
+function saveLocal(){try{localStorage.setItem(STORAGE,JSON.stringify({quickWins:state.quickWins,quickLosses:state.quickLosses,bestRound:state.bestRound,hof:state.hof}));}catch{}}
 function localDailyKey(){return `hooploop_cg_daily_${state.selectedDate}_${state.mode}`;}
 function localDailyUsed(){try{return localStorage.getItem(localDailyKey())==='1';}catch{return false;}}
 function markLocalDailyUsed(){try{localStorage.setItem(localDailyKey(),'1');}catch{}}
@@ -167,61 +167,80 @@ function updateGauntletButton(){
   else {head.textContent=isToday()?'Daily Gauntlet':'Archived Daily';copy.textContent=isToday()?'Your official attempt is locked. Practice as much as you want.':'Replay this old Daily board for practice.';btn.textContent='Practice Gauntlet';}
 }
 
+const SLOT_LABELS=['PG','SG','SF','PF','C'];
+const POS_RANK={PG:0,SG:1,SF:2,PF:3,C:4};
+function orderedLineup(team){return [...team].sort((a,b)=>(POS_RANK[a.pos]??2)-(POS_RANK[b.pos]??2)||b.perimeterDefense-a.perimeterDefense||b.scoring-a.scoring).map((player,i)=>({player,slot:SLOT_LABELS[i]}));}
+function matchupPairs(teamA,teamB){const a=orderedLineup(teamA),b=orderedLineup(teamB);return a.map((x,i)=>({slot:x.slot,a:x.player,b:b[i].player}));}
 function playerTalent(p){return p.scoring*.16+p.shooting*.09+p.playmaking*.10+p.perimeterDefense*.10+p.rimDefense*.10+p.rebounding*.09+p.finishing*.10+p.athleticism*.06+p.offBall*.07+p.versatility*.13;}
-function opponentDefense(team){return average(team.map(p=>p.perimeterDefense*.58+p.rimDefense*.42));}
+function matchupDefense(p,slot){const i=SLOT_LABELS.indexOf(slot);const per=[.88,.82,.66,.43,.24][i]??.6;return p.perimeterDefense*per+p.rimDefense*(1-per);}
+function matchupOffense(p,slot){const i=SLOT_LABELS.indexOf(slot);const creation=[.20,.16,.11,.06,.04][i]??.1;return p.scoring*.34+p.shooting*.18+p.finishing*.20+p.athleticism*.08+p.playmaking*creation+p.offBall*(.20-creation);}
+function matchupAdvantage(offender,defender,slot){return clamp((matchupOffense(offender,slot)-matchupDefense(defender,slot))/17,-1.35,1.35);}
 function allocInteger(total,weights){if(total<=0)return weights.map(()=>0);const s=sum(weights)||1;const raw=weights.map(w=>total*w/s),base=raw.map(Math.floor);let rem=total-sum(base);const order=raw.map((v,i)=>[v-base[i],i]).sort((a,b)=>b[0]-a[0]);for(let k=0;k<rem;k++)base[order[k%order.length][1]]++;return base;}
-function splitQuarters(total,rand){const weights=[1+normal(rand)*.08,1+normal(rand)*.08,1+normal(rand)*.08,1+normal(rand)*.08].map(v=>Math.max(.65,v));return allocInteger(total,weights);}
-function shootingCombo(points,p,opp,rand){
-  const targetFT=clamp(.11+(p.finishing-70)/420+(p.usage-75)/700,.07,.28);const target3=clamp(.18+(p.shooting-70)/300-(p.finishing-75)/850,.09,.42);
-  let best=null;
-  for(let ft=0;ft<=Math.min(points,14);ft++)for(let threes=0;threes<=Math.floor((points-ft)/3);threes++){
-    const rem=points-ft-threes*3;if(rem<0||rem%2)continue;const twos=rem/2;
-    const score=Math.abs(ft/Math.max(1,points)-targetFT)+Math.abs((threes*3)/Math.max(1,points)-target3)+(rand()*.015);
-    if(!best||score<best.score)best={ftm:ft,threeM:threes,twoM:twos,score};
-  }
-  best=best||{ftm:0,threeM:0,twoM:Math.floor(points/2)};
-  const threePct=clamp(.28+(p.shooting-65)*.0031-(average(opp.map(x=>x.perimeterDefense))-75)*.0011,.25,.53);
-  const twoPct=clamp(.42+(p.finishing-65)*.0030+(p.scoring-70)*.0012-(Math.max(...opp.map(x=>x.rimDefense))-75)*.0013,.38,.72);
-  const threeA=Math.max(best.threeM,Math.round(best.threeM/Math.max(.2,threePct)+Math.max(0,normal(rand)*1.2)));
-  const twoA=Math.max(best.twoM,Math.round(best.twoM/Math.max(.3,twoPct)+Math.max(0,normal(rand)*1.5)));
-  const fta=Math.max(best.ftm,Math.round(best.ftm/clamp(.72+(p.shooting-70)*.0015,.68,.92)));
-  return{fgm:best.threeM+best.twoM,fga:threeA+twoA,threeM:best.threeM,threeA,ftm:best.ftm,fta};
+function allocWithFloor(total,weights,floorEach=0,cap=999){const n=weights.length,base=Array(n).fill(Math.min(floorEach,Math.floor(total/n)));let left=total-sum(base);if(left<=0)return base;let add=allocInteger(left,weights);for(let i=0;i<n;i++)base[i]+=add[i];let guard=0;while(base.some(v=>v>cap)&&guard++<30){let overflow=0;for(let i=0;i<n;i++)if(base[i]>cap){overflow+=base[i]-cap;base[i]=cap;}if(!overflow)break;const eligible=weights.map((w,i)=>base[i]<cap?w:0);const extra=allocInteger(overflow,eligible);for(let i=0;i<n;i++)base[i]+=extra[i];}return base;}
+function sampleMakes(attempts,pct,rand){let made=0;for(let i=0;i<attempts;i++)if(rand()<pct)made++;return made;}
+function splitQuarters(total,rand){const weights=[1+normal(rand)*.10,1+normal(rand)*.10,1+normal(rand)*.10,1+normal(rand)*.10].map(v=>Math.max(.58,v));return allocInteger(total,weights);}
+function possessionProfile(team,opp,metrics,oppMetrics,possessions,rand){
+  const play=average(team.map(p=>p.playmaking)),oppPressure=average(opp.map(p=>p.perimeterDefense)),reb=average(team.map(p=>p.rebounding)),oppReb=average(opp.map(p=>p.rebounding)),finish=average(team.map(p=>p.finishing)),usage=average(team.map(p=>p.usage)),oppRim=Math.max(...opp.map(p=>p.rimDefense));
+  const turnovers=clamp(Math.round(13.2+(oppPressure-78)*.055-(play-78)*.070-(metrics.fit-78)*.035+normal(rand)*2.15),6,22);
+  const oreb=clamp(Math.round(9.0+(reb-78)*.095-(oppReb-78)*.055+normal(rand)*2.3),3,18);
+  const fta=clamp(Math.round(19+(finish-78)*.105+(usage-82)*.035-(oppRim-78)*.045+normal(rand)*3.9),7,38);
+  const fga=clamp(Math.round(possessions+oreb-turnovers-.44*fta),66,104);
+  return{possessions,turnovers,oreb,fta,fga};
 }
-function playerBox(team,opp,totalScore,metrics,rand){
-  const usageWeights=team.map(p=>Math.max(10,(p.usage*.43+p.scoring*.28+p.shooting*.11+p.finishing*.10+p.playmaking*.08)-54));
-  const points=allocInteger(totalScore,usageWeights.map((w,i)=>w*(.90+rand()*.20)*(1+(team[i].scoring-80)/250)));
-  const fgm=[];const rows=[];
-  for(let i=0;i<team.length;i++){
-    const p=team[i],shoot=shootingCombo(points[i],p,opp,rand);fgm.push(shoot.fgm);
-    rows.push({player:p,min:40,pts:points[i],...shoot,reb:0,ast:0,stl:0,blk:0,to:0});
-  }
-  const teamFgm=sum(fgm);
-  const rebWeights=team.map(p=>(p.rebounding*.7+(p.group==='C'?28:p.group==='F'?12:2))*(.85+rand()*.3));
-  const totalReb=clamp(Math.round(28+average(team.map(p=>p.rebounding))*.17+normal(rand)*3),24,52);const rebs=allocInteger(totalReb,rebWeights);
-  const astCeil=Math.max(0,Math.round(teamFgm*.82));const astTarget=clamp(Math.round(teamFgm*(.43+(average(team.map(p=>p.playmaking))-65)*.004+metrics.fit*.0015)+normal(rand)*2),6,astCeil);
-  const asts=allocInteger(astTarget,team.map(p=>Math.max(2,p.playmaking-48)*(p.group==='G'?1.18:1)));
-  rows.forEach((r,i)=>{const p=team[i];r.reb=rebs[i];r.ast=asts[i];r.stl=clamp(Math.round((p.perimeterDefense-58)/28+rand()*1.35),0,4);r.blk=clamp(Math.round((p.rimDefense-62)/25+(p.group==='C'?.55:p.group==='F'?.2:0)+rand()*.9),0,5);r.to=clamp(Math.round((p.usage+p.playmaking)/75+rand()*1.8-(metrics.fit-75)/30),0,7);});
-  return rows;
+function explosionFactor(p,adv,rand){
+  const star=clamp((p.scoring-78)/20,0,1);let factor=Math.exp(normal(rand)*.18)*(1+adv*.10);let eruption=0;
+  if(rand()<.025+star*.065+Math.max(0,adv)*.035){factor*=1.28+rand()*.42;eruption=1;}
+  if(rand()<.004+star*.012+Math.max(0,adv)*.010){factor*=1.30+rand()*.35;eruption=2;}
+  return{factor:clamp(factor,.48,2.45),eruption};
+}
+function primaryBox(team,opp,metrics,oppMetrics,profile,rand){
+  const mine=orderedLineup(team),theirs=orderedLineup(opp);const contexts=mine.map((x,i)=>{const d=theirs[i].player,adv=matchupAdvantage(x.player,d,x.slot),boom=explosionFactor(x.player,adv,rand);return{...x,defender:d,adv,...boom};});
+  const shotWeights=contexts.map(c=>Math.max(5,(c.player.usage*.40+c.player.scoring*.30+c.player.shooting*.10+c.player.finishing*.10+c.player.playmaking*.06+c.player.offBall*.04)-55)*c.factor*(1+c.adv*.075));
+  const fga=allocWithFloor(profile.fga,shotWeights,4,42);
+  const foulWeights=contexts.map(c=>Math.max(4,c.player.finishing*.42+c.player.usage*.34+c.player.scoring*.15+c.player.athleticism*.09-55)*Math.sqrt(c.factor)*(1+Math.max(-.3,c.adv)*.06));
+  const fta=allocInteger(profile.fta,foulWeights);
+  const toWeights=contexts.map(c=>Math.max(3,c.player.usage*.50+(100-c.player.playmaking)*.28+c.player.scoring*.12-36));
+  const tos=allocInteger(profile.turnovers,toWeights);
+  const orebWeights=contexts.map(c=>Math.max(2,c.player.rebounding+(c.player.pos==='C'?24:c.player.pos==='PF'?13:c.player.pos==='SF'?5:0)));
+  const orebs=allocInteger(profile.oreb,orebWeights);
+  const edge=clamp((metrics.power-oppMetrics.power)*.00115,-.025,.025);
+  return contexts.map((c,i)=>{
+    const p=c.player,hot=normal(rand)*.022+(c.eruption?(.012+c.eruption*.009):0);const threeRate=clamp(.22+(p.shooting-p.finishing)*.0048+(p.pos==='PG'||p.pos==='SG'?.055:p.pos==='C'?-.05:0),.10,.67);
+    const threeA=clamp(Math.round(fga[i]*threeRate+normal(rand)*1.05),0,fga[i]),twoA=fga[i]-threeA;
+    const def=matchupDefense(c.defender,c.slot);const threePct=clamp(.255+(p.shooting-60)*.00325-(def-76)*.00135+edge+c.adv*.010+hot,.20,.58);const twoPct=clamp(.425+(p.finishing-60)*.0030+(p.scoring-72)*.0012-(def-76)*.00115+edge+c.adv*.012+hot,.34,.77);const ftPct=clamp(.66+(p.shooting-55)*.00265+normal(rand)*.015,.58,.95);
+    const threeM=sampleMakes(threeA,threePct,rand),twoM=sampleMakes(twoA,twoPct,rand),ftm=sampleMakes(fta[i],ftPct,rand);const pts=threeM*3+twoM*2+ftm;
+    return{player:p,slot:c.slot,defender:c.defender,advantage:round(c.adv,2),eruption:c.eruption,min:40,pts,fgm:threeM+twoM,fga:fga[i],threeM,threeA,ftm,fta:fta[i],oreb:orebs[i],dreb:0,reb:orebs[i],ast:0,stl:0,blk:0,to:tos[i]};
+  });
+}
+function fillSecondary(rows,oppRows,team,opp,metrics,oppMetrics,rand){
+  const oppMisses=sum(oppRows.map(r=>r.fga-r.fgm)),oppOreb=sum(oppRows.map(r=>r.oreb));const drebTotal=Math.max(0,oppMisses-oppOreb);
+  const dreb=allocInteger(drebTotal,rows.map(r=>Math.max(3,r.player.rebounding+(r.player.pos==='C'?26:r.player.pos==='PF'?14:r.player.pos==='SF'?6:0))*(.78+rand()*.48)));
+  const teamFgm=sum(rows.map(r=>r.fgm));const assistRate=clamp(.48+(average(team.map(p=>p.playmaking))-75)*.0035+(metrics.fit-75)*.0020,.38,.80);const astTarget=clamp(Math.round(teamFgm*assistRate+normal(rand)*1.8),5,teamFgm);const ast=allocInteger(astTarget,rows.map(r=>Math.max(3,r.player.playmaking-45)*(r.player.pos==='PG'?1.28:r.player.pos==='SG'?1.08:1)*(.72+rand()*.58)));
+  const oppTO=sum(oppRows.map(r=>r.to));const stealTarget=clamp(Math.round(oppTO*clamp(.48+(average(team.map(p=>p.perimeterDefense))-75)*.003,.32,.75)),2,Math.min(oppTO,13));const stl=allocInteger(stealTarget,rows.map(r=>Math.max(2,r.player.perimeterDefense-45)*(.65+rand()*.70)));
+  const oppTwoMisses=sum(oppRows.map(r=>(r.fga-r.threeA)-(r.fgm-r.threeM)));const blockTarget=clamp(Math.round(2.4+(Math.max(...team.map(p=>p.rimDefense))-75)*.075+normal(rand)*1.4),0,Math.min(10,Math.max(0,oppTwoMisses)));const blk=allocInteger(blockTarget,rows.map(r=>Math.max(2,r.player.rimDefense-48)*(r.player.pos==='C'?1.45:r.player.pos==='PF'?1.18:1)*(.60+rand()*.78)));
+  rows.forEach((r,i)=>{r.dreb=dreb[i];r.reb=r.oreb+r.dreb;r.ast=ast[i];r.stl=stl[i];r.blk=blk[i];});
 }
 function simulateGame(teamA,teamB,seedText=''){
-  const rand=seedText?seededRandom(seedText):Math.random;const a=teamMetrics(teamA),b=teamMetrics(teamB);
-  const chance=clamp(1/(1+Math.exp(-(a.power-b.power)/6.2)),.07,.93),aWins=rand()<chance;
-  const commonPace=clamp(80+normal(rand)*3.8,71,90);
-  const offenseA=average(teamA.map(p=>p.scoring*.31+p.shooting*.23+p.finishing*.18+p.playmaking*.15+p.offBall*.13));
-  const offenseB=average(teamB.map(p=>p.scoring*.31+p.shooting*.23+p.finishing*.18+p.playmaking*.15+p.offBall*.13));
-  const defA=opponentDefense(teamA),defB=opponentDefense(teamB);
-  const ortgA=102+(offenseA-75)*.43+(a.fit-75)*.24+(a.versatility-75)*.08-(defB-75)*.22+normal(rand)*4.5;
-  const ortgB=102+(offenseB-75)*.43+(b.fit-75)*.24+(b.versatility-75)*.08-(defA-75)*.22+normal(rand)*4.5;
-  let scoreA=Math.max(70,Math.round(commonPace*ortgA/100));let scoreB=Math.max(70,Math.round(commonPace*ortgB/100));
-  if(aWins&&scoreA<=scoreB)scoreA=scoreB+1+Math.floor(rand()*7);if(!aWins&&scoreB<=scoreA)scoreB=scoreA+1+Math.floor(rand()*7);
-  const quartersA=splitQuarters(scoreA,rand),quartersB=splitQuarters(scoreB,rand);
-  const boxA=playerBox(teamA,teamB,scoreA,a,rand),boxB=playerBox(teamB,teamA,scoreB,b,rand);
-  return{a,b,aWins,scoreA,scoreB,quartersA,quartersB,boxA,boxB,gameMinutes:40,seed:seedText||null};
+  const rand=seedText?seededRandom(seedText):Math.random;const a=teamMetrics(teamA),b=teamMetrics(teamB);const possessions=clamp(Math.round(87+normal(rand)*4.2),76,98);
+  const profileA=possessionProfile(teamA,teamB,a,b,possessions,rand),profileB=possessionProfile(teamB,teamA,b,a,possessions,rand);
+  const boxA=primaryBox(teamA,teamB,a,b,profileA,rand),boxB=primaryBox(teamB,teamA,b,a,profileB,rand);fillSecondary(boxA,boxB,teamA,teamB,a,b,rand);fillSecondary(boxB,boxA,teamB,teamA,b,a,rand);
+  let scoreA=sum(boxA.map(r=>r.pts)),scoreB=sum(boxB.map(r=>r.pts));
+  if(scoreA===scoreB){const winner=rand()<.5?boxA:boxB;const row=winner[Math.floor(rand()*winner.length)];row.fta++;row.ftm++;row.pts++;if(winner===boxA)scoreA++;else scoreB++;}
+  const quartersA=splitQuarters(scoreA,rand),quartersB=splitQuarters(scoreB,rand);return{a,b,aWins:scoreA>scoreB,scoreA,scoreB,quartersA,quartersB,boxA,boxB,gameMinutes:40,possessions,profileA,profileB,seed:seedText||null};
 }
-function rosterHtml(team){return team.map(p=>`<div class="match-player"><strong>${escapeHtml(p.name)}</strong><span>$${p.price} · ${p.pos} · ${escapeHtml(p.archetype)}</span></div>`).join('');}
-function totalRow(rows){return{fgm:sum(rows.map(r=>r.fgm)),fga:sum(rows.map(r=>r.fga)),threeM:sum(rows.map(r=>r.threeM)),threeA:sum(rows.map(r=>r.threeA)),ftm:sum(rows.map(r=>r.ftm)),fta:sum(rows.map(r=>r.fta)),reb:sum(rows.map(r=>r.reb)),ast:sum(rows.map(r=>r.ast)),stl:sum(rows.map(r=>r.stl)),blk:sum(rows.map(r=>r.blk)),to:sum(rows.map(r=>r.to)),pts:sum(rows.map(r=>r.pts))};}
-function boxTable(label,rows){const t=totalRow(rows);return`<article class="box-score-card"><h3>${escapeHtml(label)}</h3><table class="box-score"><thead><tr><th>PLAYER</th><th>MIN</th><th>FG</th><th>3PT</th><th>FT</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>TO</th><th>PTS</th></tr></thead><tbody>${rows.map(r=>`<tr><td><strong>${escapeHtml(r.player.name)}</strong><br><small>${r.player.pos} · ${escapeHtml(r.player.archetype)}</small></td><td>40</td><td>${r.fgm}-${r.fga}</td><td>${r.threeM}-${r.threeA}</td><td>${r.ftm}-${r.fta}</td><td>${r.reb}</td><td>${r.ast}</td><td>${r.stl}</td><td>${r.blk}</td><td>${r.to}</td><td><strong>${r.pts}</strong></td></tr>`).join('')}<tr><td>TEAM</td><td>200</td><td>${t.fgm}-${t.fga}</td><td>${t.threeM}-${t.threeA}</td><td>${t.ftm}-${t.fta}</td><td>${t.reb}</td><td>${t.ast}</td><td>${t.stl}</td><td>${t.blk}</td><td>${t.to}</td><td>${t.pts}</td></tr></tbody></table><div class="box-note">Five-player lineup · every player logged 40 minutes · stamina and injuries are not simulated.</div></article>`;}
+function rosterHtml(team){return orderedLineup(team).map(({player:p,slot})=>`<div class="match-player"><span class="matchup-slot">${slot}</span><strong>${escapeHtml(p.name)}</strong><span>${p.pos} · $${p.price} · ${escapeHtml(p.archetype)}</span></div>`).join('');}
+function totalRow(rows){return{fgm:sum(rows.map(r=>r.fgm)),fga:sum(rows.map(r=>r.fga)),threeM:sum(rows.map(r=>r.threeM)),threeA:sum(rows.map(r=>r.threeA)),ftm:sum(rows.map(r=>r.ftm)),fta:sum(rows.map(r=>r.fta)),oreb:sum(rows.map(r=>r.oreb)),reb:sum(rows.map(r=>r.reb)),ast:sum(rows.map(r=>r.ast)),stl:sum(rows.map(r=>r.stl)),blk:sum(rows.map(r=>r.blk)),to:sum(rows.map(r=>r.to)),pts:sum(rows.map(r=>r.pts))};}
+function boxTable(label,rows){const t=totalRow(rows);return`<article class="box-score-card"><h3>${escapeHtml(label)}</h3><table class="box-score"><thead><tr><th>POS</th><th>PLAYER</th><th>MIN</th><th>FG</th><th>3PT</th><th>FT</th><th>ORB</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>TO</th><th>PTS</th></tr></thead><tbody>${rows.map(r=>`<tr><td><strong>${r.slot}</strong></td><td><strong>${escapeHtml(r.player.name)}</strong><br><small>${r.player.pos} · vs ${escapeHtml(r.defender.name)}</small></td><td>40</td><td>${r.fgm}-${r.fga}</td><td>${r.threeM}-${r.threeA}</td><td>${r.ftm}-${r.fta}</td><td>${r.oreb}</td><td>${r.reb}</td><td>${r.ast}</td><td>${r.stl}</td><td>${r.blk}</td><td>${r.to}</td><td><strong>${r.pts}</strong></td></tr>`).join('')}<tr><td></td><td>TEAM</td><td>200</td><td>${t.fgm}-${t.fga}</td><td>${t.threeM}-${t.threeA}</td><td>${t.ftm}-${t.fta}</td><td>${t.oreb}</td><td>${t.reb}</td><td>${t.ast}</td><td>${t.stl}</td><td>${t.blk}</td><td>${t.to}</td><td>${t.pts}</td></tr></tbody></table><div class="box-note">Rows are ordered PG → SG → SF → PF → C to show the direct matchup. FGA differences are driven by the shared possession count, turnovers, offensive rebounds, and free throws. Every player logs 40 minutes; stamina and injuries are not simulated.</div></article>`;}
+function gameStory(result,labelA='YOU',labelB='CPU'){
+  const ta=totalRow(result.boxA),tb=totalRow(result.boxB),all=[...result.boxA.map(r=>({...r,side:labelA})),...result.boxB.map(r=>({...r,side:labelB}))];const top=[...all].sort((x,y)=>y.pts-x.pts)[0];const notes=[];
+  if(top)notes.push(`<strong>${escapeHtml(top.player.name)}</strong> led the game with ${top.pts} points on ${top.fgm}-${top.fga} shooting against ${escapeHtml(top.defender.name)}.`);
+  const fgaGap=ta.fga-tb.fga;if(Math.abs(fgaGap)>=3){const leader=fgaGap>0?labelA:labelB,a=fgaGap>0?ta:tb,b=fgaGap>0?tb:ta;notes.push(`<strong>${escapeHtml(leader)}</strong> created ${Math.abs(fgaGap)} more field-goal attempts (${a.oreb} ORB, ${a.to} TO vs ${b.oreb} ORB, ${b.to} TO).`);}
+  const cold=[...all].filter(r=>r.fga>=12).sort((x,y)=>(x.fgm/x.fga)-(y.fgm/y.fga))[0];if(cold&&(cold.fgm/cold.fga)<.36)notes.push(`<strong>${escapeHtml(cold.defender.name)}</strong> helped hold ${escapeHtml(cold.player.name)} to ${cold.fgm}-${cold.fga} from the field in their direct ${cold.slot} matchup.`);
+  return notes.slice(0,3).map(n=>`<div class="story-note">${n}</div>`).join('');
+}
 function renderGame(result,teamA,teamB,labelA='YOU',labelB='CPU'){
+  $('matchup-strip').innerHTML=matchupPairs(teamA,teamB).map(m=>`<div class="matchup-pair"><strong>${m.slot}</strong><span>${escapeHtml(m.a.name)}</span><em>vs</em><span>${escapeHtml(m.b.name)}</span></div>`).join('');
+  $('game-story').innerHTML=gameStory(result,labelA,labelB);
   $('line-score-wrap').innerHTML=`<table class="line-score"><thead><tr><th>TEAM</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>FINAL</th></tr></thead><tbody><tr><td>${escapeHtml(labelA)}</td>${result.quartersA.map(q=>`<td>${q}</td>`).join('')}<td><strong>${result.scoreA}</strong></td></tr><tr><td>${escapeHtml(labelB)}</td>${result.quartersB.map(q=>`<td>${q}</td>`).join('')}<td><strong>${result.scoreB}</strong></td></tr></tbody></table>`;
   $('box-score-shell').innerHTML=boxTable(labelA,result.boxA)+boxTable(labelB,result.boxB);
 }
@@ -278,6 +297,7 @@ function playGauntletRound(){
   const opp=gauntletOpponent(state.gauntletRound);const seed=state.boardType==='daily'?`cg-game|${state.selectedDate}|${state.mode}|${state.gauntletRound}|${ids(state.gauntletTeam).slice().sort().join(',')}`:'';const result=simulateGame(state.gauntletTeam,opp,seed);showBattle(state.gauntletTeam,opp,result,{type:'gauntlet',title:`Gauntlet Round ${state.gauntletRound} of 10`,opponentLabel:`ROUND ${state.gauntletRound}`});
 }
 async function finalizeGauntlet(){
+  await recordHallOfFame();
   if(!state.officialDaily||!state.dailyRunId)return;
   const cleared=state.gauntletCleared,failed=state.gauntletFailedRound;const diff=state.gauntletTotals.for-state.gauntletTotals.against;
   const {error}=await db.rpc('finish_cash_grab_daily_run',{p_run_id:state.dailyRunId,p_rounds_cleared:cleared,p_failed_round:failed,p_point_diff:diff,p_points_for:state.gauntletTotals.for,p_points_against:state.gauntletTotals.against});
@@ -292,12 +312,21 @@ function nextResultAction(){
 }
 function renderGauntletMap(){$('gauntlet-map').innerHTML=GAUNTLET.map((_,i)=>{const r=i+1;let status='',mark='';if(r<=state.gauntletCleared){status=' completed';mark='✓';}else if(r===state.gauntletFailedRound){status=' failed';mark='×';}else if(state.gauntletActive&&r===state.gauntletRound){status=' current';mark='•';}return`<div class="gauntlet-step${status}"><span>${r}</span><strong>${mark}</strong></div>`;}).join('');}
 
+function hofRosterKey(team){return ids(team).slice().sort().join('|');}
+function hofEntry(){return{key:`${state.mode}|${hofRosterKey(state.gauntletTeam)}`,pool_mode:state.mode,board_type:state.boardType,date:state.selectedDate,roster:ids(state.gauntletTeam).slice().sort(),rounds_cleared:state.gauntletCleared,point_diff:state.gauntletTotals.for-state.gauntletTotals.against,points_for:state.gauntletTotals.for,points_against:state.gauntletTotals.against,achieved_at:new Date().toISOString()};}
+function hofBetter(a,b){return (a.rounds_cleared-b.rounds_cleared)||(a.point_diff-b.point_diff)||(a.points_for-b.points_for);}
+function mergeLocalHof(entry){const found=state.hof.findIndex(x=>x.key===entry.key);if(found<0)state.hof.push(entry);else if(hofBetter(entry,state.hof[found])>0)state.hof[found]=entry;state.hof.sort((a,b)=>hofBetter(b,a)||String(a.achieved_at).localeCompare(String(b.achieved_at)));state.hof=state.hof.slice(0,5);saveLocal();renderHallOfFame();}
+function hofNames(entry){return (entry.roster||[]).map(id=>playerById(id)?.name||id);}
+function renderHallOfFame(){const root=$('hof-list');if(!root)return;if(!state.hof.length){root.innerHTML='<div class="hof-empty">Complete a Gauntlet run to put your first lineup in the Hall of Five.</div>';return;}root.innerHTML=state.hof.map((e,i)=>`<article class="hof-card"><div class="hof-rank">${i+1}</div><div><span class="overline">${escapeHtml((e.pool_mode||'current').toUpperCase())} · ${e.board_type==='daily'?'DAILY':'RANDOM'}</span><h3>${e.rounds_cleared>=10?'GAUNTLET CLEARED':`ROUND ${e.rounds_cleared}`}</h3><p>${hofNames(e).map(escapeHtml).join(' · ')}</p><small>${e.point_diff>=0?'+':''}${e.point_diff} point diff · ${e.points_for}-${e.points_against} aggregate</small></div></article>`).join('');}
+async function loadHallOfFame(){renderHallOfFame();if(!db||!state.user)return;try{const{data,error}=await db.from('cash_grab_hof').select('pool_mode,board_type,roster,rounds_cleared,point_diff,points_for,points_against,achieved_at').eq('user_id',state.user.id).order('rounds_cleared',{ascending:false}).order('point_diff',{ascending:false}).order('points_for',{ascending:false}).limit(5);if(error)throw error;if(data){state.hof=data.map(e=>({...e,key:`${e.pool_mode}|${(e.roster||[]).slice().sort().join('|')}`}));saveLocal();renderHallOfFame();}}catch(e){/* v4 migration may not be installed yet; local HOF still works */}}
+async function recordHallOfFame(){const entry=hofEntry();mergeLocalHof(entry);if(!db||!state.user)return;try{const{error}=await db.rpc('record_cash_grab_hof',{p_pool_mode:entry.pool_mode,p_board_type:entry.board_type,p_roster:entry.roster,p_rounds_cleared:entry.rounds_cleared,p_point_diff:entry.point_diff,p_points_for:entry.points_for,p_points_against:entry.points_against});if(!error)await loadHallOfFame();}catch{}}
+
 async function initOnline(){
   if(!db){updateOnlineStatus();return;}const {data}=await db.auth.getSession();state.user=data.session?.user||null;if(state.user){const{data:p}=await db.from('profiles').select('id,username').eq('id',state.user.id).maybeSingle();state.profile=p||null;}
-  updateOnlineStatus();await checkDailyAttempt();await refreshChallengeCount();db.auth.onAuthStateChange(async(_,session)=>{state.user=session?.user||null;state.profile=null;if(state.user){const{data:p}=await db.from('profiles').select('id,username').eq('id',state.user.id).maybeSingle();state.profile=p||null;}updateOnlineStatus();checkDailyAttempt();refreshChallengeCount();});
+  updateOnlineStatus();await checkDailyAttempt();await refreshChallengeCount();await loadHallOfFame();db.auth.onAuthStateChange(async(_,session)=>{state.user=session?.user||null;state.profile=null;if(state.user){const{data:p}=await db.from('profiles').select('id,username').eq('id',state.user.id).maybeSingle();state.profile=p||null;}updateOnlineStatus();checkDailyAttempt();refreshChallengeCount();loadHallOfFame();});
 }
 function updateOnlineStatus(){const el=$('online-status');if(!ONLINE_READY){el.textContent='Online draft setup needed';el.className='online-status offline';}else if(!state.user){el.textContent='Log in for real-player drafts';el.className='online-status';}else{el.textContent=`Online as ${state.profile?.username||'player'}`;el.className='online-status online';}}
-function requireOnline(){if(!ONLINE_READY){toast('Online Cash Grab is not connected.','Run the Cash Grab v3 Supabase migration.');return false;}if(!state.user){toast('Log in first.','Use your HoopLoop account to play real-player drafts or record a Daily score.');return false;}return true;}
+function requireOnline(){if(!ONLINE_READY){toast('Online Cash Grab is not connected.','Run the Cash Grab v4 Supabase migration.');return false;}if(!state.user){toast('Log in first.','Use your HoopLoop account to play real-player drafts or record a Daily score.');return false;}return true;}
 async function checkDailyAttempt(){
   state.dailyAttemptUsed=localDailyUsed();
   if(db&&state.user&&state.boardType==='daily'&&isToday()){
@@ -334,8 +363,8 @@ function onlineDraftSides(d){const host=state.user?.id===d.host_id;return{youPic
 function loadOnlineDraft(d){const board=(d.board||[]).map(x=>playerById(x.id||x)).filter(Boolean);if(board.length!==25)return toast('Draft board could not be loaded.');state.draft={kind:'online',row:d,board};$('draft-section').classList.remove('hidden');renderDraft();subscribeDraft(d.id);$('draft-section').scrollIntoView({behavior:'smooth',block:'start'});if(d.status==='ready')finalizeOnlineDraftIfNeeded();if(d.status==='finished')showFinishedOnlineDraft(d);}
 async function makeOnlineDraftPick(player){const d=state.draft?.row;if(!d||d.status!=='drafting')return;const sides=onlineDraftSides(d);if(!sides.yourTurn)return toast('Wait for your turn.');if(!canDraftPick(player,'you'))return toast('That pick would make it impossible to finish under $15.');const{data,error}=await db.rpc('make_cash_grab_draft_pick',{p_draft_id:d.id,p_player_id:player.id});if(error)return toast('Pick failed',error.message);state.draft.row=data;renderDraft();if(data.status==='ready')finalizeOnlineDraftIfNeeded();}
 async function finalizeOnlineDraftIfNeeded(){const d=state.draft?.row;if(!d||d.status!=='ready')return;const host=(d.host_picks||[]).map(x=>playerById(x.id||x)).filter(Boolean),opp=(d.opponent_picks||[]).map(x=>playerById(x.id||x)).filter(Boolean);if(host.length!==5||opp.length!==5)return;const result=simulateGame(host,opp,`draft|${d.id}|${d.resolution_seed||d.id}`);const payload=serializeResult(result);const{data,error}=await db.rpc('finalize_cash_grab_draft',{p_draft_id:d.id,p_host_score:result.scoreA,p_opponent_score:result.scoreB,p_result:payload});if(!error){state.draft.row=data;showFinishedOnlineDraft(data);}}
-function serializeResult(r){return{scoreA:r.scoreA,scoreB:r.scoreB,quartersA:r.quartersA,quartersB:r.quartersB,boxA:r.boxA.map(x=>({...x,player:x.player.id})),boxB:r.boxB.map(x=>({...x,player:x.player.id})),a:r.a,b:r.b};}
-function hydrateResult(raw,teamA,teamB){return{scoreA:raw.scoreA,scoreB:raw.scoreB,quartersA:raw.quartersA,quartersB:raw.quartersB,boxA:(raw.boxA||[]).map(x=>({...x,player:playerById(x.player)})),boxB:(raw.boxB||[]).map(x=>({...x,player:playerById(x.player)})),a:raw.a||teamMetrics(teamA),b:raw.b||teamMetrics(teamB),aWins:raw.scoreA>raw.scoreB};}
+function serializeResult(r){return{scoreA:r.scoreA,scoreB:r.scoreB,quartersA:r.quartersA,quartersB:r.quartersB,boxA:r.boxA.map(x=>({...x,player:x.player.id,defender:x.defender?.id||null})),boxB:r.boxB.map(x=>({...x,player:x.player.id,defender:x.defender?.id||null})),a:r.a,b:r.b};}
+function hydrateResult(raw,teamA,teamB){const oa=orderedLineup(teamA),ob=orderedLineup(teamB);const ha=(raw.boxA||[]).map((x,i)=>({...x,player:playerById(x.player)||oa[i]?.player,slot:x.slot||oa[i]?.slot||SLOT_LABELS[i],defender:playerById(x.defender)||ob[i]?.player}));const hb=(raw.boxB||[]).map((x,i)=>({...x,player:playerById(x.player)||ob[i]?.player,slot:x.slot||ob[i]?.slot||SLOT_LABELS[i],defender:playerById(x.defender)||oa[i]?.player}));return{scoreA:raw.scoreA,scoreB:raw.scoreB,quartersA:raw.quartersA,quartersB:raw.quartersB,boxA:ha,boxB:hb,a:raw.a||teamMetrics(teamA),b:raw.b||teamMetrics(teamB),aWins:raw.scoreA>raw.scoreB};}
 function showFinishedOnlineDraft(d){const sides=onlineDraftSides(d),host=(d.host_picks||[]).map(x=>playerById(x.id||x)).filter(Boolean),opp=(d.opponent_picks||[]).map(x=>playerById(x.id||x)).filter(Boolean);if(host.length!==5||opp.length!==5||!d.result)return;const raw=d.result,result=hydrateResult(raw,host,opp);const you=sides.host?host:opp,them=sides.host?opp:host;if(!sides.host){const swapped={...result,scoreA:result.scoreB,scoreB:result.scoreA,quartersA:result.quartersB,quartersB:result.quartersA,boxA:result.boxB,boxB:result.boxA,a:result.b,b:result.a,aWins:result.scoreB>result.scoreA};showBattle(you,them,swapped,{type:'draft',title:'Snake Draft Battle',opponentLabel:'OPPONENT'});}else showBattle(you,them,result,{type:'draft',title:'Snake Draft Battle',opponentLabel:'OPPONENT'});}
 
 function startCpuDraft(){state.draft={kind:'cpu',board:[...state.board],first:Math.random()<.5?0:1,pickNumber:0,you:[],opp:[]};$('draft-section').classList.remove('hidden');renderDraft();$('draft-section').scrollIntoView({behavior:'smooth',block:'start'});runCpuTurns();}
@@ -374,5 +403,5 @@ function bind(){
   $('cpu-draft').onclick=startCpuDraft;$('invite-friend').onclick=openFriendDraft;$('random-player').onclick=findRandomDraft;$('challenges-button').onclick=openDraftBattles;$('leave-draft').onclick=leaveDraft;
   $('back-to-builder').onclick=()=>$('builder').scrollIntoView({behavior:'smooth'});$('result-next').onclick=nextResultAction;$('result-rematch').onclick=playBot;
 }
-async function init(){loadLocal();state.selectedDate=chicagoDate();bind();makeBoard();await initOnline();}
+async function init(){loadLocal();state.selectedDate=chicagoDate();bind();makeBoard();renderHallOfFame();await initOnline();}
 document.addEventListener('DOMContentLoaded',init);

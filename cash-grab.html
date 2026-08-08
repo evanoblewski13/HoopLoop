@@ -7,7 +7,7 @@
   <meta name="description" content="Cash Grab by HoopLoop — build a five-player basketball lineup with a $15 virtual roster budget, then test it in a 40-minute 5v5 game." />
   <title>Cash Grab — HoopLoop</title>
   <script src="theme.js?v=9.0.0"></script>
-  <link rel="stylesheet" href="cash-grab.css?v=3.0.0" />
+  <link rel="stylesheet" href="cash-grab.css?v=4.0.0" />
 </head>
 <body>
   <div class="page-noise" aria-hidden="true"></div>
@@ -73,7 +73,7 @@
     <section class="section hidden" id="matchup-section">
       <div class="section-heading compact-heading"><div><span class="overline" id="matchup-kicker">5V5 · 40 MINUTES</span><h2 id="matchup-title">Your five vs. their five</h2></div><button class="secondary-button" id="back-to-builder" type="button">Back to builder</button></div>
       <div class="matchup-board"><article class="match-team you-team"><div class="match-team-heading"><span>YOU</span><strong id="your-power">--</strong></div><div id="your-match-roster" class="match-roster"></div></article><div class="versus-block"><span>FINAL</span><strong id="final-score">—</strong></div><article class="match-team"><div class="match-team-heading"><span id="opponent-label">CPU</span><strong id="opponent-power">--</strong></div><div id="opponent-match-roster" class="match-roster"></div></article></div>
-      <div class="line-score-wrap" id="line-score-wrap"></div>
+      <div class="matchup-strip" id="matchup-strip"></div><div class="game-story" id="game-story"></div><div class="line-score-wrap" id="line-score-wrap"></div>
       <div class="box-score-shell" id="box-score-shell"></div>
       <div class="result-card hidden" id="result-card"><span class="result-kicker" id="result-kicker">FINAL</span><h3 id="result-title">Result</h3><div class="comparison-grid" id="comparison-grid"></div><div class="result-actions"><button class="primary-button" id="result-next" type="button">Next</button><button class="secondary-button" id="result-rematch" type="button">Another Bot Game</button></div></div>
     </section>
@@ -85,12 +85,15 @@
       <div class="draft-board" id="draft-board"></div>
     </section>
 
+
+    <section class="section hof-section" id="hof-section"><div class="section-heading"><div><span class="overline">YOUR BEST LINEUPS</span><h2>Hall of Five</h2><p>Your five best unique Gauntlet teams, ranked by rounds cleared, point differential, then scoring.</p></div></div><div class="hof-list" id="hof-list"></div></section>
+
     <section class="section gauntlet-map-section" id="gauntlet-map-section"><div class="section-heading"><div><span class="overline">THE LADDER</span><h2>Gauntlet</h2><p>✓ cleared · × eliminated</p></div></div><div class="gauntlet-map" id="gauntlet-map"></div></section>
   </main>
 
-  <footer><a class="brand footer-brand" href="index.html"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a><p>Cash Grab uses a virtual roster budget only—no wagering or real-money play.</p><span>Cash Grab v3.0 · HoopLoop Platform 11</span><span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span></footer>
+  <footer><a class="brand footer-brand" href="index.html"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a><p>Cash Grab uses a virtual roster budget only—no wagering or real-money play.</p><span>Cash Grab v4.0 · HoopLoop Platform 12</span><span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span></footer>
 
   <div class="modal-backdrop hidden" id="modal-backdrop"><section class="modal" role="dialog" aria-modal="true"><button class="modal-close" id="modal-close" type="button">×</button><div id="modal-content"></div></section></div><div class="toast-region" id="toast-region" aria-live="polite"></div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=11.0.0"></script><script src="cash-grab-data.js?v=3.0.0"></script><script src="cash-grab.js?v=3.0.0"></script><script src="theme-account-sync.js?v=11.0.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=11.0.0"></script><script src="cash-grab-data.js?v=4.0.0"></script><script src="cash-grab.js?v=4.0.0"></script><script src="theme-account-sync.js?v=11.0.0"></script>
 </body>
 </html>
