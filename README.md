@@ -1,18 +1,5 @@
-# HoopLoop Platform 10 — Cash Grab v2
+# HoopLoop Platform 11 — Cash Grab v3
 
-Main update files:
-- `cash-grab.html`
-- `cash-grab.css`
-- `cash-grab.js`
-- `cash-grab-data.js`
-- `verify.html`
-- `version.json`
-- `supabase/cash-grab-v2.sql`
+Cash Grab v3 adds 40-minute 5v5 box scores, fixed G-G-F-F-C boards, Current/All-Time-only pools, one-attempt Daily Gauntlet standings, no-overlap opponents, and snake-draft battles against CPU, friends, or random HoopLoop players.
 
-Documentation:
-- `PLATFORM-10-UPDATE-GUIDE.md`
-- `PLATFORM-10-TEST-CHECKLIST.md`
-- `CASH-GRAB-PLAYER-TIERS.md`
-- `CASH-GRAB-DESIGN-NOTES.md`
-
-The user's existing `config.js` is deliberately not included.
+Run `supabase/cash-grab-v3.sql` once before publishing the update.

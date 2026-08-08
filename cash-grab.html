@@ -4,29 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#ff5a1f" />
-  <meta name="description" content="Cash Grab by HoopLoop — build a five-player basketball lineup with a $15 virtual roster budget, then test the fit." />
+  <meta name="description" content="Cash Grab by HoopLoop — build a five-player basketball lineup with a $15 virtual roster budget, then test it in a 40-minute 5v5 game." />
   <title>Cash Grab — HoopLoop</title>
   <script src="theme.js?v=9.0.0"></script>
-  <link rel="stylesheet" href="cash-grab.css?v=2.0.0" />
+  <link rel="stylesheet" href="cash-grab.css?v=3.0.0" />
 </head>
 <body>
   <div class="page-noise" aria-hidden="true"></div>
-
   <header class="site-header">
-    <a class="brand" href="index.html" aria-label="HoopLoop home">
-      <span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span>
-    </a>
+    <a class="brand" href="index.html" aria-label="HoopLoop home"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a>
     <nav class="desktop-nav" aria-label="HoopLoop games">
-      <a href="index.html">Name Rush</a>
-      <a href="start-bench-cut.html">Start, Bench, Cut</a>
-      <a class="active" href="cash-grab.html">Cash Grab</a>
-      <a href="hooploopsim.html">HoopLoopSim</a>
-      <span class="soon-link" title="Coming soon">Higher or Lower <small>SOON</small></span>
-      <a href="index.html?open=friends">Friends</a>
+      <a href="index.html">Name Rush</a><a href="start-bench-cut.html">Start, Bench, Cut</a><a class="active" href="cash-grab.html">Cash Grab</a><a href="hooploopsim.html">HoopLoopSim</a><span class="soon-link">Higher or Lower <small>SOON</small></span><a href="index.html?open=friends">Friends</a>
     </nav>
-    <a class="account-control" href="index.html?open=account" aria-label="Open HoopLoop account">
-      <span class="account-dot" aria-hidden="true"></span><span>Account</span>
-    </a>
+    <a class="account-control" href="index.html?open=account"><span class="account-dot"></span><span>Account</span></a>
   </header>
 
   <main>
@@ -34,150 +24,73 @@
       <div class="hero-copy">
         <div class="game-pill"><span></span> HoopLoop Game 03</div>
         <h1>Spend <em>$15.</em><br />Build five.</h1>
-        <p>Build any five-player roster for $15. Fit matters most. Play the Daily board, generate endless Random boards, face bots or real HoopLoop players, or try to survive the ten-round Gauntlet.</p>
-        <div class="hero-actions">
-          <button class="primary-button" id="jump-board" type="button">Build a team <span>↘</span></button>
-          <button class="text-button" id="how-button" type="button">How matchups work</button>
-        </div>
+        <p>A five-on-five basketball game with five players playing all 40 minutes. No stamina system. No injuries. Build for talent, fit, and versatility—then see exactly what happened in the box score.</p>
+        <div class="hero-actions"><button class="primary-button" id="jump-board" type="button">Build a team <span>↘</span></button><button class="text-button" id="how-button" type="button">How it works</button></div>
       </div>
-      <aside class="hero-preview">
-        <span class="preview-label">THE CAP</span>
-        <strong>$15</strong>
-        <p>Five roster spots. Five price tiers. Daily boards stay the same all day; Random boards keep the player pool fresh.</p>
-        <div class="mini-prices"><span>$1</span><span>$2</span><span>$3</span><span>$4</span><span>$5</span></div>
-      </aside>
+      <aside class="hero-preview"><span class="preview-label">THE CAP</span><strong>$15</strong><p>Five players. Current ability or all-time peak ability. Daily competition or endless Random boards.</p><div class="mini-prices"><span>$1</span><span>$2</span><span>$3</span><span>$4</span><span>$5</span></div></aside>
     </section>
 
     <section class="section" id="builder">
       <div class="section-heading">
-        <div>
-          <span class="overline">BUILD YOUR FIVE</span>
-          <h2>Cash Grab Board</h2>
-          <p id="board-label">DAILY</p>
-        </div>
+        <div><span class="overline">BUILD YOUR FIVE</span><h2>Cash Grab Board</h2><p id="board-label">DAILY</p></div>
         <div class="builder-switches">
-          <div class="mode-switch" role="group" aria-label="Board type">
-            <button class="active" data-board-type="daily" type="button">Daily Board</button>
-            <button data-board-type="random" type="button">Random Board</button>
-          </div>
-          <div class="mode-switch" role="group" aria-label="Player pool">
-            <button class="active" data-mode="current" type="button">Current</button>
-            <button data-mode="alltime" type="button">All-Time</button>
-            <button data-mode="mixed" type="button">Mixed</button>
-          </div>
-          <button class="secondary-button challenge-button" id="challenges-button" type="button">Online Challenges <span class="challenge-count hidden" id="challenge-count"></span></button>
+          <div class="mode-switch" role="group" aria-label="Board type"><button class="active" data-board-type="daily" type="button">Daily Board</button><button data-board-type="random" type="button">Random Board</button></div>
+          <div class="mode-switch" role="group" aria-label="Player pool"><button class="active" data-mode="current" type="button">Current</button><button data-mode="alltime" type="button">All-Time</button></div>
+          <div class="daily-date-controls" id="daily-date-controls"><button class="secondary-button compact" id="prev-day" type="button">←</button><input id="daily-date" type="date" aria-label="Daily board date" /><button class="secondary-button compact" id="next-day" type="button">→</button></div>
+          <button class="secondary-button challenge-button" id="challenges-button" type="button">Draft Battles <span class="challenge-count hidden" id="challenge-count"></span></button>
         </div>
       </div>
 
+      <div class="daily-status" id="daily-status"></div>
       <div class="budget-bar">
-        <div><span>REMAINING</span><strong id="budget-left">$15</strong></div>
-        <div><span>ROSTER</span><strong id="roster-count">0 / 5</strong></div>
-        <div class="budget-meter"><span id="budget-meter"></span></div>
-        <button class="secondary-button" id="clear-team" type="button">Clear team</button>
-        <button class="secondary-button hidden" id="shuffle-board" type="button">New Random Board</button>
+        <div><span>REMAINING</span><strong id="budget-left">$15</strong></div><div><span>ROSTER</span><strong id="roster-count">0 / 5</strong></div><div class="budget-meter"><span id="budget-meter"></span></div>
+        <button class="secondary-button" id="clear-team" type="button">Clear team</button><button class="secondary-button hidden" id="shuffle-board" type="button">New Random Board</button>
       </div>
 
+      <div class="board-shape"><span>Every price column:</span><strong>G</strong><strong>G</strong><strong>F</strong><strong>F</strong><strong>C</strong></div>
       <div class="price-board" id="price-board" aria-live="polite"></div>
 
       <section class="team-dock">
-        <div class="team-dock-heading">
-          <div><span class="overline">YOUR LINEUP</span><h3 id="team-title">Choose five players.</h3></div>
-          <span class="team-cost" id="team-cost">$0 / $15</span>
-        </div>
+        <div class="team-dock-heading"><div><span class="overline">YOUR LINEUP</span><h3 id="team-title">Choose five players.</h3></div><span class="team-cost" id="team-cost">$0 / $15</span></div>
         <div class="selected-team" id="selected-team"></div>
-        <div class="team-analysis hidden" id="team-analysis">
-          <div><span>FIT</span><strong id="fit-score">--</strong></div>
-          <div><span>TALENT</span><strong id="talent-score">--</strong></div>
-          <div><span>VERSATILITY</span><strong id="versatility-score">--</strong></div>
-          <div class="grade-box"><span>TEAM GRADE</span><strong id="team-grade">--</strong></div>
-        </div>
+        <div class="team-analysis hidden" id="team-analysis"><div><span>FIT</span><strong id="fit-score">--</strong></div><div><span>TALENT</span><strong id="talent-score">--</strong></div><div><span>VERSATILITY</span><strong id="versatility-score">--</strong></div><div class="grade-box"><span>TEAM GRADE</span><strong id="team-grade">--</strong></div></div>
         <div class="fit-notes hidden" id="fit-notes"></div>
-        <button class="primary-button wide hidden" id="submit-challenge-lineup" type="button">Submit friend challenge lineup</button>
       </section>
 
-      <section class="battle-select hidden" id="battle-select">
+      <section class="battle-select" id="battle-select">
         <div class="battle-card">
-          <span class="overline">BOTS</span>
-          <h3>Quick Match</h3>
-          <p>Play instantly against a generated CPU roster using the same player pool.</p>
-          <button class="primary-button" id="bot-match" type="button">Play a bot</button>
-          <div class="record-line" id="quick-record">Record: 0–0</div>
-        </div>
-        <div class="battle-card online-battle-card">
-          <span class="overline">REAL PLAYERS</span>
-          <h3>HoopLoop Matchup</h3>
-          <p>Invite a friend or submit your five to random matchmaking. Daily and Random boards both work.</p>
-          <div class="online-status" id="online-status">Checking account…</div>
-          <div class="battle-inline-actions">
-            <button class="primary-button" id="invite-friend" type="button">Invite Friend</button>
-            <button class="secondary-button" id="random-player" type="button">Face Random Player</button>
-          </div>
+          <span class="overline">5V5 · 40 MINUTES</span><h3>Bot Game</h3><p>Build a normal $15 lineup, then play a generated CPU team. Full quarter line and box score included.</p><button class="primary-button" id="bot-match" type="button">Play a bot</button><div class="record-line" id="quick-record">Record: 0–0</div>
         </div>
         <div class="battle-card gauntlet-card">
-          <span class="overline">TEN ROUNDS</span>
-          <h3>Run the Gauntlet</h3>
-          <p>One loss ends the run. Clear all ten rounds to finish the ladder.</p>
-          <button class="primary-button" id="start-gauntlet" type="button">Start Gauntlet</button>
-          <div class="record-line" id="gauntlet-best">Best: Not started</div>
+          <span class="overline">TEN ROUNDS</span><h3 id="gauntlet-heading">Daily Gauntlet</h3><p id="gauntlet-copy">One official attempt today. Furthest round is your Daily score.</p><button class="primary-button" id="start-gauntlet" type="button">Start Gauntlet</button><button class="secondary-button inverse-button" id="daily-leaderboard" type="button">Daily leaderboard</button><div class="record-line" id="gauntlet-best">Best: Not started</div>
+        </div>
+        <div class="battle-card draft-battle-card">
+          <span class="overline">SNAKE DRAFT</span><h3>Draft Battle</h3><p>Draft from the 25-player board. First pick is random, then the order snakes. Both teams must finish under $15.</p><div class="battle-inline-actions"><button class="primary-button" id="cpu-draft" type="button">Draft vs CPU</button><button class="secondary-button" id="invite-friend" type="button">Invite Friend</button><button class="secondary-button" id="random-player" type="button">Find Random Player</button></div><div class="online-status" id="online-status">Checking account…</div>
         </div>
       </section>
     </section>
 
     <section class="section hidden" id="matchup-section">
-      <div class="section-heading compact-heading">
-        <div><span class="overline" id="matchup-kicker">MATCHUP</span><h2 id="matchup-title">Your five vs. their five</h2></div>
-        <button class="secondary-button" id="back-to-builder" type="button">Back to builder</button>
-      </div>
-      <div class="matchup-board">
-        <article class="match-team you-team">
-          <div class="match-team-heading"><span>YOU</span><strong id="your-power">--</strong></div>
-          <div id="your-match-roster" class="match-roster"></div>
-        </article>
-        <div class="versus-block"><span>VS</span><strong id="final-score">—</strong></div>
-        <article class="match-team">
-          <div class="match-team-heading"><span id="opponent-label">CPU</span><strong id="opponent-power">--</strong></div>
-          <div id="opponent-match-roster" class="match-roster"></div>
-        </article>
-      </div>
-      <div class="result-card hidden" id="result-card">
-        <span class="result-kicker" id="result-kicker">FINAL</span>
-        <h3 id="result-title">Result</h3>
-        <p id="result-copy"></p>
-        <div class="comparison-grid" id="comparison-grid"></div>
-        <div class="result-actions">
-          <button class="primary-button" id="result-next" type="button">Next</button>
-          <button class="secondary-button" id="result-rematch" type="button">Another Quick Match</button>
-        </div>
-      </div>
+      <div class="section-heading compact-heading"><div><span class="overline" id="matchup-kicker">5V5 · 40 MINUTES</span><h2 id="matchup-title">Your five vs. their five</h2></div><button class="secondary-button" id="back-to-builder" type="button">Back to builder</button></div>
+      <div class="matchup-board"><article class="match-team you-team"><div class="match-team-heading"><span>YOU</span><strong id="your-power">--</strong></div><div id="your-match-roster" class="match-roster"></div></article><div class="versus-block"><span>FINAL</span><strong id="final-score">—</strong></div><article class="match-team"><div class="match-team-heading"><span id="opponent-label">CPU</span><strong id="opponent-power">--</strong></div><div id="opponent-match-roster" class="match-roster"></div></article></div>
+      <div class="line-score-wrap" id="line-score-wrap"></div>
+      <div class="box-score-shell" id="box-score-shell"></div>
+      <div class="result-card hidden" id="result-card"><span class="result-kicker" id="result-kicker">FINAL</span><h3 id="result-title">Result</h3><div class="comparison-grid" id="comparison-grid"></div><div class="result-actions"><button class="primary-button" id="result-next" type="button">Next</button><button class="secondary-button" id="result-rematch" type="button">Another Bot Game</button></div></div>
     </section>
 
-    <section class="section gauntlet-map-section" id="gauntlet-map-section">
-      <div class="section-heading">
-        <div><span class="overline">THE LADDER</span><h2>Gauntlet checklist</h2><p>Beat a round and check it off. One loss ends the run.</p></div>
-      </div>
-      <div class="gauntlet-map" id="gauntlet-map"></div>
+    <section class="section hidden" id="draft-section">
+      <div class="section-heading compact-heading"><div><span class="overline">SNAKE DRAFT</span><h2 id="draft-title">Cash Grab Draft</h2><p id="draft-status">Preparing draft…</p></div><button class="secondary-button" id="leave-draft" type="button">Leave draft</button></div>
+      <div class="draft-scoreboard"><div><span>YOU</span><strong id="draft-your-budget">$15</strong><small id="draft-your-picks">0 / 5</small></div><div class="draft-turn"><span id="draft-pick-label">PICK 1</span><strong id="draft-turn-label">—</strong></div><div><span id="draft-opponent-name">OPPONENT</span><strong id="draft-opp-budget">$15</strong><small id="draft-opp-picks">0 / 5</small></div></div>
+      <div class="draft-rosters"><div><h3>Your picks</h3><div id="draft-your-roster" class="draft-roster"></div></div><div><h3>Opponent picks</h3><div id="draft-opp-roster" class="draft-roster"></div></div></div>
+      <div class="draft-board" id="draft-board"></div>
     </section>
+
+    <section class="section gauntlet-map-section" id="gauntlet-map-section"><div class="section-heading"><div><span class="overline">THE LADDER</span><h2>Gauntlet</h2><p>✓ cleared · × eliminated</p></div></div><div class="gauntlet-map" id="gauntlet-map"></div></section>
   </main>
 
-  <footer>
-    <a class="brand footer-brand" href="index.html"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a>
-    <p>Cash Grab uses a virtual roster budget only—no wagering or real-money play.</p>
-    <span>Cash Grab v2.0 · HoopLoop Platform 10</span>
-    <span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span>
-  </footer>
+  <footer><a class="brand footer-brand" href="index.html"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a><p>Cash Grab uses a virtual roster budget only—no wagering or real-money play.</p><span>Cash Grab v3.0 · HoopLoop Platform 11</span><span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span></footer>
 
-  <div class="modal-backdrop hidden" id="modal-backdrop">
-    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <button class="modal-close" id="modal-close" type="button">×</button>
-      <div id="modal-content"></div>
-    </section>
-  </div>
-  <div class="toast-region" id="toast-region" aria-live="polite"></div>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=10.0.0"></script>
-  <script src="cash-grab-data.js?v=2.0.0"></script>
-  <script src="cash-grab.js?v=2.0.0"></script>
-  <script src="theme-account-sync.js?v=10.0.0"></script>
+  <div class="modal-backdrop hidden" id="modal-backdrop"><section class="modal" role="dialog" aria-modal="true"><button class="modal-close" id="modal-close" type="button">×</button><div id="modal-content"></div></section></div><div class="toast-region" id="toast-region" aria-live="polite"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=11.0.0"></script><script src="cash-grab-data.js?v=3.0.0"></script><script src="cash-grab.js?v=3.0.0"></script><script src="theme-account-sync.js?v=11.0.0"></script>
 </body>
 </html>

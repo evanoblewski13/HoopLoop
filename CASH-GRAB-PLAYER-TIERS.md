@@ -1,8 +1,8 @@
-# Cash Grab v2 — Player Tier Review
+# Cash Grab v3 player tiers
 
-The Current pool below is based on the exact dollar tiers supplied for this update. Random and Daily boards draw **five players from each dollar tier**, with **2–3 guards in each five-player price column** when the pool allows it. User-built rosters themselves remain unrestricted.
+Current prices use the user-approved Current pool and should represent current ability. All-Time prices use the user-approved list and the simulator treats every player as a peak version. No player was added to a dollar tier without the user supplying them.
 
-## Current Players
+## Current
 
 ### $5
 - **PG:** Stephen Curry, Shai Gilgeous-Alexander, Jalen Brunson, Luka Dončić, Cade Cunningham
@@ -39,29 +39,39 @@ The Current pool below is based on the exact dollar tiers supplied for this upda
 - **PF:** Jabari Smith Jr., Keegan Murray, Obi Toppin, Tari Eason, Tobias Harris, Aaron Wiggins, Jarred Vanderbilt, Kyle Kuzma, Patrick Williams, Ryan Dunn, Ron Holland
 - **C:** Brook Lopez, Jakob Poeltl, Al Horford, Mark Williams, Yves Missi, Clint Capela, Jaylin Williams, Jaxson Hayes, Steven Adams, Neemias Queta, Marvin Bagley III
 
-## All-Time starter pool
-
-The All-Time list remains the original 25-player starter pool for now. It can be expanded with the same pricing format later.
+## All-Time
 
 ### $5
-Michael Jordan, LeBron James, Kareem Abdul-Jabbar, Magic Johnson, Larry Bird
+- **PG:** Stephen Curry, Magic Johnson, Oscar Robertson, John Stockton
+- **SG:** Michael Jordan, Kobe Bryant, Dwyane Wade
+- **SF:** LeBron James, Larry Bird, Kevin Durant, Kawhi Leonard
+- **PF:** Tim Duncan, Kevin Garnett, Dirk Nowitzki, Giannis Antetokounmpo
+- **C:** Shaquille O’Neal, Kareem Abdul-Jabbar, Hakeem Olajuwon, Wilt Chamberlain, Bill Russell
 
 ### $4
-Kobe Bryant, Tim Duncan, Shaquille O’Neal, Stephen Curry, Hakeem Olajuwon
+- **PG:** Jerry West, Chris Paul, Steve Nash, Shai Gilgeous-Alexander, Isiah Thomas, Russell Westbrook, Kyrie Irving, Jason Kidd, Luka Dončić
+- **SG:** Vince Carter, Allen Iverson, Clyde Drexler, James Harden, Pete Maravich
+- **SF:** Julius Erving, Scottie Pippen, Elgin Baylor, James Worthy, Carmelo Anthony, George Gervin
+- **PF:** Kevin McHale, Bob Pettit, Elvin Hayes, Anthony Davis, Charles Barkley, Draymond Green
+- **C:** Nikola Jokić, Moses Malone, David Robinson, Joel Embiid, Bill Walton, Bob McAdoo, Wes Unseld, Dwight Howard, Victor Wembanyama
 
 ### $3
-Kevin Garnett, Dwyane Wade, Dirk Nowitzki, Oscar Robertson, Julius Erving
+- **PG:** Walt Frazier, Bob Cousy, Derrick Rose, Tony Parker, Gary Payton, Penny Hardaway, Jo Jo White, Nate Archibald, Jalen Brunson, Dennis Johnson, Gilbert Arenas, Damian Lillard, Chauncey Billups
+- **SG:** David Thompson, Tracy McGrady, Ray Allen, Mitch Richmond, Sidney Moncrief, Manu Ginobili, Joe Dumars, Klay Thompson, Reggie Miller
+- **SF:** John Havlicek, Rick Barry, Dominique Wilkins, Jayson Tatum, Paul Pierce, Chris Mullin, Paul George, Andrei Kirilenko, Alex English, Grant Hill
+- **PF:** Jerry Lucas, Dolph Schayes, Chris Webber, Chris Bosh, Dennis Rodman
+- **C:** Patrick Ewing, Dave Cowens, George Mikan, Willis Reed, Alonzo Mourning, DeMarcus Cousins, Dikembe Mutombo, Artis Gilmore, Bob Lanier, Yao Ming, Pau Gasol
 
 ### $2
-Scottie Pippen, David Robinson, Steve Nash, Charles Barkley, John Stockton
+- **PG:** Mark Price, Jason Williams, Deron Williams, John Wall, Earl Monroe, Rajon Rondo, Fat Lever, Dave Bing, Baron Davis, Tim Hardaway, Stephon Marbury
+- **SG:** Devin Booker, Brandon Roy, Jaylen Brown, Dražen Petrović, Richard Hamilton, Jerry Stackhouse, Jason Richardson, Anthony Edwards
+- **SF:** Jimmy Butler, Billy Cunningham, Shawn Marion, Peja Stojaković, Larry Kenon, DeMar DeRozan, Adrian Dantley, Bernard King, Richard Jefferson, Glen Rice, Paul Arizin, Ron Artest, Jalen Rose, Marques Johnson
+- **PF:** Amar'e Stoudemire, Maurice Lucas, LaMarcus Aldridge, Kenyon Martin, Kevin Love, Dan Issel, Jermaine O'Neal, Elton Brand, Zach Randolph, Charles Oakley, Shawn Kemp, Rashard Lewis
+- **C:** Robert Parish, Mark Eaton, Rudy Gobert, Ben Wallace, Nate Thurmond, Ralph Sampson, Marc Gasol
 
 ### $1
-Dennis Rodman, Reggie Miller, Ray Allen, Dikembe Mutombo, Ben Wallace
-
-## Match model
-
-- **50% Fit**
-- **30% Talent**
-- **20% Versatility / diversity
-
-The short archetype label on each card is the scouting preview. The unexplained four-line ability indicator from v1 has been removed.
+- **PG:** Tyrese Maxey, Charlie Scott, Kevin Johnson, Mike Bibby, Kyle Lowry, Trae Young, Doc Rivers, Jeff Teague, Kemba Walker, LaMelo Ball, Jason Terry, Derek Harper, Mahmoud Abdul-Rauf, Calvin Murphy, Kenny Smith, Steve Francis, World B. Free, Ron Harper, Norm Nixon, Mike Conley, Sam Cassell, Scott Skiles
+- **SG:** Hersey Hawkins, CJ McCollum, Kevin Martin, Donovan Mitchell, Darrell Griffith, Joe Johnson, Eddie Jones, Dell Curry, Jim Jackson, Kelly Tripucka, Michael Cooper, Tony Allen, Michael Redd, Allan Houston
+- **SF:** Jerome Kersey, Kiki Vandeweghe, Caron Butler, Keith Van Horn, Gerald Wallace, Toni Kukoč, Mark Aguirre, Michael Finley, Rudy Tomjanovich, Danny Granger, Shane Battier, Glenn Robinson, Detlef Schrempf, Hedo Türkoğlu
+- **PF:** Tom Chambers, Scottie Barnes, Pascal Siakam, Carlos Boozer, Antawn Jamison, Josh Smith, Bob Love, Horace Grant, Blake Griffin, Danny Manning, Shareef Abdur-Rahim, Zion Williamson
+- **C:** Arvydas Sabonis, Domantas Sabonis, Vlade Divac, Gheorghe Mureșan, Al Horford, Joakim Noah, Zydrunas Ilgauskas, Brad Daugherty, Shawn Bradley, Tyson Chandler, Bill Laimbeer, Roy Hibbert, DeAndre Jordan

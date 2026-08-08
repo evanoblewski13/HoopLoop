@@ -1,41 +1,36 @@
-# Cash Grab v2 — Design Notes
+# Cash Grab v3 design notes
 
-## Core loop
-- 5×5 board: five players at each $1–$5 price tier.
-- Build any five-player roster with a maximum virtual budget of $15.
-- User rosters have no forced positions.
-- Generated board columns use 2–3 guards among their five options to preserve useful variety.
+## Core game
+- Virtual $15 roster budget; no real-money or wagering features.
+- Five-player, five-on-five games.
+- 40 minutes per game; all five players play all 40 minutes.
+- Stamina and injuries are intentionally not simulated.
+- Team model: 50% fit, 30% talent, 20% versatility/diversity.
+- Full quarter line score and player box scores are generated for every v3 game.
 
-## Board types
-### Daily Board
-- Same board for every player on the same Chicago-calendar date and player pool.
-- Available in Current, All-Time, and Mixed.
-- Useful for friends/community comparison.
+## Boards
+- Current and All-Time only; Mixed was removed.
+- Current ratings represent current ability; All-Time ratings represent peak versions.
+- Every $1-$5 column is generated as G-G-F-F-C.
+- Users are not required to draft a positional shape; all five centers or all five guards are legal if the board/budget permits it.
 
-### Random Board
-- Reroll infinitely.
-- Same Current / All-Time / Mixed choices.
-- Current pool contains 192 players in v2.
-
-## Matchup model
-- 50% Fit
-- 30% Talent
-- 20% Versatility / diversity
-
-Fit considers lineup shape, spacing, creation, perimeter defense, rim protection, rebounding, off-ball value, and ball-dominance conflicts.
+## Daily
+- Daily boards are deterministic by Chicago date and player pool.
+- One official Daily Gauntlet attempt per logged-in account, date, and pool.
+- Past Daily boards remain available as practice.
+- Official standings rank: rounds cleared → point differential → points scored → earliest completion.
+- Gauntlet game seeds are deterministic for the date/round/selected lineup, preventing refresh rerolls.
 
 ## Opponents
-### Bots
-Immediate generated opponent from the same player-pool mode.
+- Bot and Gauntlet opponents cannot duplicate a player within their own five.
+- They cannot use any player already on the user's team.
+- Gauntlet price compositions remain the original ten-round ladder.
 
-### Real players
-Requires the existing HoopLoop account/Supabase connection plus `supabase/cash-grab-v2.sql`.
-- Invite Friend: friend receives the inviter's exact board and builds a five-player response.
-- Face Random Player: submits the current roster to matchmaking. Players are paired by board type and player-pool mode.
-- Daily players naturally share the same board. Random-board opponents may have different random boards, but both retain the same $15 cap.
-
-## Gauntlet
-The exact ten-round player-price ladder from v1 is preserved internally, but the interface is intentionally just a 1–10 checklist. Completed rounds receive ✓ and the failed round receives ×.
-
-## Player card cleanup
-The four unexplained mini ability bars from v1 were removed. The archetype text (e.g. `Stretch Big`, `Two-Way Wing`) is now the quick scouting preview.
+## Snake Draft
+- First picker is randomized.
+- Pick order: P1, P2, P2, P1, P1, P2, P2, P1, P1, P2.
+- Both sides share one 25-player board.
+- Drafted players are unavailable to the other side.
+- Each side has its own $15 cap and may finish under budget.
+- Client validation prevents a pick that would leave too little money to complete five players.
+- CPU and realtime friend/random-player versions use the same draft rules.
