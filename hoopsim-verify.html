@@ -3,34 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>HoopLoopSim Alpha 0.8 Verification</title>
+  <title>HoopLoopSim Alpha 0.9 Verification</title>
   <style>body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f3;color:#111;margin:0;padding:40px 18px}.card{max-width:920px;margin:auto;background:#fff;border:1px solid #ddd;border-radius:22px;padding:28px;box-shadow:0 12px 36px rgba(0,0,0,.06)}.check{padding:14px;margin:9px 0;border-radius:12px;background:#f2f3f5;font-weight:750}.pass{background:#eaf7ee;color:#146b34}.fail{background:#fff0ed;color:#9d2418}a{color:#e64810;font-weight:800}.sub{color:#686868;line-height:1.55}</style>
 </head>
-<body><main class="card"><p>HOOPLOOP · HOOPLOOPSIM</p><h1>Alpha 0.8 verification</h1><p class="sub">Checks the stable +5 OVR model, 80 domestic teams, 48 tournament nations, Career + League History, separated Bronze/Gold rounds, single-game tournament simulation, podium UI, expanded names, and rare height outliers.</p><div id="checks">Checking files…</div><p><a href="hooploopsim.html">Open HoopLoopSim</a></p></main>
-<script src="hoopsim-teams.js?v=0.8.0"></script>
+<body><main class="card"><p>HOOPLOOP · HOOPLOOPSIM</p><h1>Alpha 0.9 verification</h1><p class="sub">Checks the +10 displayed OVR model, elite-attribute diminishing returns, lower/variable game pace, 80 domestic teams, 48 tournament nations, Career + League History, and the separated international medal rounds.</p><div id="checks">Checking files…</div><p><a href="hooploopsim.html">Open HoopLoopSim</a></p></main>
+<script src="hoopsim-teams.js?v=0.9.0"></script>
 <script>
 (async()=>{
  const checks=[];const add=(name,ok,detail)=>checks.push([name,Boolean(ok),detail]);
  add('Domestic team database',Array.isArray(window.HOOPSIM_TEAMS)&&window.HOOPSIM_TEAMS.length===80,`${window.HOOPSIM_TEAMS?.length||0} of 80 teams loaded`);
  add('International tournament database',Array.isArray(window.HOOPLOOPSIM_TOURNAMENT_TEAMS)&&window.HOOPLOOPSIM_TOURNAMENT_TEAMS.length===48,`${window.HOOPLOOPSIM_TOURNAMENT_TEAMS?.length||0} of 48 teams loaded`);
  add('Removed international teams',!window.HOOPLOOPSIM_TOURNAMENT_TEAMS?.some(t=>['Madagascar','New Zealand'].includes(t.country)),'Madagascar and New Zealand remain excluded');
- for(const file of ['hoopsim.css','hoopsim.js','hooploopsim.html','hoopsim.html','version.json']){try{const response=await fetch(`${file}?v=0.8.0`);add(file,response.ok,response.ok?'Available':`HTTP ${response.status}`)}catch(error){add(file,false,error.message)}}
+ for(const file of ['hoopsim.css','hoopsim.js','hooploopsim.html','hoopsim.html','version.json']){try{const response=await fetch(`${file}?v=0.9.0`);add(file,response.ok,response.ok?'Available':`HTTP ${response.status}`)}catch(error){add(file,false,error.message)}}
  try{
-   const html=await(await fetch('hooploopsim.html?v=0.8.0')).text();
-   add('Alpha 0.8 interface',html.includes('Career Simulator · Alpha 0.8'),'Version label found');
+   const html=await(await fetch('hooploopsim.html?v=0.9.0')).text();
+   add('Alpha 0.9 interface',html.includes('Career Simulator · Alpha 0.9'),'Version label found');
    add('Career + League History',html.includes('data-tab="league-history"')&&html.includes('career-international-history')&&html.includes('league-history-international'),'Career and League History surfaces found');
    add('Tournament controls',html.includes('sim-international-knockout-game')&&html.includes('international-podium-dialog'),'Single-game control and podium dialog found');
- }catch(error){add('Alpha 0.8 interface',false,error.message)}
+ }catch(error){add('Alpha 0.9 interface',false,error.message)}
  try{
-   const script=await(await fetch('hoopsim.js?v=0.8.0')).text();
-   add('Alpha 0.8 game logic',script.includes("const VERSION = '0.8.0'")&&script.includes('OVERALL_DISPLAY_BOOST = 5'),'Version and +5 displayed OVR model found');
+   const script=await(await fetch('hoopsim.js?v=0.9.0')).text();
+   add('Alpha 0.9 game logic',script.includes("const VERSION = '0.9.0'")&&script.includes('OVERALL_DISPLAY_BOOST = 10')&&script.includes("attribute-average-plus-10"),'Version and +10 displayed OVR model found');
+   add('Elite rating controls',script.includes('scaleEliteAttributeGrowth')&&script.includes('generatedAttributeCeiling'),'Natural elite ratings use diminishing returns and generated-player ceilings');
+   add('Game pace balance',script.includes('function gamePaceFactor()')&&script.includes('paceFactor'),'Lower-average game-level pace model found');
+   add('Development variance',script.includes('developmentSeasonSwing')&&script.includes('veteran renaissance'),'Season-level slumps, surges, and rare veteran renaissances found');
    add('Separated medal rounds',script.includes("k.stage='bronze'")&&script.includes("k.stage='gold'")&&script.includes('k.bronzeResult'),'Bronze and Gold are separate stages');
    add('Bronze participants',script.includes('k.bronzeFinalists=finished.map((game)=>game.result.loserId)'),'Bronze is played by the two semifinal losers');
    add('Tournament single-game simulation',script.includes('function simulateInternationalKnockoutGame()'),'Single knockout-game simulation found');
    add('Tournament history',script.includes('internationalStatsSnapshotFromGames')&&script.includes('renderLeagueHistory')&&script.includes('groupSeed'),'International stats, seed, and league-history records found');
    add('Early-career development',script.includes('firstYearStarter')&&script.includes('breakoutChance'),'First-year-starter breakout logic found');
    add('Player-pool variety',script.includes('INTERNATIONAL_FIRST_NAMES')&&script.includes('generatedHeight')&&script.includes("Math.random() < .42"),'Expanded names, height outliers, and increased easter-egg chance found');
- }catch(error){add('Alpha 0.8 game logic',false,error.message)}
+ }catch(error){add('Alpha 0.9 game logic',false,error.message)}
  document.querySelector('#checks').innerHTML=checks.map(([name,ok,detail])=>`<div class="check ${ok?'pass':'fail'}">${ok?'✓':'✕'} ${name}: ${detail}</div>`).join('');
 })()
 </script></body></html>

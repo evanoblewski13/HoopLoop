@@ -1,9 +1,9 @@
 (() => {
   'use strict';
 
-  const VERSION = '0.8.0';
-  const OVERALL_DISPLAY_BOOST = 5;
-  const RATING_MODEL = 'attribute-average-plus-5';
+  const VERSION = '0.9.0';
+  const OVERALL_DISPLAY_BOOST = 10;
+  const RATING_MODEL = 'attribute-average-plus-10';
   const DB_NAME = 'hoopsim_alpha_db';
   const DB_STORE = 'careers';
   const MAX_SAVES = 6;
@@ -544,12 +544,38 @@
     return copy;
   }
 
+  function generatedAttributeCeiling(targetOverall) {
+    if (targetOverall >= 96) return Math.random() < .08 ? 99 : 98;
+    if (targetOverall >= 90) return 98;
+    if (targetOverall >= 85) return 95;
+    if (targetOverall >= 78) return 93;
+    return 91;
+  }
+
+  function adjustGeneratedAttributesToTarget(attributes, targetOverall, ceiling) {
+    const copy = { ...attributes };
+    ATTRIBUTES.forEach(([key]) => { copy[key] = clamp(copy[key], 10, ceiling); });
+    let guard = 0;
+    while (overallFromAttributes(copy) !== targetOverall && guard < 2500) {
+      const direction = overallFromAttributes(copy) < targetOverall ? 1 : -1;
+      const keys = ATTRIBUTES.map(([key]) => key).filter((key) => direction > 0 ? copy[key] < ceiling : copy[key] > 10);
+      if (!keys.length) break;
+      const key = choose(keys);
+      copy[key] += direction;
+      guard += 1;
+    }
+    return copy;
+  }
+
   function generatedAttributes(playstyle, targetOverall) {
     const base = PLAYSTYLES[playstyle].ratings;
     const shift = targetOverall - 60;
+    const ceiling = generatedAttributeCeiling(targetOverall);
     const attrs = {};
-    ATTRIBUTES.forEach(([key], index) => { attrs[key] = clamp(Math.round(base[index] + shift + normalRandom() * 4.5), 10, 99); });
-    return adjustAttributesToTarget(attrs, targetOverall);
+    ATTRIBUTES.forEach(([key], index) => {
+      attrs[key] = clamp(Math.round(base[index] - OVERALL_DISPLAY_BOOST + shift + normalRandom() * 4.2), 10, ceiling);
+    });
+    return adjustGeneratedAttributesToTarget(attrs, targetOverall, ceiling);
   }
 
   function createStats() {
@@ -967,7 +993,14 @@
     return clamp(.72 + (weightedSkill - 48) * .012, .72, 1.28);
   }
 
-  function simulatePlayerBox(player, opponentDefense, coachRating, offenseSupport = 1) {
+  function gamePaceFactor() {
+    const roll = Math.random();
+    if (roll < .03) return rand(.74, .86); // true grind-it-out game
+    if (roll < .07) return rand(1.08, 1.17); // rare track meet
+    return clamp(1.02 + normalRandom() * .035, .92, 1.10);
+  }
+
+  function simulatePlayerBox(player, opponentDefense, coachRating, offenseSupport = 1, paceFactor = 1) {
     const minutes = player.projectedMinutes;
     const a = player.attributes;
     const scoringSkill = mean([a.layup, a.dunk, a.midrange, a.threePoint, a.postMoves]);
@@ -977,7 +1010,7 @@
     const sizeFinishing = clamp((player.height - POSITION_HEIGHT[player.position]) * .008 + (a.vertical - 60) * .0015, -.05, .09);
     const playstyleFga = player.playstyle === 'Pure Scorer' ? 2.7 : player.playstyle === 'Offensive Engine' ? 1.5 : player.playstyle === 'Pure Playmaker' ? -1.1 : player.playstyle === '3&D' ? -.25 : 0;
     const fgaPer36 = clamp(3.2 + scoringSkill / 10.7 + a.dribbling / 58 + playstyleFga, 3.2, 21.5);
-    const fga = Math.max(0, Math.round(fgaPer36 * minutes / 36 * rand(.88,1.12)));
+    const fga = Math.max(0, Math.round(fgaPer36 * minutes / 36 * paceFactor * rand(.88,1.12)));
     const threeRate = clamp(.05 + a.threePoint / 235 + (player.playstyle === '3&D' ? .15 : 0) + (player.playstyle === 'Pure Scorer' ? .04 : 0), .03, .70);
     const threeA = Math.min(fga, Math.round(fga * threeRate * rand(.86,1.14)));
     const twoA = Math.max(0, fga - threeA);
@@ -987,7 +1020,7 @@
     const threeM = binomial(threeA, threePct);
     const twoM = binomial(twoA, twoPct);
     const ftaPer36 = clamp(.45 + (a.layup + a.dunk + a.postMoves) / 56 + Math.max(0, player.height - 78) * .035 + (player.playstyle === 'Pure Scorer' ? 1 : 0), .4, 11);
-    const fta = Math.round(ftaPer36 * minutes / 36 * rand(.68,1.32));
+    const fta = Math.round(ftaPer36 * minutes / 36 * paceFactor * rand(.68,1.32));
     const ftPct = clamp(.45 + a.freeThrow * .005, .50, .96);
     const ftm = binomial(fta, ftPct);
     const seasonVariance = player.seasonVariance || { scoring:1, rebounding:1, assists:1, defense:1 };
@@ -998,13 +1031,13 @@
     const weightReb = clamp((player.weight - 190) * .0045, -.35, .95);
     const verticalReb = clamp((a.vertical - 60) / 190, -.16, .18);
     const reboundPer36 = .10 + a.rebounding / 11.5 + positionReb + absoluteHeightReb + eliteHeightReb + weightReb + verticalReb + (player.playstyle === 'Uber Athlete' ? .05 : 0);
-    const rebounds = Math.max(0, Math.round(reboundPer36 * seasonVariance.rebounding * minutes / 36 * rand(.72,1.25)));
+    const rebounds = Math.max(0, Math.round(reboundPer36 * seasonVariance.rebounding * minutes / 36 * Math.sqrt(paceFactor) * rand(.72,1.25)));
     const posAst = player.position === 'PG' ? 1.10 : player.position === 'SG' ? .45 : player.position === 'SF' ? .18 : 0;
     const playmakerBonus = player.playstyle === 'Pure Playmaker' ? 1.55 : player.playstyle === 'Offensive Engine' ? .78 : 0;
     const assistPer36 = .08 + a.passing / 16.5 + a.dribbling / 82 + posAst + playmakerBonus;
     const passingLeverage = clamp(.75 + (a.passing - 50) * .0055, .64, 1.04);
     const talentMultiplier = clamp(1 + (offenseSupport - 1) * passingLeverage, .72, 1.24);
-    const assists = Math.max(0, Math.round(assistPer36 * talentMultiplier * seasonVariance.assists * minutes / 36 * rand(.68,1.32)));
+    const assists = Math.max(0, Math.round(assistPer36 * talentMultiplier * seasonVariance.assists * minutes / 36 * Math.sqrt(paceFactor) * rand(.68,1.32)));
     const stealRate = .05 + a.perimeterDefense / 96 + a.iq / 265 + (player.playstyle === 'Lockdown Defender' ? .34 : 0);
     const steals = Math.max(0, Math.round(stealRate * seasonVariance.defense * minutes / 36 * rand(.40,1.62)));
     const heightBonus = clamp((player.height - 78) / 15, -.22, .82);
@@ -1041,8 +1074,9 @@
     updateTeamRotation(homeTeam, playoff); updateTeamRotation(awayTeam, playoff);
     const homeDefense = averageDefense(homeTeam);
     const awayDefense = averageDefense(awayTeam);
-    const homeBoxes = homeTeam.roster.filter((player) => player.projectedMinutes > 0 && !player.injury).map((player) => simulatePlayerBox(player, awayDefense, homeTeam.coachRating, teamOffensiveSupport(homeTeam, player.id)));
-    const awayBoxes = awayTeam.roster.filter((player) => player.projectedMinutes > 0 && !player.injury).map((player) => simulatePlayerBox(player, homeDefense, awayTeam.coachRating, teamOffensiveSupport(awayTeam, player.id)));
+    const paceFactor = gamePaceFactor();
+    const homeBoxes = homeTeam.roster.filter((player) => player.projectedMinutes > 0 && !player.injury).map((player) => simulatePlayerBox(player, awayDefense, homeTeam.coachRating, teamOffensiveSupport(homeTeam, player.id), paceFactor));
+    const awayBoxes = awayTeam.roster.filter((player) => player.projectedMinutes > 0 && !player.injury).map((player) => simulatePlayerBox(player, homeDefense, awayTeam.coachRating, teamOffensiveSupport(awayTeam, player.id), paceFactor));
     let homeScore = sum(homeBoxes.map((box) => box.points));
     let awayScore = sum(awayBoxes.map((box) => box.points));
     const homeCourt = randInt(0,3);
@@ -1937,6 +1971,37 @@
     return 0;
   }
 
+  function developmentSeasonSwing(age, performance, firstYearStarter) {
+    let swing = normalRandom() * (age <= 24 ? .75 : age <= 31 ? .55 : .48);
+    const roll = Math.random();
+    if (age <= 24) {
+      if (roll < .09) swing -= rand(1.8, 3.8);
+      else if (roll > .92) swing += rand(1.7, 3.8);
+    } else if (age <= 31) {
+      if (roll < .10) swing -= rand(1.5, 3.2);
+      else if (roll > .95) swing += rand(1.8, 4.0);
+    } else {
+      if (roll < .15) swing -= rand(1.3, 3.3);
+      else if (roll > .96) swing += rand(1.5, 3.6); // rare veteran renaissance
+    }
+    if (firstYearStarter) swing += .20;
+    return swing + clamp(performance * .08, -.30, .35);
+  }
+
+  function scaleEliteAttributeGrowth(currentValue, change, rareBreakout) {
+    if (change <= 0) return change;
+    let multiplier = 1;
+    if (currentValue >= 98) multiplier = .07;
+    else if (currentValue >= 95) multiplier = .20;
+    else if (currentValue >= 90) multiplier = .42;
+    else if (currentValue >= 85) multiplier = .68;
+    else if (currentValue >= 80) multiplier = .86;
+    if (rareBreakout) multiplier = Math.min(1, multiplier * 1.25);
+    const scaled = change * multiplier;
+    const whole = Math.floor(scaled);
+    return whole + (Math.random() < scaled - whole ? 1 : 0);
+  }
+
   function developPlayer(player) {
     const before = { ...player.attributes };
     const oldOverall = player.overall;
@@ -1956,19 +2021,22 @@
       : 0;
     const firstYearStarterLift = firstYearStarter && !rareBreakout ? .35 : 0;
     const lateLongevity = age >= 34 && player.attributes.durability >= 88 && Math.random() < .055 ? rand(1.5,4) : 0;
+    const seasonSwing = developmentSeasonSwing(age, performance, firstYearStarter);
     const changes = {};
     ATTRIBUTES.forEach(([key]) => {
       const physicalDecline = age >= 31 && ['dunk','vertical','speed','durability'].includes(key) ? -(age-30)*.2 : 0;
-      const raw = baseAge + performance*.5 + playstyleBonus(player,key) + firstYearStarterLift + physicalDecline - injuryPenalty + rareBreakout + lateLongevity + normalRandom()*youngVariance;
-      const capDown = age >= 36 ? -8 : -6;
-      const capUp = age <= 24 ? (rareBreakout ? 11 : 9) : rareBreakout ? 10 : 7;
-      const change = clamp(Math.round(raw), capDown, capUp);
+      const attributeSwing = normalRandom() * (age <= 24 ? .65 : .45);
+      const raw = baseAge + performance*.5 + playstyleBonus(player,key) + firstYearStarterLift + physicalDecline - injuryPenalty + rareBreakout + lateLongevity + seasonSwing + attributeSwing + normalRandom()*youngVariance;
+      const capDown = age >= 36 ? -9 : -7;
+      const capUp = age <= 24 ? (rareBreakout ? 12 : 9) : rareBreakout ? 10 : 7;
+      const unscaledChange = clamp(Math.round(raw), capDown, capUp);
+      const change = scaleEliteAttributeGrowth(player.attributes[key], unscaledChange, rareBreakout > 0);
       changes[key] = change;
       player.attributes[key] = clamp(player.attributes[key] + change, 10, 99);
     });
     player.overall = overallFromAttributes(player.attributes);
     player.age += 1;
-    return { before, changes, oldOverall, newOverall:player.overall, performance, rareBreakout:rareBreakout > 0, firstYearStarter };
+    return { before, changes, oldOverall, newOverall:player.overall, performance, rareBreakout:rareBreakout > 0, firstYearStarter, seasonSwing };
   }
 
   function shouldGeneratedPlayerRetire(player) {
@@ -2907,10 +2975,12 @@
       })));
     }
     if (sourceRatingModel !== RATING_MODEL) {
+      const priorBoost = sourceRatingModel === 'attribute-average-plus-5' ? 5 : sourceRatingModel === 'attribute-average-plus-10' ? 10 : 0;
+      const boostDelta = Math.max(0, OVERALL_DISPLAY_BOOST - priorBoost);
       const migrateRatingPlayer = (player) => {
         if (!player?.attributes) return;
-        const preservedOverall = Number.isFinite(Number(player.overall)) ? Number(player.overall) : Math.round(rawAttributeAverage(player.attributes));
-        ATTRIBUTES.forEach(([key]) => { player.attributes[key] = clamp(Number(player.attributes[key] ?? 10) - OVERALL_DISPLAY_BOOST, 10, 99); });
+        const preservedOverall = Number.isFinite(Number(player.overall)) ? Number(player.overall) : Math.round(rawAttributeAverage(player.attributes) + priorBoost);
+        ATTRIBUTES.forEach(([key]) => { player.attributes[key] = clamp(Number(player.attributes[key] ?? 10) - boostDelta, 10, 99); });
         player.attributes = adjustAttributesToTarget(player.attributes, clamp(Math.round(preservedOverall), 10, 99));
         player.overall = overallFromAttributes(player.attributes);
       };

@@ -1,12 +1,16 @@
 {
   "game": "HoopLoopSim",
-  "version": "0.8.0",
-  "release": "Career and league history, separated medal rounds, podium presentation, progression and player-pool variety",
+  "version": "0.9.0",
+  "release": "Final alpha balance pass: +10 displayed OVR model, elite-rating diminishing returns, volatile progression, and lower/more varied game pace",
   "domesticTeams": 80,
   "internationalTournamentTeams": 48,
-  "overallDisplayBoost": 5,
-  "ratingModel": "attribute-average-plus-5",
-  "domesticLeagueSize": {"minimum": 8, "maximum": 50, "evenOnly": true},
+  "overallDisplayBoost": 10,
+  "ratingModel": "attribute-average-plus-10",
+  "domesticLeagueSize": {
+    "minimum": 8,
+    "maximum": 50,
+    "evenOnly": true
+  },
   "minimumSeasonGames": 14,
   "maximumSeasonGames": 99,
   "attributes": 15,
@@ -32,16 +36,27 @@
     "qualifiers": 12,
     "topFourByes": true,
     "bronzeParticipants": "semifinal-losers",
-    "medalRoundOrder": ["Bronze", "Gold"],
+    "medalRoundOrder": [
+      "Bronze",
+      "Gold"
+    ],
     "singleGameSimulation": true,
     "podiumPresentation": true,
     "dedicatedFullScreen": true,
     "boxScores": "user-group-games-and-all-knockout-games",
-    "medals": ["Gold", "Silver", "Bronze"]
+    "medals": [
+      "Gold",
+      "Silver",
+      "Bronze"
+    ]
   },
   "randomPlayerIdentity": true,
   "expandedInternationalNames": true,
   "rareHeightOutliers": true,
   "easterEggFrequency": "slightly-increased",
-  "leagueStatFilters": true
+  "leagueStatFilters": true,
+  "eliteAttributeDiminishingReturns": true,
+  "developmentVariance": "expanded",
+  "gamePaceModel": "lower-average-with-slow-game-and-shootout-outliers",
+  "targetTypicalTeamScore": "115-140"
 }
