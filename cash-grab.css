@@ -41,3 +41,15 @@ footer{display:flex;flex-wrap:wrap;align-items:center;gap:18px;padding:28px clam
 @media(max-width:700px){.hof-list{grid-template-columns:1fr}.matchup-strip{grid-template-columns:repeat(5,160px)}}
 
 .game-story{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 14px}.story-note{padding:11px 12px;border-left:3px solid var(--orange);border-radius:8px;background:#fff;color:var(--muted);font-size:.68rem;line-height:1.45}.story-note strong{color:var(--ink)}@media(max-width:700px){.game-story{grid-template-columns:1fr}}
+
+/* Cash Grab v5 lineup controls + live draft clock */
+.lineup-control-row,.draft-lineup-control-row{display:grid;grid-template-columns:minmax(180px,1fr) 118px 118px;gap:10px;align-items:end;padding:12px 0;border-bottom:1px solid var(--line,#e5e5e5)}
+.lineup-control-row:last-child,.draft-lineup-control-row:last-child{border-bottom:0}
+.lineup-control-player{display:flex;flex-direction:column;gap:3px}.lineup-control-player span{font-size:.78rem;opacity:.68}
+.lineup-control-row label,.draft-lineup-control-row label{font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;display:flex;flex-direction:column;gap:5px}
+.lineup-control-row select,.draft-lineup-control-row select{min-height:38px;border:1px solid var(--line,#d7d7d7);border-radius:10px;background:var(--surface,#fff);color:inherit;padding:0 10px;font:inherit;font-weight:800}
+.draft-clock{margin-top:7px;padding:7px 13px;border-radius:999px;background:var(--accent,#f47c20);color:#fff;display:inline-flex;gap:8px;align-items:center;justify-content:center}.draft-clock span{font-size:.62rem;font-weight:900;letter-spacing:.11em}.draft-clock strong{font-size:1.18rem;min-width:28px}.draft-clock.urgent{animation:cgPulse .75s infinite alternate}.draft-clock.hidden{display:none}
+@keyframes cgPulse{from{transform:scale(1)}to{transform:scale(1.045)}}
+.draft-lineup-setup{margin-top:24px;padding:22px;border:1px solid var(--line,#ddd);border-radius:18px;background:var(--surface,#fff)}.draft-lineup-setup.hidden{display:none}.draft-lineup-heading h3{margin:.25rem 0}.draft-lineup-heading p{max-width:760px;opacity:.72}.draft-lineup-controls{margin:16px 0}.draft-lineup-status{margin:10px 0 0;font-size:.86rem;opacity:.7}
+@media(max-width:700px){.lineup-control-row,.draft-lineup-control-row{grid-template-columns:1fr 1fr}.lineup-control-player{grid-column:1/-1}}
+.selected-team.configured{display:block}

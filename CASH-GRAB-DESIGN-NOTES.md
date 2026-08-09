@@ -1,44 +1,28 @@
-# Cash Grab v4 Design Notes
+# Cash Grab v5 — Design Notes
 
-## Game model
-Cash Grab remains a 5v5, 40-minute game. All five players play the full game. Stamina and injuries are not simulated.
+## Lineup positions
+Cash Grab still allows any five-player roster. After the five are chosen, the user assigns one player to each game slot: PG, SG, SF, PF, C.
 
-Team strength remains:
-- 50% fit
-- 30% talent
-- 20% versatility/diversity
+The slot is a matchup assignment, not a restriction on who can be drafted. A natural center can be assigned PG if the user wants that matchup. The opposing lineup is matched slot-for-slot.
 
-v4 changes how that strength becomes a box score.
+## Offensive options
+Each lineup must also have a unique 1st, 2nd, 3rd, 4th, and 5th option.
 
-## Shared possessions
-Both teams now begin from the same game-level possession count. A team's field-goal attempts are then derived primarily from:
+The shot-volume multipliers are intentionally separate from shooting efficiency:
+- 1st: 1.35× opportunity preference
+- 2nd: 1.16×
+- 3rd: 1.00×
+- 4th: 0.87×
+- 5th: 0.74×
 
-`FGA ≈ possessions + offensive rebounds - turnovers - 0.44 × FTA`
+The simulation still uses player scoring/shooting/finishing ratings and direct defender quality to decide efficiency. This allows a defensive specialist to be intentionally placed 5th without reducing their defensive value.
 
-This prevents unexplained shot-attempt gaps. Small differences remain natural; larger differences should now have visible causes in ORB, turnovers, and free-throw volume.
+## Online pick clock
+The database stores an absolute `turn_deadline` for every online pick. The browser displays time remaining from that shared deadline, so both players are looking at the same clock.
 
-## Positional matchup assignment
-Every lineup is sorted into matchup slots:
+After a legal pick, the database advances the snake order and creates a new deadline 60 seconds later.
 
-PG → SG → SF → PF → C
+When the deadline expires, either connected participant can invoke the timeout resolver. The resolver prefers a $1 player and also verifies that both five-player rosters can still be completed under $15. If no legal $1 remains, it takes the cheapest legal fallback rather than breaking the draft.
 
-The sort uses the player's listed natural position. If a roster contains duplicate positions, the five players are still ordered from smallest/most guard-like to biggest/most center-like and mapped across the five matchup slots.
-
-The player in the opposing slot is the direct defender. Perimeter defense matters more at guard slots, while rim defense matters increasingly toward PF/C.
-
-## Player variance
-Shot volume uses usage, scoring skill, matchup quality, and a game-to-game volatility factor. Elite scorers have a small additional chance of a hot/explosion game. A favorable defender increases that chance; a difficult defender reduces it.
-
-There is no forced 50-point event. It is simply possible within the normal simulation.
-
-Rebounds, assists, steals, and blocks also receive more game-level distribution variance.
-
-## Hall of Five
-Each user keeps their five best unique Gauntlet lineups. Ranking is:
-1. Rounds cleared
-2. Point differential
-3. Points scored
-
-Repeating the same five-player lineup only replaces its stored result if the newer run is better.
-
-Logged-in users sync through `cash_grab_hof`; guests retain a local-device version.
+## Live room behavior
+Realtime draft updates now mutate the open draft room directly instead of tearing down and reopening the room after each opponent pick. The intended experience is to enter the draft once and remain there through all ten selections and lineup setup.

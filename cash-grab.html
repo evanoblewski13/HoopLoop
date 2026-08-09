@@ -7,7 +7,7 @@
   <meta name="description" content="Cash Grab by HoopLoop — build a five-player basketball lineup with a $15 virtual roster budget, then test it in a 40-minute 5v5 game." />
   <title>Cash Grab — HoopLoop</title>
   <script src="theme.js?v=9.0.0"></script>
-  <link rel="stylesheet" href="cash-grab.css?v=4.0.0" />
+  <link rel="stylesheet" href="cash-grab.css?v=5.0.0" />
 </head>
 <body>
   <div class="page-noise" aria-hidden="true"></div>
@@ -80,9 +80,10 @@
 
     <section class="section hidden" id="draft-section">
       <div class="section-heading compact-heading"><div><span class="overline">SNAKE DRAFT</span><h2 id="draft-title">Cash Grab Draft</h2><p id="draft-status">Preparing draft…</p></div><button class="secondary-button" id="leave-draft" type="button">Leave draft</button></div>
-      <div class="draft-scoreboard"><div><span>YOU</span><strong id="draft-your-budget">$15</strong><small id="draft-your-picks">0 / 5</small></div><div class="draft-turn"><span id="draft-pick-label">PICK 1</span><strong id="draft-turn-label">—</strong></div><div><span id="draft-opponent-name">OPPONENT</span><strong id="draft-opp-budget">$15</strong><small id="draft-opp-picks">0 / 5</small></div></div>
+      <div class="draft-scoreboard"><div><span>YOU</span><strong id="draft-your-budget">$15</strong><small id="draft-your-picks">0 / 5</small></div><div class="draft-turn"><span id="draft-pick-label">PICK 1</span><strong id="draft-turn-label">—</strong><div class="draft-clock hidden" id="draft-clock"><span>ON THE CLOCK</span><strong id="draft-clock-value">60</strong></div></div><div><span id="draft-opponent-name">OPPONENT</span><strong id="draft-opp-budget">$15</strong><small id="draft-opp-picks">0 / 5</small></div></div>
       <div class="draft-rosters"><div><h3>Your picks</h3><div id="draft-your-roster" class="draft-roster"></div></div><div><h3>Opponent picks</h3><div id="draft-opp-roster" class="draft-roster"></div></div></div>
       <div class="draft-board" id="draft-board"></div>
+      <section class="draft-lineup-setup hidden" id="draft-lineup-setup"><div class="draft-lineup-heading"><span class="overline">SET YOUR FIVE</span><h3>Choose matchup positions and offensive options.</h3><p>Positions determine who guards whom. Offensive option #1 gets the strongest shot-volume preference; #5 gets the smallest.</p></div><div id="draft-lineup-controls" class="draft-lineup-controls"></div><button class="primary-button" id="submit-draft-lineup" type="button">Lock lineup</button><p class="draft-lineup-status" id="draft-lineup-status"></p></section>
     </section>
 
 
@@ -91,9 +92,9 @@
     <section class="section gauntlet-map-section" id="gauntlet-map-section"><div class="section-heading"><div><span class="overline">THE LADDER</span><h2>Gauntlet</h2><p>✓ cleared · × eliminated</p></div></div><div class="gauntlet-map" id="gauntlet-map"></div></section>
   </main>
 
-  <footer><a class="brand footer-brand" href="index.html"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a><p>Cash Grab uses a virtual roster budget only—no wagering or real-money play.</p><span>Cash Grab v4.0 · HoopLoop Platform 12</span><span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span></footer>
+  <footer><a class="brand footer-brand" href="index.html"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a><p>Cash Grab uses a virtual roster budget only—no wagering or real-money play.</p><span>Cash Grab v5.0 · HoopLoop Platform 13</span><span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span></footer>
 
   <div class="modal-backdrop hidden" id="modal-backdrop"><section class="modal" role="dialog" aria-modal="true"><button class="modal-close" id="modal-close" type="button">×</button><div id="modal-content"></div></section></div><div class="toast-region" id="toast-region" aria-live="polite"></div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=11.0.0"></script><script src="cash-grab-data.js?v=4.0.0"></script><script src="cash-grab.js?v=4.0.0"></script><script src="theme-account-sync.js?v=11.0.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=11.0.0"></script><script src="cash-grab-data.js?v=5.0.0"></script><script src="cash-grab.js?v=5.0.0"></script><script src="theme-account-sync.js?v=11.0.0"></script>
 </body>
 </html>
