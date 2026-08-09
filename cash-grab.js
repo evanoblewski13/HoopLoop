@@ -12,7 +12,7 @@ const GAUNTLET = [
   [1,1,1,1,1], [1,1,1,2,2], [2,2,2,2,2], [2,2,2,3,3], [2,3,3,3,3],
   [3,3,3,3,3], [3,3,3,4,4], [4,4,4,4,4], [4,4,4,5,5], [5,5,5,5,5]
 ];
-const WEIGHTS = { fit:.50, talent:.30, versatility:.20 };
+const WEIGHTS = { fit:.50, talent:.25, versatility:.25 };
 const SNAKE = [0,1,1,0,0,1,1,0,0,1];
 const ONLINE_READY = Boolean(window.supabase && /^https:\/\/.+\.supabase\.co$/i.test(String(CONFIG.SUPABASE_URL || '')) && String(CONFIG.SUPABASE_ANON_KEY || '').length > 20 && !String(CONFIG.SUPABASE_ANON_KEY).includes('PASTE_'));
 const db = ONLINE_READY ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true } }) : null;
@@ -118,17 +118,19 @@ function teamMetrics(team){
   const perimeter=average(team.map(p=>p.perimeterDefense));const rim=Math.max(...team.map(p=>p.rimDefense));const defense=perimeter*.58+rim*.42;
   const reb=average([...team].sort((a,b)=>b.rebounding-a.rebounding).slice(0,3).map(p=>p.rebounding));const offball=average(team.map(p=>p.offBall));
   const usages=team.map(p=>p.usage),highUsage=usages.filter(v=>v>=90).length;
-  const shape=(guards>=1?22:0)+(centers>=1?23:0)+(forwards>=1?14:0)+(guards>=2&&guards<=3?15:0)+(forwards>=1&&forwards<=3?10:0)+(new Set(team.map(p=>p.group)).size===3?16:0);
-  const usageBalance=clamp(94-Math.max(0,highUsage-2)*16+(Math.max(...usages)>=85?5:-8),40,100);
+  // Natural-position balance is only a light fit input. Skill overlap/complementarity matters far more.
+  const groupKinds=new Set(team.map(p=>p.group)).size,maxSameGroup=Math.max(guards,forwards,centers),exactPosMax=Math.max(...SLOT_LABELS.map(pos=>team.filter(p=>p.pos===pos).length));
+  const shape=clamp(70+(guards?7:0)+(forwards?7:0)+(centers?7:0)+(groupKinds===3?5:0)-(maxSameGroup>=4?7:0)-(exactPosMax>=3?3:0),48,96);
+  const usageBalance=clamp(94-Math.max(0,highUsage-2)*13+(Math.max(...usages)>=85?5:-8),42,100);
   const spacing=clamp(shooting-nonShooters*5+team.filter(p=>p.shooting>=90).length*3,32,100);
-  const fit=clamp(shape*.17+spacing*.20+creation*.16+defense*.18+reb*.10+offball*.10+usageBalance*.09,25,99);
+  const fit=clamp(shape*.06+spacing*.22+creation*.18+defense*.20+reb*.12+offball*.12+usageBalance*.10,25,99);
   const talent=average(team.map(p=>p.scoring*.16+p.shooting*.09+p.playmaking*.10+p.perimeterDefense*.10+p.rimDefense*.10+p.rebounding*.09+p.finishing*.10+p.athleticism*.06+p.offBall*.07+p.versatility*.13));
   const skillSpread=average(team.map(p=>Math.max(p.shooting,p.playmaking,p.perimeterDefense,p.rimDefense,p.rebounding, p.finishing)));
   const roleDiversity=new Set(team.map(p=>p.archetype)).size;
   const versatility=clamp(average(team.map(p=>p.versatility))*.78+skillSpread*.12+roleDiversity*2,25,99);
-  const power=fit*.50+talent*.30+versatility*.20;
+  const power=fit*WEIGHTS.fit+talent*WEIGHTS.talent+versatility*WEIGHTS.versatility;
   const grade=power>=94?'S':power>=90?'A+':power>=86?'A':power>=82?'B+':power>=78?'B':power>=73?'C+':'C';const notes=[];
-  if(guards>=2&&forwards>=1&&centers>=1)notes.push('Strong lineup balance');else if(!centers)notes.push('No true center');else if(!guards)notes.push('No true guard');
+  if(groupKinds===3)notes.push('Balanced natural-position mix');else if(maxSameGroup>=4)notes.push('Position-heavy lineup — skill fit matters more than labels');
   if(shooting>=88)notes.push('Elite spacing');else if(nonShooters>=2)notes.push('Crowded spacing');
   if(creation>=90)notes.push('Multiple creators');else if(creation<76)notes.push('Limited creation');
   if(defense>=90)notes.push('Elite defensive ceiling');if(reb>=90)notes.push('Strong rebounding');if(highUsage>=4)notes.push('Several ball-dominant scorers');if(offball>=92)notes.push('Excellent off-ball fit');
@@ -193,14 +195,29 @@ function matchupOffense(p,slot){const i=SLOT_LABELS.indexOf(slot);const creation
 function matchupAdvantage(offender,defender,slot){return clamp((matchupOffense(offender,slot)-matchupDefense(defender,slot))/17,-1.35,1.35);}
 function allocInteger(total,weights){if(total<=0)return weights.map(()=>0);const s=sum(weights)||1;const raw=weights.map(w=>total*w/s),base=raw.map(Math.floor);let rem=total-sum(base);const order=raw.map((v,i)=>[v-base[i],i]).sort((a,b)=>b[0]-a[0]);for(let k=0;k<rem;k++)base[order[k%order.length][1]]++;return base;}
 function allocWithFloor(total,weights,floorEach=0,cap=999){const n=weights.length,base=Array(n).fill(Math.min(floorEach,Math.floor(total/n)));let left=total-sum(base);if(left<=0)return base;let add=allocInteger(left,weights);for(let i=0;i<n;i++)base[i]+=add[i];let guard=0;while(base.some(v=>v>cap)&&guard++<30){let overflow=0;for(let i=0;i<n;i++)if(base[i]>cap){overflow+=base[i]-cap;base[i]=cap;}if(!overflow)break;const eligible=weights.map((w,i)=>base[i]<cap?w:0);const extra=allocInteger(overflow,eligible);for(let i=0;i<n;i++)base[i]+=extra[i];}return base;}
+function allocStochastic(total,weights,rand,cap=999){
+  const out=weights.map(()=>0);
+  for(let n=0;n<total;n++){
+    const live=weights.map((w,i)=>out[i]<cap?Math.max(.0001,w):0),totalWeight=sum(live);if(totalWeight<=0)break;
+    let ticket=rand()*totalWeight,pick=live.length-1;for(let i=0;i<live.length;i++){ticket-=live[i];if(ticket<=0){pick=i;break;}}out[pick]++;
+  }
+  return out;
+}
+function slotReboundMult(slot){return slot==='C'?1.23:slot==='PF'?1.12:slot==='SF'?1:slot==='SG'?.92:.88;}
+function reboundDistributionWeight(row,rand,offensive=false){
+  const p=row.player,base=Math.pow(Math.max(6,p.rebounding-46),1.11),natural=p.group==='C'?1.06:p.group==='F'?1.02:.94;
+  const variance=Math.exp(normal(rand)*(offensive?.16:.19)),burst=p.rebounding>=90&&rand()<.025?(1.38+rand()*.55):1;
+  return base*natural*slotReboundMult(row.slot)*variance*burst;
+}
 function sampleMakes(attempts,pct,rand){let made=0;for(let i=0;i<attempts;i++)if(rand()<pct)made++;return made;}
 function splitQuarters(total,rand){const weights=[1+normal(rand)*.10,1+normal(rand)*.10,1+normal(rand)*.10,1+normal(rand)*.10].map(v=>Math.max(.58,v));return allocInteger(total,weights);}
 function possessionProfile(team,opp,metrics,oppMetrics,possessions,rand){
   const play=average(team.map(p=>p.playmaking)),oppPressure=average(opp.map(p=>p.perimeterDefense)),reb=average(team.map(p=>p.rebounding)),oppReb=average(opp.map(p=>p.rebounding)),finish=average(team.map(p=>p.finishing)),usage=average(team.map(p=>p.usage)),oppRim=Math.max(...opp.map(p=>p.rimDefense));
-  const turnovers=clamp(Math.round(13.2+(oppPressure-78)*.055-(play-78)*.070-(metrics.fit-78)*.035+normal(rand)*2.15),6,22);
-  const oreb=clamp(Math.round(9.0+(reb-78)*.095-(oppReb-78)*.055+normal(rand)*2.3),3,18);
-  const fta=clamp(Math.round(19+(finish-78)*.105+(usage-82)*.035-(oppRim-78)*.045+normal(rand)*3.9),7,38);
-  const fga=clamp(Math.round(possessions+oreb-turnovers-.44*fta),66,104);
+  let turnoverSwing=0;const swingRoll=rand();if(swingRoll<.04)turnoverSwing=2+Math.floor(rand()*5);else if(swingRoll>.96)turnoverSwing=-(2+Math.floor(rand()*4));
+  const turnovers=clamp(Math.round(12.2+(oppPressure-78)*.060-(play-78)*.075-(metrics.fit-78)*.030+normal(rand)*2.75+turnoverSwing),3,25);
+  const oreb=clamp(Math.round(9.1+(reb-78)*.10-(oppReb-78)*.055+normal(rand)*2.8),2,20);
+  const fta=clamp(Math.round(19+(finish-78)*.105+(usage-82)*.035-(oppRim-78)*.045+normal(rand)*4.2),5,40);
+  const fga=clamp(Math.round(possessions+oreb-turnovers-.44*fta),62,108);
   return{possessions,turnovers,oreb,fta,fga};
 }
 function explosionFactor(p,adv,rand){
@@ -215,10 +232,12 @@ function primaryBox(team,opp,metrics,oppMetrics,profile,rand,configTeam=null,con
   const fga=allocWithFloor(profile.fga,shotWeights,4,42);
   const foulWeights=contexts.map(c=>Math.max(4,c.player.finishing*.42+c.player.usage*.34+c.player.scoring*.15+c.player.athleticism*.09-55)*Math.sqrt(c.factor)*(1+Math.max(-.3,c.adv)*.06)*Math.sqrt(OPTION_MULT[c.option]||1));
   const fta=allocInteger(profile.fta,foulWeights);
-  const toWeights=contexts.map(c=>Math.max(3,c.player.usage*.50+(100-c.player.playmaking)*.28+c.player.scoring*.12-36));
-  const tos=allocInteger(profile.turnovers,toWeights);
-  const orebWeights=contexts.map(c=>Math.max(2,c.player.rebounding+(c.player.pos==='C'?24:c.player.pos==='PF'?13:c.player.pos==='SF'?5:0)));
-  const orebs=allocInteger(profile.oreb,orebWeights);
+  const toWeights=contexts.map(c=>{const role=({1:1.32,2:1.16,3:1,4:.86,5:.72})[c.option]||1;const base=Math.max(1,c.player.usage*.52+(100-c.player.playmaking)*.34+c.player.scoring*.10-43);return base*role*Math.exp(normal(rand)*.48);});
+  const tos=allocWithFloor(profile.turnovers,toWeights,0,9);
+  // Low-usage players can finish clean while primary creators occasionally absorb a true turnover disaster.
+  for(let i=0;i<tos.length;i++)if(tos[i]===1&&rand()<.22){let target=-1,best=-1;for(let j=0;j<tos.length;j++)if(j!==i&&tos[j]<9&&toWeights[j]>best){best=toWeights[j];target=j;}if(target>=0){tos[i]=0;tos[target]++;}}
+  const orebWeights=contexts.map(c=>reboundDistributionWeight(c,rand,true));
+  const orebs=allocWithFloor(profile.oreb,orebWeights,0,9);
   const edge=clamp((metrics.power-oppMetrics.power)*.00115,-.025,.025);
   return contexts.map((c,i)=>{
     const p=c.player,hot=normal(rand)*.022+(c.eruption?(.012+c.eruption*.009):0);const threeRate=clamp(.22+(p.shooting-p.finishing)*.0048+(p.pos==='PG'||p.pos==='SG'?.055:p.pos==='C'?-.05:0),.10,.67);
@@ -230,10 +249,23 @@ function primaryBox(team,opp,metrics,oppMetrics,profile,rand,configTeam=null,con
 }
 function fillSecondary(rows,oppRows,team,opp,metrics,oppMetrics,rand){
   const oppMisses=sum(oppRows.map(r=>r.fga-r.fgm)),oppOreb=sum(oppRows.map(r=>r.oreb));const drebTotal=Math.max(0,oppMisses-oppOreb);
-  const dreb=allocInteger(drebTotal,rows.map(r=>Math.max(3,r.player.rebounding+(r.player.pos==='C'?26:r.player.pos==='PF'?14:r.player.pos==='SF'?6:0))*(.78+rand()*.48)));
-  const teamFgm=sum(rows.map(r=>r.fgm));const assistRate=clamp(.48+(average(team.map(p=>p.playmaking))-75)*.0035+(metrics.fit-75)*.0020,.38,.80);const astTarget=clamp(Math.round(teamFgm*assistRate+normal(rand)*1.8),5,teamFgm);const ast=allocInteger(astTarget,rows.map(r=>Math.max(3,r.player.playmaking-45)*(r.player.pos==='PG'?1.28:r.player.pos==='SG'?1.08:1)*(.72+rand()*.58)));
-  const oppTO=sum(oppRows.map(r=>r.to));const stealTarget=clamp(Math.round(oppTO*clamp(.48+(average(team.map(p=>p.perimeterDefense))-75)*.003,.32,.75)),2,Math.min(oppTO,13));const stl=allocInteger(stealTarget,rows.map(r=>Math.max(2,r.player.perimeterDefense-45)*(.65+rand()*.70)));
-  const oppTwoMisses=sum(oppRows.map(r=>(r.fga-r.threeA)-(r.fgm-r.threeM)));const blockTarget=clamp(Math.round(2.4+(Math.max(...team.map(p=>p.rimDefense))-75)*.075+normal(rand)*1.4),0,Math.min(10,Math.max(0,oppTwoMisses)));const blk=allocInteger(blockTarget,rows.map(r=>Math.max(2,r.player.rimDefense-48)*(r.player.pos==='C'?1.45:r.player.pos==='PF'?1.18:1)*(.60+rand()*.78)));
+  const dreb=allocInteger(drebTotal,rows.map(r=>reboundDistributionWeight(r,rand,false)));
+
+  const teamFgm=sum(rows.map(r=>r.fgm));const assistRate=clamp(.47+(average(team.map(p=>p.playmaking))-75)*.0040+(metrics.fit-75)*.0022,.36,.84);
+  const astTarget=clamp(Math.round(teamFgm*assistRate+normal(rand)*3.1),3,teamFgm);
+  const astWeights=rows.map(r=>{const base=Math.pow(Math.max(4,r.player.playmaking-45),1.48),slot=r.slot==='PG'?1.34:r.slot==='SG'?1.12:r.slot==='SF'?1:r.slot==='PF'?.90:.86;const creatorBurst=r.player.playmaking>=90&&rand()<.045?(1.55+rand()*.75):1;return base*slot*Math.exp(normal(rand)*.46)*creatorBurst;});
+  const ast=allocStochastic(astTarget,astWeights,rand,18);
+
+  const oppTO=sum(oppRows.map(r=>r.to));const stealRate=clamp(.39+(average(team.map(p=>p.perimeterDefense))-75)*.0030,.25,.68);
+  const stealTarget=clamp(Math.round(oppTO*stealRate+normal(rand)*1.45),0,Math.min(oppTO,14));
+  const stlWeights=rows.map(r=>{const base=Math.pow(Math.max(3,r.player.perimeterDefense-48),1.36),burst=r.player.perimeterDefense>=90&&rand()<.04?(1.6+rand()*.75):1;return base*Math.exp(normal(rand)*.46)*burst;});
+  const stl=allocStochastic(stealTarget,stlWeights,rand,7);
+
+  const oppTwoMisses=sum(oppRows.map(r=>(r.fga-r.threeA)-(r.fgm-r.threeM)));
+  const blockTarget=clamp(Math.round(2.5+(Math.max(...team.map(p=>p.rimDefense))-75)*.070+normal(rand)*1.75),0,Math.min(12,Math.max(0,oppTwoMisses)));
+  const blkWeights=rows.map(r=>{const slot=r.slot==='C'?1.65:r.slot==='PF'?1.27:r.slot==='SF'?.93:r.slot==='SG'?.68:.58;const base=Math.pow(Math.max(2,r.player.rimDefense-48),1.45),burst=r.player.rimDefense>=90&&rand()<.045?(1.65+rand()*.8):1;return base*slot*Math.exp(normal(rand)*.55)*burst;});
+  const blk=allocStochastic(blockTarget,blkWeights,rand,7);
+
   rows.forEach((r,i)=>{r.dreb=dreb[i];r.reb=r.oreb+r.dreb;r.ast=ast[i];r.stl=stl[i];r.blk=blk[i];});
 }
 function simulateGame(teamA,teamB,seedText='',configA=null,configB=null){
@@ -342,7 +374,7 @@ async function initOnline(){
   updateOnlineStatus();await checkDailyAttempt();await refreshChallengeCount();await loadHallOfFame();db.auth.onAuthStateChange(async(_,session)=>{state.user=session?.user||null;state.profile=null;if(state.user){const{data:p}=await db.from('profiles').select('id,username').eq('id',state.user.id).maybeSingle();state.profile=p||null;}updateOnlineStatus();checkDailyAttempt();refreshChallengeCount();loadHallOfFame();});
 }
 function updateOnlineStatus(){const el=$('online-status');if(!ONLINE_READY){el.textContent='Online draft setup needed';el.className='online-status offline';}else if(!state.user){el.textContent='Log in for real-player drafts';el.className='online-status';}else{el.textContent=`Online as ${state.profile?.username||'player'}`;el.className='online-status online';}}
-function requireOnline(){if(!ONLINE_READY){toast('Online Cash Grab is not connected.','Run the Cash Grab v5 Supabase migration.');return false;}if(!state.user){toast('Log in first.','Use your HoopLoop account to play real-player drafts or record a Daily score.');return false;}return true;}
+function requireOnline(){if(!ONLINE_READY){toast('Online Cash Grab is not connected.','Run the Cash Grab v6 Supabase migration.');return false;}if(!state.user){toast('Log in first.','Use your HoopLoop account to play real-player drafts or record a Daily score.');return false;}return true;}
 async function checkDailyAttempt(){
   state.dailyAttemptUsed=localDailyUsed();
   if(db&&state.user&&state.boardType==='daily'&&isToday()){
@@ -390,8 +422,10 @@ function loadOnlineDraft(d){
   state.draft={kind:'online',row:d,board,localConfig,timeoutBusy:false};$('draft-section').classList.remove('hidden');renderDraft();subscribeDraft(d.id);$('draft-section').scrollIntoView({behavior:'smooth',block:'start'});if(d.status==='ready')finalizeOnlineDraftIfNeeded();if(d.status==='finished')showFinishedOnlineDraft(d);
 }
 async function tickDraftTimer(){
-  const d=state.draft;if(!d||d.kind!=='online'||d.row.status!=='drafting'||!d.row.turn_deadline){const clock=$('draft-clock');if(clock)clock.classList.add('hidden');return;}
-  const clock=$('draft-clock'),value=$('draft-clock-value');clock.classList.remove('hidden');const ms=new Date(d.row.turn_deadline).getTime()-Date.now(),seconds=Math.max(0,Math.ceil(ms/1000));value.textContent=String(seconds);clock.classList.toggle('urgent',seconds<=10);
+  const d=state.draft,clock=$('draft-clock'),value=$('draft-clock-value');if(!d||d.kind!=='online'||d.row.status!=='drafting'){if(clock)clock.classList.add('hidden');return;}
+  const sides=onlineDraftSides(d.row),label=clock?.querySelector('span');clock.classList.remove('hidden');if(label)label.textContent=sides.yourTurn?'YOUR CLOCK':'OPPONENT CLOCK';
+  if(!d.row.turn_deadline){value.textContent='60';clock.classList.remove('urgent');return;}
+  const ms=new Date(d.row.turn_deadline).getTime()-Date.now(),seconds=Math.max(0,Math.ceil(ms/1000));value.textContent=`${seconds}s`;clock.classList.toggle('urgent',seconds<=10);
   if(ms<=0&&!d.timeoutBusy){d.timeoutBusy=true;const{data,error}=await db.rpc('timeout_cash_grab_draft_pick',{p_draft_id:d.row.id});d.timeoutBusy=false;if(error){if(!/not expired|not accepting/i.test(error.message||''))console.warn(error.message);return;}if(data){d.row=data;renderDraft();}}
 }
 function startDraftTimer(){stopDraftTimer();state.draftTimer=setInterval(tickDraftTimer,500);tickDraftTimer();}
@@ -437,7 +471,7 @@ function renderDraft(){
 }
 function leaveDraft(){stopOnlineChannel();state.draft=null;$('draft-section').classList.add('hidden');$('draft-lineup-setup').classList.add('hidden');$('builder').scrollIntoView({behavior:'smooth'});}
 
-function openHow(){openModal(`<span class="overline">CASH GRAB RULES</span><h2>Five players. Forty minutes.</h2><ul class="modal-list"><li><strong>$15 virtual budget</strong><br>Build five players. You may finish under budget, never over.</li><li><strong>5v5, 40 minutes</strong><br>There are no substitutes, stamina penalties, or injuries. Every player logs 40 minutes.</li><li><strong>Set your lineup</strong><br>Assign PG, SG, SF, PF, and C to control direct defensive matchups, then rank your 1st through 5th offensive options to control shot preference.</li><li><strong>50% Fit · 30% Talent · 20% Versatility</strong><br>Fit is the largest team-strength factor, while positions, offensive hierarchy, direct matchups, and game variance shape the box score.</li><li><strong>Daily</strong><br>One official Gauntlet attempt per logged-in account. Past boards stay playable as practice.</li><li><strong>Live Snake Draft Battles</strong><br>First pick is random: P1, P2, P2, P1, P1, P2, P2, P1, P1, P2. Online picks have a 60-second clock; a timeout assigns an available $1 player automatically.</li></ul>`);}
+function openHow(){openModal(`<span class="overline">CASH GRAB RULES</span><h2>Five players. Forty minutes.</h2><ul class="modal-list"><li><strong>$15 virtual budget</strong><br>Build five players. You may finish under budget, never over.</li><li><strong>5v5, 40 minutes</strong><br>There are no substitutes, stamina penalties, or injuries. Every player logs 40 minutes.</li><li><strong>Set your lineup</strong><br>Assign PG, SG, SF, PF, and C to control direct defensive matchups, then rank your 1st through 5th offensive options to control shot preference.</li><li><strong>50% Fit · 25% Talent · 25% Versatility</strong><br>Fit is the largest team-strength factor. Natural-position duplication is only a small fit consideration; complementary skills, matchup assignments, offensive hierarchy, and game variance matter much more.</li><li><strong>Daily</strong><br>One official Gauntlet attempt per logged-in account. Past boards stay playable as practice.</li><li><strong>Live Snake Draft Battles</strong><br>First pick is random: P1, P2, P2, P1, P1, P2, P2, P1, P1, P2. Online picks have a 60-second clock; a timeout assigns an available $1 player automatically.</li></ul>`);}
 function openModal(html){$('modal-content').innerHTML=html;$('modal-backdrop').classList.remove('hidden');}
 function closeModal(){$('modal-backdrop').classList.add('hidden');}
 function toast(title,message=''){const el=document.createElement('div');el.className='toast';el.innerHTML=`<strong>${escapeHtml(title)}</strong>${message?`<span>${escapeHtml(message)}</span>`:''}`;$('toast-region').appendChild(el);setTimeout(()=>el.remove(),4200);}

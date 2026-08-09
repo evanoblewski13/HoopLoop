@@ -1,28 +1,24 @@
-# Cash Grab v5 — Design Notes
+# Cash Grab v6 Design Notes
 
-## Lineup positions
-Cash Grab still allows any five-player roster. After the five are chosen, the user assigns one player to each game slot: PG, SG, SF, PF, C.
+## Team power
+Cash Grab v6 uses:
+- **50% Fit**
+- **25% Talent**
+- **25% Versatility / diversity**
 
-The slot is a matchup assignment, not a restriction on who can be drafted. A natural center can be assigned PG if the user wants that matchup. The opposing lineup is matched slot-for-slot.
+Natural-position balance is now only a light input to Fit. Three natural small forwards, for example, can still form an excellent lineup if they provide complementary creation, shooting, defense, rebounding and off-ball value. User-assigned PG/SG/SF/PF/C slots continue to determine the direct defensive matchups.
 
-## Offensive options
-Each lineup must also have a unique 1st, 2nd, 3rd, 4th, and 5th option.
+## Secondary-stat variance
+v5 produced believable scoring but overly smooth secondary stats. v6 keeps team-level basketball constraints while using more volatile player-level allocation.
 
-The shot-volume multipliers are intentionally separate from shooting efficiency:
-- 1st: 1.35× opportunity preference
-- 2nd: 1.16×
-- 3rd: 1.00×
-- 4th: 0.87×
-- 5th: 0.74×
+- Assists favor playmaking and lead-guard/creator roles, with occasional creator explosions.
+- Steals favor perimeter defense but can spike in unusual games.
+- Blocks favor rim defense and frontcourt matchup slots, with occasional shot-blocking explosions.
+- Turnovers reflect usage, playmaking, offensive priority and opponent pressure. Individual lines can now range from 0 to rare 7-9 turnover disasters.
+- Rebounds still reconcile to missed shots and offensive rebounds, but strong bigs receive more of the available defensive boards while guards receive less when sharing the floor with elite rebounders.
 
-The simulation still uses player scoring/shooting/finishing ratings and direct defender quality to decide efficiency. This allows a defensive specialist to be intentionally placed 5th without reducing their defensive value.
+## Player-specific tuning
+At the user's request, both Current and All-Time versions of **Paul George** receive a small ratings increase. Both versions of **Nikola Jokic** receive a small ratings decrease. These are intentionally subtle and do not change their Cash Grab dollar prices.
 
-## Online pick clock
-The database stores an absolute `turn_deadline` for every online pick. The browser displays time remaining from that shared deadline, so both players are looking at the same clock.
-
-After a legal pick, the database advances the snake order and creates a new deadline 60 seconds later.
-
-When the deadline expires, either connected participant can invoke the timeout resolver. The resolver prefers a $1 player and also verifies that both five-player rosters can still be completed under $15. If no legal $1 remains, it takes the cheapest legal fallback rather than breaking the draft.
-
-## Live room behavior
-Realtime draft updates now mutate the open draft room directly instead of tearing down and reopening the room after each opponent pick. The intended experience is to enter the draft once and remain there through all ten selections and lineup setup.
+## Draft timer
+The existing v5 server deadline remains authoritative. v6 makes the clock visually prominent and labels whether it is YOUR CLOCK or OPPONENT CLOCK. No database migration is needed.

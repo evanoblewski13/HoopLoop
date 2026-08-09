@@ -42,7 +42,7 @@ footer{display:flex;flex-wrap:wrap;align-items:center;gap:18px;padding:28px clam
 
 .game-story{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 14px}.story-note{padding:11px 12px;border-left:3px solid var(--orange);border-radius:8px;background:#fff;color:var(--muted);font-size:.68rem;line-height:1.45}.story-note strong{color:var(--ink)}@media(max-width:700px){.game-story{grid-template-columns:1fr}}
 
-/* Cash Grab v5 lineup controls + live draft clock */
+/* Cash Grab v6 lineup controls + highly visible live draft clock */
 .lineup-control-row,.draft-lineup-control-row{display:grid;grid-template-columns:minmax(180px,1fr) 118px 118px;gap:10px;align-items:end;padding:12px 0;border-bottom:1px solid var(--line,#e5e5e5)}
 .lineup-control-row:last-child,.draft-lineup-control-row:last-child{border-bottom:0}
 .lineup-control-player{display:flex;flex-direction:column;gap:3px}.lineup-control-player span{font-size:.78rem;opacity:.68}
@@ -53,3 +53,7 @@ footer{display:flex;flex-wrap:wrap;align-items:center;gap:18px;padding:28px clam
 .draft-lineup-setup{margin-top:24px;padding:22px;border:1px solid var(--line,#ddd);border-radius:18px;background:var(--surface,#fff)}.draft-lineup-setup.hidden{display:none}.draft-lineup-heading h3{margin:.25rem 0}.draft-lineup-heading p{max-width:760px;opacity:.72}.draft-lineup-controls{margin:16px 0}.draft-lineup-status{margin:10px 0 0;font-size:.86rem;opacity:.7}
 @media(max-width:700px){.lineup-control-row,.draft-lineup-control-row{grid-template-columns:1fr 1fr}.lineup-control-player{grid-column:1/-1}}
 .selected-team.configured{display:block}
+
+/* Platform 14: make the online pick clock impossible to miss. */
+.draft-clock:not(.hidden){display:flex!important;min-width:168px;margin:10px auto 0;padding:9px 16px;border:2px solid rgba(255,255,255,.85);box-shadow:0 8px 24px #0005;transform:translateZ(0)}
+.draft-clock strong{font-size:1.7rem!important;line-height:1}.draft-clock span{font-size:.64rem!important;color:#fff!important}.draft-clock.urgent{outline:3px solid rgba(255,255,255,.5);outline-offset:2px}

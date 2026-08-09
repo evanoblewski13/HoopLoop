@@ -1,18 +1,14 @@
-# HoopLoop Platform 13 — Cash Grab v5
+# HoopLoop Platform 14 — Cash Grab v6
 
-Cash Grab v5 focuses on lineup control and live drafting.
+Cash Grab v6 is a balance and presentation patch on top of Platform 13.
 
-## What changed
-- Online snake drafts stay live on one screen through Supabase Realtime.
-- Every online pick has a shared 60-second deadline.
-- When the clock expires, the timed-out side receives an available legal $1 player automatically; if no $1 can legally complete both rosters, the cheapest legal fallback is used.
-- After building or drafting five players, users assign PG / SG / SF / PF / C matchup slots.
-- Users also rank 1st through 5th offensive options.
-- Offensive options change shot-volume preference, not shooting ratings.
-- Direct defensive matchups still influence efficiency and explosion-game probability.
-- Box scores now show each player's offensive-option rank.
+Highlights:
+- 50% Fit / 25% Talent / 25% Versatility.
+- Softer natural-position duplication penalties.
+- Wider assist, steal, block, turnover and rebound variance.
+- More frontcourt-weighted rebounding.
+- Large visible 60-second online Draft Battle clock.
+- Subtle Paul George boost and Nikola Jokic reduction in Current + All-Time Cash Grab data.
+- No new Supabase migration.
 
-## Database
-Run `supabase/cash-grab-v5.sql` once after your existing Cash Grab v3/v4 migrations.
-
-No Name Rush, SBC, HoopLoopSim, account, friend, Daily, draft-history, or Hall of Five data is deleted.
+See `PLATFORM-14-UPDATE-GUIDE.md` and `PLATFORM-14-TEST-CHECKLIST.md`.
