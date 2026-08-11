@@ -1,10 +1,7 @@
-# Stats Race v1 — Data Source Notes
+# Stats Race v2 data sources
 
-The founding profile pool uses completed NBA regular-season career information so answers remain stable.
+- Basketball-Reference player pages and 2025-26 career summaries were used as the primary statistical reference for the current snapshot.
+- NBA.com was used to spot-check current/career-high information where useful.
+- Retired career totals are stable historical data.
 
-Primary reference used during the v1 data pass:
-- Basketball-Reference player profile pages for listed height/weight, birthplace, college, draft information, games, and career per-game statistics.
-
-Additional cross-checks were made against NBA.com / Hall of Fame or widely established career records where useful.
-
-The data is intentionally isolated in `stats-race-data.js`. If a profile answer needs correction, the profile data can be updated without touching the scoring engine.
+Current-mode statistics are intentionally labeled as a snapshot through the 2025-26 regular season.

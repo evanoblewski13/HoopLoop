@@ -7,7 +7,7 @@
   <meta name="description" content="Stats Race by HoopLoop — fill out an NBA scouting report before the clock expires and race other basketball fans." />
   <title>Stats Race — HoopLoop</title>
   <script src="theme.js?v=9.0.0"></script>
-  <link rel="stylesheet" href="stats-race.css?v=1.0.0" />
+  <link rel="stylesheet" href="stats-race.css?v=2.0.0" />
 </head>
 <body>
   <div class="page-noise" aria-hidden="true"></div>
@@ -32,8 +32,14 @@
 
     <section class="section" id="play-section">
       <div class="section-heading">
-        <div><span class="overline">THE SCOUTING DESK</span><h2>Stats Race</h2><p id="mode-description">One player. Seventeen fields. Ninety seconds.</p></div>
+        <div><span class="overline">THE SCOUTING DESK</span><h2>Stats Race</h2><p id="mode-description">One player. A full scouting file. Ninety seconds.</p></div>
         <div class="mode-switch" role="group" aria-label="Stats Race mode"><button class="active" data-mode="daily" type="button">Daily</button><button data-mode="practice" type="button">Practice</button><button data-mode="race" type="button">Race</button></div>
+      </div>
+      <div class="pool-strip" aria-label="Player pool">
+        <span>PLAYER POOL</span>
+        <button type="button" class="active" data-pool="retired">Retired</button>
+        <button type="button" data-pool="current">Current</button>
+        <small id="pool-note">Completed careers · totals included</small>
       </div>
 
       <section class="mode-panel" id="daily-panel">
@@ -65,7 +71,8 @@
               <label class="field"><span>Primary position</span><select id="position"><option value="">Choose</option><option>PG</option><option>SG</option><option>SF</option><option>PF</option><option>C</option></select><small>Primary NBA position</small></label>
               <label class="field"><span>College / route</span><input id="college" placeholder="Michigan State" /><small>College, high school, or international</small></label>
               <label class="field"><span>Hometown / birthplace</span><input id="hometown" placeholder="Lansing" /><small>City is enough for full credit</small></label>
-              <label class="field"><span>Jersey number</span><input id="jersey" type="number" inputmode="numeric" placeholder="32" /><small>Any iconic NBA number accepted</small></label>
+              <label class="field multi-field"><span>NBA jersey numbers</span><input id="jersey" inputmode="text" placeholder="23, 45" /><small>List every number you know · comma/space is fine</small></label>
+              <label class="field multi-field"><span>NBA teams played for</span><input id="teams" inputmode="text" placeholder="Bulls, Wizards" /><small>List as many teams as you know</small></label>
             </div></section>
 
             <section class="dossier-card resume-card"><div class="dossier-title"><span>02</span><div><small>NBA FILE</small><h3>Draft & résumé</h3></div></div><div class="fields-grid">
@@ -78,8 +85,9 @@
             </div></section>
 
             <section class="dossier-card stats-card"><div class="dossier-title"><span>03</span><div><small>CAREER FILE</small><h3>Career stats</h3></div></div><div class="fields-grid stats-fields">
-              <label class="field"><span>Games played</span><input id="games" type="number" inputmode="numeric" placeholder="906" /></label>
-              <label class="field"><span>Career points</span><input id="points" type="number" inputmode="numeric" placeholder="17707" /></label>
+              <label class="field retired-only"><span>Games played</span><input id="games" type="number" inputmode="numeric" placeholder="906" /></label>
+              <label class="field retired-only"><span>Career points</span><input id="points" type="number" inputmode="numeric" placeholder="17707" /></label>
+              <label class="field current-only hidden"><span>Career-high points</span><input id="careerHighPoints" type="number" inputmode="numeric" placeholder="61" /></label>
               <label class="field"><span>PPG</span><input id="ppg" type="number" inputmode="decimal" step="0.1" placeholder="19.5" /></label>
               <label class="field"><span>RPG</span><input id="rpg" type="number" inputmode="decimal" step="0.1" placeholder="7.2" /></label>
               <label class="field"><span>APG</span><input id="apg" type="number" inputmode="decimal" step="0.1" placeholder="11.2" /></label>
@@ -90,7 +98,7 @@
       </section>
 
       <section class="results-shell hidden" id="results-shell">
-        <div class="results-hero"><div><span class="overline">REPORT FILED</span><h2 id="result-player">Magic Johnson</h2><p id="result-copy">Here's where your points came from.</p></div><div class="total-score"><span>SCORE</span><strong id="total-score">0</strong><small>/ 1700</small></div></div>
+        <div class="results-hero"><div><span class="overline">REPORT FILED</span><h2 id="result-player">Magic Johnson</h2><p id="result-copy">Here's where your points came from.</p></div><div class="total-score"><span>SCORE</span><strong id="total-score">0</strong><small id="total-max">/ 1800</small></div></div>
         <div class="result-summary" id="result-summary"></div>
         <div class="score-breakdown" id="score-breakdown"></div>
         <div class="results-actions"><button class="primary-button" id="result-next" type="button">Next report</button><button class="secondary-button" id="result-leaderboard" type="button">Leaderboard</button></div>
@@ -98,9 +106,9 @@
     </section>
   </main>
 
-  <footer><a class="brand footer-brand" href="index.html"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a><p>Basketball knowledge, scored like a scouting report.</p><span>Stats Race v1.0 · HoopLoop Platform 15</span><span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span></footer>
+  <footer><a class="brand footer-brand" href="index.html"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a><p>Basketball knowledge, scored like a scouting report.</p><span>Stats Race v2.0 · HoopLoop Platform 15</span><span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span></footer>
 
   <div class="modal-backdrop hidden" id="modal-backdrop"><section class="modal" role="dialog" aria-modal="true"><button class="modal-close" id="modal-close" type="button">×</button><div id="modal-content"></div></section></div><div class="toast-region" id="toast-region" aria-live="polite"></div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=11.0.0"></script><script src="stats-race-data.js?v=1.0.0"></script><script src="stats-race.js?v=1.0.0"></script><script src="theme-account-sync.js?v=11.0.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=11.0.0"></script><script src="stats-race-data.js?v=2.0.0"></script><script src="stats-race.js?v=2.0.0"></script><script src="theme-account-sync.js?v=11.0.0"></script>
 </body>
 </html>
