@@ -1,14 +1,24 @@
-# HoopLoop Platform 14 — Cash Grab v6
+# HoopLoop Platform 15 — Stats Race v1
 
-Cash Grab v6 is a balance and presentation patch on top of Platform 13.
+Stats Race is HoopLoop Game 04: a timed NBA scouting-report game.
 
-Highlights:
-- 50% Fit / 25% Talent / 25% Versatility.
-- Softer natural-position duplication penalties.
-- Wider assist, steal, block, turnover and rebound variance.
-- More frontcourt-weighted rebounding.
-- Large visible 60-second online Draft Battle clock.
-- Subtle Paul George boost and Nikola Jokic reduction in Current + All-Time Cash Grab data.
-- No new Supabase migration.
+## New files
+- `stats-race.html`
+- `stats-race.css`
+- `stats-race.js`
+- `stats-race-data.js`
+- `supabase/stats-race-v1.sql`
 
-See `PLATFORM-14-UPDATE-GUIDE.md` and `PLATFORM-14-TEST-CHECKLIST.md`.
+## Updated platform files
+- `index.html`
+- `start-bench-cut.html`
+- `cash-grab.html`
+- `hooploopsim.html`
+- `verify.html`
+- `version.json`
+
+## Core rules
+17 fields × 100 points = 1,700 maximum.
+Exact answers score 100. Numeric guesses decline gradually with distance. Wrong answers and blanks never subtract points.
+
+See `PLATFORM-15-UPDATE-GUIDE.md` before installing.

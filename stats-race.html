@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#ff5a1f" />
+  <meta name="description" content="Stats Race by HoopLoop — fill out an NBA scouting report before the clock expires and race other basketball fans." />
+  <title>Stats Race — HoopLoop</title>
+  <script src="theme.js?v=9.0.0"></script>
+  <link rel="stylesheet" href="stats-race.css?v=1.0.0" />
+</head>
+<body>
+  <div class="page-noise" aria-hidden="true"></div>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="HoopLoop home"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a>
+    <nav class="desktop-nav" aria-label="HoopLoop games">
+      <a href="index.html">Name Rush</a><a href="start-bench-cut.html">Start, Bench, Cut</a><a href="cash-grab.html">Cash Grab</a><a class="active" href="stats-race.html">Stats Race</a><a href="hooploopsim.html">HoopLoopSim</a><span class="soon-link">Higher or Lower <small>SOON</small></span><a href="index.html?open=friends">Friends</a>
+    </nav>
+    <a class="account-control" href="index.html?open=account"><span class="account-dot"></span><span id="account-label">Account</span></a>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="game-pill"><span></span> HoopLoop Game 04</div>
+        <h1>Scout the player.<br><em>Beat the clock.</em></h1>
+        <p>You get the name. Fill out as much of the player profile as you can in 90 seconds. Every category is worth up to 100 points. Wrong answers never subtract points.</p>
+        <div class="hero-actions"><button class="primary-button" id="jump-play" type="button">Open the scouting desk <span>↘</span></button><button class="text-button" id="how-button" type="button">Scoring rules</button></div>
+      </div>
+      <aside class="hero-preview"><span class="preview-label">THE REPORT</span><strong>17</strong><p>Bio, draft history, awards, and career numbers. Perfect answer = 100. Close answer = partial credit.</p><div class="preview-chips"><span>BIO</span><span>RÉSUMÉ</span><span>STATS</span></div></aside>
+    </section>
+
+    <section class="section" id="play-section">
+      <div class="section-heading">
+        <div><span class="overline">THE SCOUTING DESK</span><h2>Stats Race</h2><p id="mode-description">One player. Seventeen fields. Ninety seconds.</p></div>
+        <div class="mode-switch" role="group" aria-label="Stats Race mode"><button class="active" data-mode="daily" type="button">Daily</button><button data-mode="practice" type="button">Practice</button><button data-mode="race" type="button">Race</button></div>
+      </div>
+
+      <section class="mode-panel" id="daily-panel">
+        <div class="mode-card primary-mode"><span class="overline">SAME PLAYER FOR EVERYONE</span><h3>Daily Scout</h3><p>One official 90-second report per account. Highest score wins; time breaks ties.</p><div class="mode-actions"><button class="primary-button" id="start-daily" type="button">Start today's report</button><button class="secondary-button" id="daily-leaderboard" type="button">Leaderboard</button></div><div class="status-line" id="daily-status">Checking today's assignment…</div></div>
+      </section>
+
+      <section class="mode-panel hidden" id="practice-panel">
+        <div class="mode-card"><span class="overline">UNLIMITED</span><h3>Practice Scout</h3><p>Get a random founding profile, fill out the report, and immediately run another one.</p><div class="mode-actions"><button class="primary-button" id="start-practice" type="button">Random player</button></div><div class="status-line" id="practice-best">Best practice score: —</div></div>
+      </section>
+
+      <section class="mode-panel hidden" id="race-panel">
+        <div class="race-grid">
+          <div class="mode-card"><span class="overline">INSTANT</span><h3>Race a CPU Scout</h3><p>Same player, same 90 seconds. Beat the CPU's scouting score.</p><button class="primary-button" id="start-cpu-race" type="button">Race CPU</button></div>
+          <div class="mode-card online-card"><span class="overline">ONLINE</span><h3>Race another fan</h3><p>Challenge a friend or find a random HoopLoop player. Both reports begin from the same five-second countdown.</p><div class="mode-actions"><button class="primary-button" id="race-friend" type="button">Invite friend</button><button class="secondary-button" id="race-random" type="button">Find random</button><button class="secondary-button" id="race-invites" type="button">Invites <span class="count-badge hidden" id="invite-count"></span></button></div><div class="status-line" id="online-status">Checking account…</div></div>
+        </div>
+      </section>
+
+      <section class="scout-shell hidden" id="scout-shell">
+        <div class="scout-topbar">
+          <div><span class="overline" id="assignment-kicker">SCOUT ASSIGNMENT</span><h2 id="player-name">Magic Johnson</h2><p id="assignment-subtitle">Fill out everything you know. Close numeric guesses still score.</p></div>
+          <div class="clock-card" id="clock-card"><span>TIME</span><strong id="clock-value">90.0</strong><small>seconds</small></div>
+        </div>
+        <div class="race-opponent hidden" id="race-opponent"><span id="opponent-name">Opponent</span><strong id="opponent-state">Scouting…</strong></div>
+        <form id="scout-form" autocomplete="off">
+          <div class="dossier-grid">
+            <section class="dossier-card bio-card"><div class="dossier-title"><span>01</span><div><small>PLAYER FILE</small><h3>Bio</h3></div></div><div class="fields-grid">
+              <label class="field"><span>Height</span><input id="height" inputmode="text" placeholder="6'9&quot;" /><small>Feet / inches</small></label>
+              <label class="field"><span>Weight</span><input id="weight" type="number" inputmode="numeric" placeholder="215" /><small>lbs</small></label>
+              <label class="field"><span>Primary position</span><select id="position"><option value="">Choose</option><option>PG</option><option>SG</option><option>SF</option><option>PF</option><option>C</option></select><small>Primary NBA position</small></label>
+              <label class="field"><span>College / route</span><input id="college" placeholder="Michigan State" /><small>College, high school, or international</small></label>
+              <label class="field"><span>Hometown / birthplace</span><input id="hometown" placeholder="Lansing" /><small>City is enough for full credit</small></label>
+              <label class="field"><span>Jersey number</span><input id="jersey" type="number" inputmode="numeric" placeholder="32" /><small>Any iconic NBA number accepted</small></label>
+            </div></section>
+
+            <section class="dossier-card resume-card"><div class="dossier-title"><span>02</span><div><small>NBA FILE</small><h3>Draft & résumé</h3></div></div><div class="fields-grid">
+              <label class="field"><span>Draft year</span><input id="draftYear" type="number" inputmode="numeric" placeholder="1979" /></label>
+              <label class="field"><span>Draft pick</span><input id="draftPick" type="number" inputmode="numeric" placeholder="1" /><small>Overall pick</small></label>
+              <label class="field"><span>Championships</span><input id="championships" type="number" inputmode="numeric" placeholder="5" /></label>
+              <label class="field"><span>Regular-season MVPs</span><input id="mvps" type="number" inputmode="numeric" placeholder="3" /></label>
+              <label class="field"><span>Finals MVPs</span><input id="finalsMvps" type="number" inputmode="numeric" placeholder="3" /></label>
+              <label class="field"><span>All-Star selections</span><input id="allStars" type="number" inputmode="numeric" placeholder="12" /></label>
+            </div></section>
+
+            <section class="dossier-card stats-card"><div class="dossier-title"><span>03</span><div><small>CAREER FILE</small><h3>Career stats</h3></div></div><div class="fields-grid stats-fields">
+              <label class="field"><span>Games played</span><input id="games" type="number" inputmode="numeric" placeholder="906" /></label>
+              <label class="field"><span>Career points</span><input id="points" type="number" inputmode="numeric" placeholder="17707" /></label>
+              <label class="field"><span>PPG</span><input id="ppg" type="number" inputmode="decimal" step="0.1" placeholder="19.5" /></label>
+              <label class="field"><span>RPG</span><input id="rpg" type="number" inputmode="decimal" step="0.1" placeholder="7.2" /></label>
+              <label class="field"><span>APG</span><input id="apg" type="number" inputmode="decimal" step="0.1" placeholder="11.2" /></label>
+            </div></section>
+          </div>
+          <div class="report-actions"><div><strong id="live-filled">0 / 17 filled</strong><span>No penalties for misses or blanks.</span></div><button class="primary-button" id="submit-report" type="submit">File report</button></div>
+        </form>
+      </section>
+
+      <section class="results-shell hidden" id="results-shell">
+        <div class="results-hero"><div><span class="overline">REPORT FILED</span><h2 id="result-player">Magic Johnson</h2><p id="result-copy">Here's where your points came from.</p></div><div class="total-score"><span>SCORE</span><strong id="total-score">0</strong><small>/ 1700</small></div></div>
+        <div class="result-summary" id="result-summary"></div>
+        <div class="score-breakdown" id="score-breakdown"></div>
+        <div class="results-actions"><button class="primary-button" id="result-next" type="button">Next report</button><button class="secondary-button" id="result-leaderboard" type="button">Leaderboard</button></div>
+      </section>
+    </section>
+  </main>
+
+  <footer><a class="brand footer-brand" href="index.html"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a><p>Basketball knowledge, scored like a scouting report.</p><span>Stats Race v1.0 · HoopLoop Platform 15</span><span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span></footer>
+
+  <div class="modal-backdrop hidden" id="modal-backdrop"><section class="modal" role="dialog" aria-modal="true"><button class="modal-close" id="modal-close" type="button">×</button><div id="modal-content"></div></section></div><div class="toast-region" id="toast-region" aria-live="polite"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=11.0.0"></script><script src="stats-race-data.js?v=1.0.0"></script><script src="stats-race.js?v=1.0.0"></script><script src="theme-account-sync.js?v=11.0.0"></script>
+</body>
+</html>

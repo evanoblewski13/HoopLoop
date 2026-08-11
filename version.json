@@ -1,4 +1,5 @@
 {
-  "platform": "14.0.0",
-  "cashGrab": "6.0.0"
+  "platform": "15.0.0",
+  "cashGrab": "6.0.0",
+  "statsRace": "1.0.0"
 }
