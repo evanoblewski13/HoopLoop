@@ -7,7 +7,7 @@
   <meta name="description" content="Stats Race by HoopLoop — fill out an NBA scouting report before the clock expires and race other basketball fans." />
   <title>Stats Race — HoopLoop</title>
   <script src="theme.js?v=9.0.0"></script>
-  <link rel="stylesheet" href="stats-race.css?v=3.0.0" />
+  <link rel="stylesheet" href="stats-race.css?v=4.0.0" />
 </head>
 <body>
   <div class="page-noise" aria-hidden="true"></div>
@@ -27,7 +27,7 @@
         <p>You get the name. Fill out as much of the player profile as you can in 90 seconds. Every category is worth up to 100 points. Wrong answers never subtract points.</p>
         <div class="hero-actions"><button class="primary-button" id="jump-play" type="button">Open the scouting desk <span>↘</span></button><button class="text-button" id="how-button" type="button">Scoring rules</button></div>
       </div>
-      <aside class="hero-preview"><span class="preview-label">THE REPORT</span><strong>17</strong><p>Bio, draft history, awards, and career numbers. Perfect answer = 100. Close answer = partial credit.</p><div class="preview-chips"><span>BIO</span><span>RÉSUMÉ</span><span>STATS</span></div></aside>
+      <aside class="hero-preview"><span class="preview-label">THE REPORT</span><strong>30</strong><p>Bio, draft history, awards, and deeper career numbers. Perfect answer = 100. Close answer = partial credit.</p><div class="preview-chips"><span>BIO</span><span>RÉSUMÉ</span><span>STATS</span></div></aside>
     </section>
 
     <section class="section" id="play-section">
@@ -59,7 +59,7 @@
 
       <section class="scout-shell hidden" id="scout-shell">
         <div class="scout-topbar">
-          <div><span class="overline" id="assignment-kicker">SCOUT ASSIGNMENT</span><h2 id="player-name">Magic Johnson</h2><p id="assignment-subtitle">Fill out everything you know. Close numeric guesses still score.</p></div>
+          <div><span class="overline" id="assignment-kicker">SCOUT ASSIGNMENT</span><h2 id="player-name">Magic Johnson</h2><p id="assignment-subtitle">Fill out everything you know. Résumé misses are punished; stat guesses still earn useful partial credit.</p></div>
           <div class="clock-card" id="clock-card"><span>TIME</span><strong id="clock-value">90.0</strong><small>seconds</small></div>
         </div>
         <div class="race-opponent hidden" id="race-opponent"><span id="opponent-name">Opponent</span><strong id="opponent-state">Scouting…</strong></div>
@@ -72,6 +72,7 @@
               <label class="field"><span>College / route</span><input id="college" placeholder="Michigan State" /><small>College, high school, or international route</small></label>
               <label class="field"><span>Country / basketball nationality</span><input id="country" placeholder="Serbia" /><small>Country is scored independently for a full 100</small></label>
               <label class="field"><span>Hometown / birthplace</span><input id="hometown" placeholder="Lansing" /><small>City is enough for full credit</small></label>
+              <label class="field"><span>Shooting hand</span><select id="shootingHand"><option value="">Choose</option><option>Right</option><option>Left</option></select><small>Dominant shooting hand</small></label>
               <label class="field multi-field"><span>NBA jersey numbers</span><input id="jersey" inputmode="text" placeholder="23, 45" /><small>List every number you know · comma/space is fine</small></label>
               <label class="field multi-field"><span>NBA teams played for</span><input id="teams" inputmode="text" placeholder="Bulls, Wizards" /><small>List as many teams as you know</small></label>
             </div></section>
@@ -84,26 +85,34 @@
               <label class="field"><span>Finals MVPs</span><input id="finalsMvps" type="number" inputmode="numeric" placeholder="3" /></label>
               <label class="field"><span>All-Star selections</span><input id="allStars" type="number" inputmode="numeric" placeholder="12" /></label>
               <label class="field"><span>All-NBA selections</span><input id="allNbaTeams" type="number" inputmode="numeric" placeholder="10" /><small>First + Second + Third Team</small></label>
-              <label class="field"><span>All-Rookie selections</span><input id="allRookieTeams" type="number" inputmode="numeric" placeholder="1" /><small>Enter 0 if none</small></label>
+              <label class="field"><span>Rookie of the Year</span><input id="roty" type="number" inputmode="numeric" placeholder="1" /><small>Usually 0 or 1</small></label>
+              <label class="field"><span>Defensive Player of the Year</span><input id="dpoy" type="number" inputmode="numeric" placeholder="0" /><small>Career DPOY awards</small></label>
             </div></section>
 
             <section class="dossier-card stats-card"><div class="dossier-title"><span>03</span><div><small>CAREER FILE</small><h3>Career stats</h3></div></div><div class="fields-grid stats-fields">
               <label class="field retired-only"><span>Games played</span><input id="games" type="number" inputmode="numeric" placeholder="906" /></label>
               <label class="field retired-only"><span>Career points</span><input id="points" type="number" inputmode="numeric" placeholder="17707" /></label>
+              <label class="field retired-only"><span>NBA seasons played</span><input id="seasonsPlayed" type="number" inputmode="numeric" placeholder="13" /></label>
               <label class="field current-only hidden"><span>Career-high points</span><input id="careerHighPoints" type="number" inputmode="numeric" placeholder="61" /></label>
               <label class="field current-only hidden"><span>Career-high rebounds</span><input id="careerHighRebounds" type="number" inputmode="numeric" placeholder="27" /></label>
               <label class="field current-only hidden"><span>Career-high assists</span><input id="careerHighAssists" type="number" inputmode="numeric" placeholder="22" /></label>
+              <label class="field current-only hidden"><span>NBA salary earned</span><input id="careerEarningsM" type="number" inputmode="decimal" step="0.1" placeholder="470" /><small>Through 2025-26 · $ millions</small></label>
               <label class="field"><span>PPG</span><input id="ppg" type="number" inputmode="decimal" step="0.1" placeholder="19.5" /></label>
               <label class="field"><span>RPG</span><input id="rpg" type="number" inputmode="decimal" step="0.1" placeholder="7.2" /></label>
               <label class="field"><span>APG</span><input id="apg" type="number" inputmode="decimal" step="0.1" placeholder="11.2" /></label>
+              <label class="field"><span>SPG</span><input id="spg" type="number" inputmode="decimal" step="0.1" placeholder="1.9" /></label>
+              <label class="field"><span>BPG</span><input id="bpg" type="number" inputmode="decimal" step="0.1" placeholder="0.4" /></label>
+              <label class="field"><span>TPG</span><input id="tpg" type="number" inputmode="decimal" step="0.1" placeholder="3.9" /></label>
+              <label class="field"><span>FG%</span><input id="fgPct" type="number" inputmode="decimal" step="0.1" placeholder="52.0" /></label>
+              <label class="field"><span>Career triple-doubles</span><input id="tripleDoubles" type="number" inputmode="numeric" placeholder="138" /><small>Regular season only</small></label>
             </div></section>
           </div>
-          <div class="report-actions"><div><strong id="live-filled">0 / 21 filled</strong><span>No penalties for misses or blanks.</span></div><button class="primary-button" id="submit-report" type="submit">File report</button></div>
+          <div class="report-actions"><div><strong id="live-filled">0 / 29 filled</strong><span>No penalties for misses or blanks.</span></div><button class="primary-button" id="submit-report" type="submit">File report</button></div>
         </form>
       </section>
 
       <section class="results-shell hidden" id="results-shell">
-        <div class="results-hero"><div><span class="overline">REPORT FILED</span><h2 id="result-player">Magic Johnson</h2><p id="result-copy">Here's where your points came from.</p></div><div class="total-score"><span>SCORE</span><strong id="total-score">0</strong><small id="total-max">/ 1800</small></div></div>
+        <div class="results-hero"><div><span class="overline">REPORT FILED</span><h2 id="result-player">Magic Johnson</h2><p id="result-copy">Here's where your points came from.</p></div><div class="total-score"><span>SCORE</span><strong id="total-score">0</strong><small id="total-max">/ 2900</small></div></div>
         <div class="result-summary" id="result-summary"></div>
         <div class="score-breakdown" id="score-breakdown"></div>
         <div class="results-actions"><button class="primary-button" id="result-next" type="button">Next report</button><button class="secondary-button" id="result-leaderboard" type="button">Leaderboard</button></div>
@@ -111,9 +120,9 @@
     </section>
   </main>
 
-  <footer><a class="brand footer-brand" href="index.html"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a><p>Basketball knowledge, scored like a scouting report.</p><span>Stats Race v3.0 · HoopLoop Platform 17</span><span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span></footer>
+  <footer><a class="brand footer-brand" href="index.html"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a><p>Basketball knowledge, scored like a scouting report.</p><span>Stats Race v4.0 · HoopLoop Platform 18</span><span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span></footer>
 
   <div class="modal-backdrop hidden" id="modal-backdrop"><section class="modal" role="dialog" aria-modal="true"><button class="modal-close" id="modal-close" type="button">×</button><div id="modal-content"></div></section></div><div class="toast-region" id="toast-region" aria-live="polite"></div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=11.0.0"></script><script src="stats-race-data.js?v=3.0.0"></script><script src="stats-race.js?v=3.0.0"></script><script src="theme-account-sync.js?v=11.0.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=11.0.0"></script><script src="stats-race-data.js?v=4.0.0"></script><script src="stats-race.js?v=4.0.0"></script><script src="theme-account-sync.js?v=11.0.0"></script>
 </body>
 </html>

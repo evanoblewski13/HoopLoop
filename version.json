@@ -1,13 +1,14 @@
 {
-  "platform": "17",
-  "statsRace": "3.0.0",
+  "platform": "18",
+  "statsRace": "4.0.0",
+  "statsRaceBackend": "3",
   "released": "2026-08-10",
   "notes": [
-    "Country is a separate 100-point field",
-    "Flexible full/city/nickname/team abbreviation matching",
-    "All-NBA + All-Rookie fields",
-    "Current career-high points/rebounds/assists",
-    "90-second or Untimed Practice",
-    "Accuracy-first audited profile gate"
+    "Harsher r\u00e9sum\u00e9 scoring: 100/80/50/25/0",
+    "ROTY replaces All-Rookie",
+    "Handedness + DPOY",
+    "SPG/BPG/TPG + FG% + triple-doubles",
+    "Current salary earnings category",
+    "No new SQL migration required"
   ]
 }
