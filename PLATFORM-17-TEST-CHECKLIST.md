@@ -1,0 +1,21 @@
+# Platform 17 / Stats Race v3 test checklist
+
+- [ ] Run `supabase/stats-race-v3.sql` successfully
+- [ ] `verify.html` identifies Platform 17 / Stats Race v3
+- [ ] Jokić: `Serbia` scores 100 in Country
+- [ ] Jokić: College/route no longer requires the word Serbia
+- [ ] Giannis team history is Milwaukee only for the through-2025-26 snapshot; Miami is not counted before an appearance
+- [ ] Harden team history includes Cleveland for his 2025-26 Cavaliers games
+- [ ] LeBron College / route accepts `High school` / `No college` rather than treating him as international
+- [ ] Cleveland team answer accepts `Cleveland Cavaliers`, `Cleveland`, `Cavaliers`, `Cavs`, and `CLE` when that team is in a profile
+- [ ] Jordan `23` alone earns partial credit and `23, 45` earns 100
+- [ ] All-NBA and All-Rookie fields appear in both pools
+- [ ] Current pool shows career-high PTS / REB / AST
+- [ ] Retired pool shows games + career points instead of current career-high fields
+- [ ] Practice → 90 seconds still expires at 0
+- [ ] Practice → Untimed shows ∞ and never auto-submits
+- [ ] Untimed report can still be manually filed and scored
+- [ ] Daily remains 90 seconds
+- [ ] CPU/friend/random races remain 90 seconds
+- [ ] Daily leaderboard compares percentage and time correctly with new max scores
+- [ ] Existing Account, Friends, Name Rush, SBC, Cash Grab, and HoopSim navigation still works

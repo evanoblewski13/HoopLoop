@@ -1,3 +1,5 @@
-# HoopLoop Platform 16 — Stats Race v2
+# HoopLoop Platform 17 — Stats Race v3
 
-Stats Race v2 adds multi-answer scouting fields, separate Retired/Current pools, 40 retired profiles and 16 current profiles. Run the included Supabase v2 migration before testing official Daily/online races.
+Accuracy-first update adding independent country scoring, flexible team aliases, All-NBA/All-Rookie fields, three current-player career highs, and Untimed Practice.
+
+Start with `PLATFORM-17-UPDATE-GUIDE.md`, then run `verify.html` after deployment.

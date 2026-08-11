@@ -1,11 +1,13 @@
 {
-  "platform": "16",
-  "statsRace": "2.0.0",
+  "platform": "17",
+  "statsRace": "3.0.0",
   "released": "2026-08-10",
   "notes": [
-    "Retired + Current pools",
-    "multi-answer jersey/team fields",
-    "40 retired + 16 current profiles",
-    "variable report max scores"
+    "Country is a separate 100-point field",
+    "Flexible full/city/nickname/team abbreviation matching",
+    "All-NBA + All-Rookie fields",
+    "Current career-high points/rebounds/assists",
+    "90-second or Untimed Practice",
+    "Accuracy-first audited profile gate"
   ]
 }

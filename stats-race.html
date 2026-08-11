@@ -7,7 +7,7 @@
   <meta name="description" content="Stats Race by HoopLoop — fill out an NBA scouting report before the clock expires and race other basketball fans." />
   <title>Stats Race — HoopLoop</title>
   <script src="theme.js?v=9.0.0"></script>
-  <link rel="stylesheet" href="stats-race.css?v=2.0.0" />
+  <link rel="stylesheet" href="stats-race.css?v=3.0.0" />
 </head>
 <body>
   <div class="page-noise" aria-hidden="true"></div>
@@ -32,7 +32,7 @@
 
     <section class="section" id="play-section">
       <div class="section-heading">
-        <div><span class="overline">THE SCOUTING DESK</span><h2>Stats Race</h2><p id="mode-description">One player. A full scouting file. Ninety seconds.</p></div>
+        <div><span class="overline">THE SCOUTING DESK</span><h2>Stats Race</h2><p id="mode-description">One player. A deeper scouting file. Race the clock — or chase 100% in untimed practice.</p></div>
         <div class="mode-switch" role="group" aria-label="Stats Race mode"><button class="active" data-mode="daily" type="button">Daily</button><button data-mode="practice" type="button">Practice</button><button data-mode="race" type="button">Race</button></div>
       </div>
       <div class="pool-strip" aria-label="Player pool">
@@ -47,7 +47,7 @@
       </section>
 
       <section class="mode-panel hidden" id="practice-panel">
-        <div class="mode-card"><span class="overline">UNLIMITED</span><h3>Practice Scout</h3><p>Get a random founding profile, fill out the report, and immediately run another one.</p><div class="mode-actions"><button class="primary-button" id="start-practice" type="button">Random player</button></div><div class="status-line" id="practice-best">Best practice score: —</div></div>
+        <div class="mode-card"><span class="overline">UNLIMITED</span><h3>Practice Scout</h3><p>Get a random audited profile, fill out the report, and immediately run another one. Choose the classic clock or remove the clock completely and chase 100%.</p><div class="practice-time-switch" role="group" aria-label="Practice timer"><button class="active" data-practice-time="timed" type="button">90 seconds</button><button data-practice-time="untimed" type="button">Untimed ∞</button></div><div class="status-line" id="practice-timing-note">Classic 90-second practice report.</div><div class="mode-actions"><button class="primary-button" id="start-practice" type="button">Random player</button></div><div class="status-line" id="practice-best">Best practice score: —</div></div>
       </section>
 
       <section class="mode-panel hidden" id="race-panel">
@@ -69,7 +69,8 @@
               <label class="field"><span>Height</span><input id="height" inputmode="text" placeholder="6'9&quot;" /><small>Feet / inches</small></label>
               <label class="field"><span>Weight</span><input id="weight" type="number" inputmode="numeric" placeholder="215" /><small>lbs</small></label>
               <label class="field"><span>Primary position</span><select id="position"><option value="">Choose</option><option>PG</option><option>SG</option><option>SF</option><option>PF</option><option>C</option></select><small>Primary NBA position</small></label>
-              <label class="field"><span>College / route</span><input id="college" placeholder="Michigan State" /><small>College, high school, or international</small></label>
+              <label class="field"><span>College / route</span><input id="college" placeholder="Michigan State" /><small>College, high school, or international route</small></label>
+              <label class="field"><span>Country / basketball nationality</span><input id="country" placeholder="Serbia" /><small>Country is scored independently for a full 100</small></label>
               <label class="field"><span>Hometown / birthplace</span><input id="hometown" placeholder="Lansing" /><small>City is enough for full credit</small></label>
               <label class="field multi-field"><span>NBA jersey numbers</span><input id="jersey" inputmode="text" placeholder="23, 45" /><small>List every number you know · comma/space is fine</small></label>
               <label class="field multi-field"><span>NBA teams played for</span><input id="teams" inputmode="text" placeholder="Bulls, Wizards" /><small>List as many teams as you know</small></label>
@@ -82,18 +83,22 @@
               <label class="field"><span>Regular-season MVPs</span><input id="mvps" type="number" inputmode="numeric" placeholder="3" /></label>
               <label class="field"><span>Finals MVPs</span><input id="finalsMvps" type="number" inputmode="numeric" placeholder="3" /></label>
               <label class="field"><span>All-Star selections</span><input id="allStars" type="number" inputmode="numeric" placeholder="12" /></label>
+              <label class="field"><span>All-NBA selections</span><input id="allNbaTeams" type="number" inputmode="numeric" placeholder="10" /><small>First + Second + Third Team</small></label>
+              <label class="field"><span>All-Rookie selections</span><input id="allRookieTeams" type="number" inputmode="numeric" placeholder="1" /><small>Enter 0 if none</small></label>
             </div></section>
 
             <section class="dossier-card stats-card"><div class="dossier-title"><span>03</span><div><small>CAREER FILE</small><h3>Career stats</h3></div></div><div class="fields-grid stats-fields">
               <label class="field retired-only"><span>Games played</span><input id="games" type="number" inputmode="numeric" placeholder="906" /></label>
               <label class="field retired-only"><span>Career points</span><input id="points" type="number" inputmode="numeric" placeholder="17707" /></label>
               <label class="field current-only hidden"><span>Career-high points</span><input id="careerHighPoints" type="number" inputmode="numeric" placeholder="61" /></label>
+              <label class="field current-only hidden"><span>Career-high rebounds</span><input id="careerHighRebounds" type="number" inputmode="numeric" placeholder="27" /></label>
+              <label class="field current-only hidden"><span>Career-high assists</span><input id="careerHighAssists" type="number" inputmode="numeric" placeholder="22" /></label>
               <label class="field"><span>PPG</span><input id="ppg" type="number" inputmode="decimal" step="0.1" placeholder="19.5" /></label>
               <label class="field"><span>RPG</span><input id="rpg" type="number" inputmode="decimal" step="0.1" placeholder="7.2" /></label>
               <label class="field"><span>APG</span><input id="apg" type="number" inputmode="decimal" step="0.1" placeholder="11.2" /></label>
             </div></section>
           </div>
-          <div class="report-actions"><div><strong id="live-filled">0 / 17 filled</strong><span>No penalties for misses or blanks.</span></div><button class="primary-button" id="submit-report" type="submit">File report</button></div>
+          <div class="report-actions"><div><strong id="live-filled">0 / 21 filled</strong><span>No penalties for misses or blanks.</span></div><button class="primary-button" id="submit-report" type="submit">File report</button></div>
         </form>
       </section>
 
@@ -106,9 +111,9 @@
     </section>
   </main>
 
-  <footer><a class="brand footer-brand" href="index.html"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a><p>Basketball knowledge, scored like a scouting report.</p><span>Stats Race v2.0 · HoopLoop Platform 15</span><span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span></footer>
+  <footer><a class="brand footer-brand" href="index.html"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a><p>Basketball knowledge, scored like a scouting report.</p><span>Stats Race v3.0 · HoopLoop Platform 17</span><span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span></footer>
 
   <div class="modal-backdrop hidden" id="modal-backdrop"><section class="modal" role="dialog" aria-modal="true"><button class="modal-close" id="modal-close" type="button">×</button><div id="modal-content"></div></section></div><div class="toast-region" id="toast-region" aria-live="polite"></div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=11.0.0"></script><script src="stats-race-data.js?v=2.0.0"></script><script src="stats-race.js?v=2.0.0"></script><script src="theme-account-sync.js?v=11.0.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=11.0.0"></script><script src="stats-race-data.js?v=3.0.0"></script><script src="stats-race.js?v=3.0.0"></script><script src="theme-account-sync.js?v=11.0.0"></script>
 </body>
 </html>
