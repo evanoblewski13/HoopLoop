@@ -1,14 +1,14 @@
 {
-  "platform": "18",
+  "platform": "19",
+  "cashGrab": "7.0.0",
+  "cashGrabBackend": "5",
   "statsRace": "4.0.0",
   "statsRaceBackend": "3",
-  "released": "2026-08-10",
+  "released": "2026-08-16",
   "notes": [
-    "Harsher r\u00e9sum\u00e9 scoring: 100/80/50/25/0",
-    "ROTY replaces All-Rookie",
-    "Handedness + DPOY",
-    "SPG/BPG/TPG + FG% + triple-doubles",
-    "Current salary earnings category",
-    "No new SQL migration required"
+    "Cash Grab real-data engine",
+    "manual defensive matchups",
+    "live quarter simulation",
+    "no new SQL"
   ]
 }

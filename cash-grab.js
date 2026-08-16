@@ -1,6 +1,7 @@
 'use strict';
 
 const DATA = window.HOOPLOOP_CASH_GRAB_DATA || { current: [], allTime: [] };
+const REAL = window.HOOPLOOP_CASH_GRAB_REAL_DATA || { meta:{}, profiles:{}, h2h:{} };
 const CONFIG = window.HOOPLOOP_CONFIG || {};
 const $ = id => document.getElementById(id);
 const qsa = selector => [...document.querySelectorAll(selector)];
@@ -12,7 +13,6 @@ const GAUNTLET = [
   [1,1,1,1,1], [1,1,1,2,2], [2,2,2,2,2], [2,2,2,3,3], [2,3,3,3,3],
   [3,3,3,3,3], [3,3,3,4,4], [4,4,4,4,4], [4,4,4,5,5], [5,5,5,5,5]
 ];
-const WEIGHTS = { fit:.50, talent:.25, versatility:.25 };
 const SNAKE = [0,1,1,0,0,1,1,0,0,1];
 const ONLINE_READY = Boolean(window.supabase && /^https:\/\/.+\.supabase\.co$/i.test(String(CONFIG.SUPABASE_URL || '')) && String(CONFIG.SUPABASE_ANON_KEY || '').length > 20 && !String(CONFIG.SUPABASE_ANON_KEY).includes('PASTE_'));
 const db = ONLINE_READY ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true } }) : null;
@@ -24,7 +24,8 @@ const state = {
   gauntletTotals:{for:0,against:0}, gauntletTeam:[], officialDaily:false, dailyRunId:null, dailyAttemptUsed:false,
   currentBattle:null, currentOpponent:null,
   user:null, profile:null, onlineChannel:null,
-  draft:null, draftTimer:null, hof:[], lineupConfig:[], gauntletConfig:[]
+  draft:null, draftTimer:null, hof:[], lineupConfig:[], gauntletConfig:[],
+  pendingBattle:null, gameTimer:null
 };
 
 function escapeHtml(value=''){return String(value).replace(/[&<>'"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[c]));}
@@ -94,7 +95,7 @@ function renderBoard(){
       const selected=state.selected.some(p=>p.id===player.id);
       const disabled=!selected&&(state.selected.length>=5||usedBudget()+player.price>15);
       const b=document.createElement('button');b.type='button';b.className=`player-card${selected?' selected':''}`;b.disabled=disabled;
-      b.innerHTML=`<div class="player-topline"><strong>${escapeHtml(player.name)}</strong><span class="price-chip">$${player.price}</span></div><div class="player-meta"><span class="position-row-badge">${player.group}</span><span>${player.pos}</span><span>${escapeHtml(player.archetype)}</span></div>`;
+      b.innerHTML=`<div class="player-topline"><strong>${escapeHtml(player.name)}</strong><span class="price-chip">$${player.price}</span></div><div class="player-meta"><span class="position-row-badge">${player.group}</span><span>${player.pos}</span></div>`;
       b.onclick=()=>togglePlayer(player);col.appendChild(b);
     });
     root.appendChild(col);
@@ -110,40 +111,11 @@ function togglePlayer(player){
   renderAll();
 }
 
-function teamMetrics(team){
-  if(!team.length)return{fit:0,talent:0,versatility:0,power:0,grade:'--',notes:[]};
-  const guards=team.filter(p=>p.group==='G').length,forwards=team.filter(p=>p.group==='F').length,centers=team.filter(p=>p.group==='C').length;
-  const shooting=average(team.map(p=>p.shooting)),nonShooters=team.filter(p=>p.shooting<68).length;
-  const makers=[...team].sort((a,b)=>b.playmaking-a.playmaking).map(p=>p.playmaking);const creation=(makers[0]||0)*.62+(makers[1]||0)*.26+(makers[2]||0)*.12;
-  const perimeter=average(team.map(p=>p.perimeterDefense));const rim=Math.max(...team.map(p=>p.rimDefense));const defense=perimeter*.58+rim*.42;
-  const reb=average([...team].sort((a,b)=>b.rebounding-a.rebounding).slice(0,3).map(p=>p.rebounding));const offball=average(team.map(p=>p.offBall));
-  const usages=team.map(p=>p.usage),highUsage=usages.filter(v=>v>=90).length;
-  // Natural-position balance is only a light fit input. Skill overlap/complementarity matters far more.
-  const groupKinds=new Set(team.map(p=>p.group)).size,maxSameGroup=Math.max(guards,forwards,centers),exactPosMax=Math.max(...SLOT_LABELS.map(pos=>team.filter(p=>p.pos===pos).length));
-  const shape=clamp(70+(guards?7:0)+(forwards?7:0)+(centers?7:0)+(groupKinds===3?5:0)-(maxSameGroup>=4?7:0)-(exactPosMax>=3?3:0),48,96);
-  const usageBalance=clamp(94-Math.max(0,highUsage-2)*13+(Math.max(...usages)>=85?5:-8),42,100);
-  const spacing=clamp(shooting-nonShooters*5+team.filter(p=>p.shooting>=90).length*3,32,100);
-  const fit=clamp(shape*.06+spacing*.22+creation*.18+defense*.20+reb*.12+offball*.12+usageBalance*.10,25,99);
-  const talent=average(team.map(p=>p.scoring*.16+p.shooting*.09+p.playmaking*.10+p.perimeterDefense*.10+p.rimDefense*.10+p.rebounding*.09+p.finishing*.10+p.athleticism*.06+p.offBall*.07+p.versatility*.13));
-  const skillSpread=average(team.map(p=>Math.max(p.shooting,p.playmaking,p.perimeterDefense,p.rimDefense,p.rebounding, p.finishing)));
-  const roleDiversity=new Set(team.map(p=>p.archetype)).size;
-  const versatility=clamp(average(team.map(p=>p.versatility))*.78+skillSpread*.12+roleDiversity*2,25,99);
-  const power=fit*WEIGHTS.fit+talent*WEIGHTS.talent+versatility*WEIGHTS.versatility;
-  const grade=power>=94?'S':power>=90?'A+':power>=86?'A':power>=82?'B+':power>=78?'B':power>=73?'C+':'C';const notes=[];
-  if(groupKinds===3)notes.push('Balanced natural-position mix');else if(maxSameGroup>=4)notes.push('Position-heavy lineup — skill fit matters more than labels');
-  if(shooting>=88)notes.push('Elite spacing');else if(nonShooters>=2)notes.push('Crowded spacing');
-  if(creation>=90)notes.push('Multiple creators');else if(creation<76)notes.push('Limited creation');
-  if(defense>=90)notes.push('Elite defensive ceiling');if(reb>=90)notes.push('Strong rebounding');if(highUsage>=4)notes.push('Several ball-dominant scorers');if(offball>=92)notes.push('Excellent off-ball fit');
-  return{fit:round(fit),talent:round(talent),versatility:round(versatility),power:round(power,1),grade,notes};
-}
-
 function renderTeam(){
   const cost=usedBudget();$('budget-left').textContent=`$${15-cost}`;$('roster-count').textContent=`${state.selected.length} / 5`;$('team-cost').textContent=`$${cost} / $15`;$('budget-meter').style.width=`${cost/15*100}%`;
-  const complete=state.selected.length===5;ensureBuilderConfig();$('selected-team').classList.toggle('configured',complete);
-  $('selected-team').innerHTML=complete?lineupControlsHtml(state.selected,state.lineupConfig):Array.from({length:5},(_,i)=>state.selected[i]?`<div class="selected-slot filled"><strong>${escapeHtml(state.selected[i].name)}</strong><span>$${state.selected[i].price} · ${state.selected[i].pos} · ${escapeHtml(state.selected[i].archetype)}</span></div>`:`<div class="selected-slot"><strong>Open spot</strong><span>Choose from the board</span></div>`).join('');
-  $('team-title').textContent=complete?'Set positions and offensive options.':'Choose five players.';
-  $('team-analysis').classList.toggle('hidden',!complete);$('fit-notes').classList.toggle('hidden',!complete);
-  if(complete){const m=teamMetrics(state.selected);$('fit-score').textContent=m.fit;$('talent-score').textContent=m.talent;$('versatility-score').textContent=m.versatility;$('team-grade').textContent=m.grade;$('fit-notes').innerHTML=m.notes.map(n=>`<span class="fit-note">${escapeHtml(n)}</span>`).join('');qsa('[data-lineup-slot]').forEach(el=>el.onchange=()=>{setConfigValue(state.lineupConfig,el.dataset.lineupSlot,'slot',el.value);renderTeam();});qsa('[data-lineup-option]').forEach(el=>el.onchange=()=>{setConfigValue(state.lineupConfig,el.dataset.lineupOption,'option',Number(el.value));renderTeam();});}
+  const complete=state.selected.length===5;
+  $('selected-team').innerHTML=Array.from({length:5},(_,i)=>state.selected[i]?`<div class="selected-slot filled"><strong>${escapeHtml(state.selected[i].name)}</strong><span>$${state.selected[i].price} · ${state.selected[i].pos}</span></div>`:`<div class="selected-slot"><strong>Open spot</strong><span>Choose from the board</span></div>`).join('');
+  $('team-title').textContent=complete?'Five ready.':'Choose five players.';
   $('bot-match').disabled=!complete;$('start-gauntlet').disabled=!complete;
   $('quick-record').textContent=`Record: ${state.quickWins}–${state.quickLosses}`;$('gauntlet-best').textContent=state.bestRound?`Practice best: Round ${state.bestRound}`:'Practice best: Not started';
   updateGauntletButton();
@@ -172,142 +144,75 @@ function updateGauntletButton(){
 
 const SLOT_LABELS=['PG','SG','SF','PF','C'];
 const POS_RANK={PG:0,SG:1,SF:2,PF:3,C:4};
-const OPTION_MULT={1:1.35,2:1.16,3:1.00,4:.87,5:.74};
-function autoOrderedLineup(team){return [...team].sort((a,b)=>(POS_RANK[a.pos]??2)-(POS_RANK[b.pos]??2)||b.perimeterDefense-a.perimeterDefense||b.scoring-a.scoring).map((player,i)=>({player,slot:SLOT_LABELS[i]}));}
-function offensivePriority(p){return p.usage*.36+p.scoring*.30+p.shooting*.12+p.finishing*.10+p.playmaking*.08+p.offBall*.04;}
-function autoLineupConfig(team){
-  const slots=autoOrderedLineup(team),options=[...team].sort((a,b)=>offensivePriority(b)-offensivePriority(a));const optionMap=new Map(options.map((p,i)=>[p.id,i+1]));
-  return slots.map(x=>({id:x.player.id,slot:x.slot,option:optionMap.get(x.player.id)||3}));
+const POINT_ROLE={1:1.18,2:1.09,3:1.00,4:.91,5:.82};
+const AST_ROLE={1:1.10,2:1.05,3:1.00,4:.95,5:.90};
+const REB_ROLE={1:1.03,2:1.01,3:1.00,4:.99,5:.97};
+function realProfile(p){return REAL.profiles?.[p?.id]||null;}
+function productionValue(p){const r=realProfile(p);return r?(Number(r.ppg)||0)+(Number(r.rpg)||0)+(Number(r.apg)||0):0;}
+function naturalOrder(team){return [...team].sort((a,b)=>(POS_RANK[a.pos]??2)-(POS_RANK[b.pos]??2)||productionValue(b)-productionValue(a)||a.name.localeCompare(b.name));}
+function autoLineupConfig(team,opponent=[]){
+  const options=[...team].sort((a,b)=>productionValue(b)-productionValue(a));const optionMap=new Map(options.map((p,i)=>[p.id,i+1]));
+  const mine=naturalOrder(team),theirs=naturalOrder(opponent);
+  return mine.map((p,i)=>({id:p.id,option:optionMap.get(p.id)||3,guard:theirs[i]?.id||null}));
 }
-function validLineupConfig(team,config){
-  if(team.length!==5||!Array.isArray(config)||config.length!==5)return false;const idsSet=new Set(team.map(p=>p.id));
-  return config.every(x=>idsSet.has(x.id)&&SLOT_LABELS.includes(x.slot)&&Number.isInteger(Number(x.option))&&Number(x.option)>=1&&Number(x.option)<=5)&&new Set(config.map(x=>x.id)).size===5&&new Set(config.map(x=>x.slot)).size===5&&new Set(config.map(x=>Number(x.option))).size===5;
+function validLineupConfig(team,config,opponent=[]){
+  if(team.length!==5||opponent.length!==5||!Array.isArray(config)||config.length!==5)return false;
+  const mine=new Set(team.map(p=>p.id)),theirs=new Set(opponent.map(p=>p.id));
+  return config.every(x=>mine.has(x.id)&&theirs.has(x.guard)&&Number.isInteger(Number(x.option))&&Number(x.option)>=1&&Number(x.option)<=5)
+    &&new Set(config.map(x=>x.id)).size===5&&new Set(config.map(x=>x.guard)).size===5&&new Set(config.map(x=>Number(x.option))).size===5;
 }
-function normalizedLineupConfig(team,config){return validLineupConfig(team,config)?config.map(x=>({id:x.id,slot:x.slot,option:Number(x.option)})):autoLineupConfig(team);}
-function orderedLineup(team,config=null){const cfg=normalizedLineupConfig(team,config);const byId=new Map(team.map(p=>[p.id,p]));return [...cfg].sort((a,b)=>SLOT_LABELS.indexOf(a.slot)-SLOT_LABELS.indexOf(b.slot)).map(x=>({player:byId.get(x.id),slot:x.slot,option:x.option})).filter(x=>x.player);}
-function matchupPairs(teamA,teamB,configA=null,configB=null){const a=orderedLineup(teamA,configA),b=orderedLineup(teamB,configB);return a.map((x,i)=>({slot:x.slot,a:x.player,b:b[i].player,aOption:x.option,bOption:b[i].option}));}
+function normalizedLineupConfig(team,config,opponent=[]){return validLineupConfig(team,config,opponent)?config.map(x=>({id:x.id,guard:x.guard,option:Number(x.option)})):autoLineupConfig(team,opponent);}
 function setConfigValue(config,id,field,value){const current=config.find(x=>x.id===id);if(!current)return config;const parsed=field==='option'?Number(value):value;const other=config.find(x=>x.id!==id&&x[field]===parsed);const old=current[field];current[field]=parsed;if(other)other[field]=old;return config;}
-function ensureBuilderConfig(){if(state.selected.length===5)state.lineupConfig=normalizedLineupConfig(state.selected,state.lineupConfig);else state.lineupConfig=[];}
-function lineupControlsHtml(team,config){const cfg=normalizedLineupConfig(team,config);return orderedLineup(team,cfg).map(({player:p,slot,option})=>`<div class="lineup-control-row"><div class="lineup-control-player"><strong>${escapeHtml(p.name)}</strong><span>$${p.price} · ${p.pos} · ${escapeHtml(p.archetype)}</span></div><label>Position<select data-lineup-slot="${p.id}">${SLOT_LABELS.map(x=>`<option value="${x}" ${x===slot?'selected':''}>${x}</option>`).join('')}</select></label><label>Offense<select data-lineup-option="${p.id}">${[1,2,3,4,5].map(x=>`<option value="${x}" ${x===option?'selected':''}>${x}${x===1?'st':x===2?'nd':x===3?'rd':'th'}</option>`).join('')}</select></label></div>`).join('');}
-function playerTalent(p){return p.scoring*.16+p.shooting*.09+p.playmaking*.10+p.perimeterDefense*.10+p.rimDefense*.10+p.rebounding*.09+p.finishing*.10+p.athleticism*.06+p.offBall*.07+p.versatility*.13;}
-function matchupDefense(p,slot){const i=SLOT_LABELS.indexOf(slot);const per=[.88,.82,.66,.43,.24][i]??.6;return p.perimeterDefense*per+p.rimDefense*(1-per);}
-function matchupOffense(p,slot){const i=SLOT_LABELS.indexOf(slot);const creation=[.20,.16,.11,.06,.04][i]??.1;return p.scoring*.34+p.shooting*.18+p.finishing*.20+p.athleticism*.08+p.playmaking*creation+p.offBall*(.20-creation);}
-function matchupAdvantage(offender,defender,slot){return clamp((matchupOffense(offender,slot)-matchupDefense(defender,slot))/17,-1.35,1.35);}
-function allocInteger(total,weights){if(total<=0)return weights.map(()=>0);const s=sum(weights)||1;const raw=weights.map(w=>total*w/s),base=raw.map(Math.floor);let rem=total-sum(base);const order=raw.map((v,i)=>[v-base[i],i]).sort((a,b)=>b[0]-a[0]);for(let k=0;k<rem;k++)base[order[k%order.length][1]]++;return base;}
-function allocWithFloor(total,weights,floorEach=0,cap=999){const n=weights.length,base=Array(n).fill(Math.min(floorEach,Math.floor(total/n)));let left=total-sum(base);if(left<=0)return base;let add=allocInteger(left,weights);for(let i=0;i<n;i++)base[i]+=add[i];let guard=0;while(base.some(v=>v>cap)&&guard++<30){let overflow=0;for(let i=0;i<n;i++)if(base[i]>cap){overflow+=base[i]-cap;base[i]=cap;}if(!overflow)break;const eligible=weights.map((w,i)=>base[i]<cap?w:0);const extra=allocInteger(overflow,eligible);for(let i=0;i<n;i++)base[i]+=extra[i];}return base;}
-function allocStochastic(total,weights,rand,cap=999){
-  const out=weights.map(()=>0);
-  for(let n=0;n<total;n++){
-    const live=weights.map((w,i)=>out[i]<cap?Math.max(.0001,w):0),totalWeight=sum(live);if(totalWeight<=0)break;
-    let ticket=rand()*totalWeight,pick=live.length-1;for(let i=0;i<live.length;i++){ticket-=live[i];if(ticket<=0){pick=i;break;}}out[pick]++;
-  }
-  return out;
+function matchupControlHtml(team,opponent,config,locked=false,prefix='battle'){
+  const cfg=normalizedLineupConfig(team,config,opponent),rows=new Map(cfg.map(x=>[x.id,x]));
+  return naturalOrder(team).map(p=>{const row=rows.get(p.id);return`<div class="lineup-control-row"><div class="lineup-control-player"><strong>${escapeHtml(p.name)}</strong><span>${p.pos} · $${p.price}</span></div><label>GUARDS<select data-${prefix}-guard="${p.id}" ${locked?'disabled':''}>${naturalOrder(opponent).map(o=>`<option value="${o.id}" ${o.id===row.guard?'selected':''}>${escapeHtml(o.name)} · ${o.pos}</option>`).join('')}</select></label><label>OFF<select data-${prefix}-option="${p.id}" ${locked?'disabled':''}>${[1,2,3,4,5].map(x=>`<option value="${x}" ${x===row.option?'selected':''}>#${x}</option>`).join('')}</select></label></div>`;}).join('');
 }
-function slotReboundMult(slot){return slot==='C'?1.23:slot==='PF'?1.12:slot==='SF'?1:slot==='SG'?.92:.88;}
-function reboundDistributionWeight(row,rand,offensive=false){
-  const p=row.player,base=Math.pow(Math.max(6,p.rebounding-46),1.11),natural=p.group==='C'?1.06:p.group==='F'?1.02:.94;
-  const variance=Math.exp(normal(rand)*(offensive?.16:.19)),burst=p.rebounding>=90&&rand()<.025?(1.38+rand()*.55):1;
-  return base*natural*slotReboundMult(row.slot)*variance*burst;
+function normalizeKey(name=''){return String(name).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');}
+function h2hSample(offender,defender){const raw=REAL.h2h?.[`${normalizeKey(offender?.name)}|${normalizeKey(defender?.name)}`];if(!Array.isArray(raw)||raw.length<4)return null;return{gp:Number(raw[0])||0,ppg:Number(raw[1])||0,rpg:Number(raw[2])||0,apg:Number(raw[3])||0};}
+function expectedAgainst(offender,defender,option=3){
+  const base=realProfile(offender)||{ppg:0,rpg:0,apg:0};const sample=h2hSample(offender,defender);let ppg=Number(base.ppg)||0,rpg=Number(base.rpg)||0,apg=Number(base.apg)||0,weight=0;
+  if(sample&&sample.gp>=3){weight=Math.min(.60,sample.gp/(sample.gp+15));ppg=ppg*(1-weight)+sample.ppg*weight;rpg=rpg*(1-weight)+sample.rpg*weight;apg=apg*(1-weight)+sample.apg*weight;}
+  return{ppg:ppg*(POINT_ROLE[option]||1),rpg:rpg*(REB_ROLE[option]||1),apg:apg*(AST_ROLE[option]||1),h2hGames:sample?.gp||0,h2hWeight:weight};
 }
-function sampleMakes(attempts,pct,rand){let made=0;for(let i=0;i<attempts;i++)if(rand()<pct)made++;return made;}
-function splitQuarters(total,rand){const weights=[1+normal(rand)*.10,1+normal(rand)*.10,1+normal(rand)*.10,1+normal(rand)*.10].map(v=>Math.max(.58,v));return allocInteger(total,weights);}
-function possessionProfile(team,opp,metrics,oppMetrics,possessions,rand){
-  const play=average(team.map(p=>p.playmaking)),oppPressure=average(opp.map(p=>p.perimeterDefense)),reb=average(team.map(p=>p.rebounding)),oppReb=average(opp.map(p=>p.rebounding)),finish=average(team.map(p=>p.finishing)),usage=average(team.map(p=>p.usage)),oppRim=Math.max(...opp.map(p=>p.rimDefense));
-  let turnoverSwing=0;const swingRoll=rand();if(swingRoll<.04)turnoverSwing=2+Math.floor(rand()*5);else if(swingRoll>.96)turnoverSwing=-(2+Math.floor(rand()*4));
-  const turnovers=clamp(Math.round(12.2+(oppPressure-78)*.060-(play-78)*.075-(metrics.fit-78)*.030+normal(rand)*2.75+turnoverSwing),3,25);
-  const oreb=clamp(Math.round(9.1+(reb-78)*.10-(oppReb-78)*.055+normal(rand)*2.8),2,20);
-  const fta=clamp(Math.round(19+(finish-78)*.105+(usage-82)*.035-(oppRim-78)*.045+normal(rand)*4.2),5,40);
-  const fga=clamp(Math.round(possessions+oreb-turnovers-.44*fta),62,108);
-  return{possessions,turnovers,oreb,fta,fga};
+function sampleCount(mean,rand,kind='pts'){
+  const sd=kind==='pts'?Math.max(3.8,mean*.31):kind==='reb'?Math.max(1.8,mean*.34):Math.max(1.5,mean*.37);
+  const cap=kind==='pts'?70:kind==='reb'?30:24;return clamp(Math.round(mean+normal(rand)*sd),0,cap);
 }
-function explosionFactor(p,adv,rand){
-  const star=clamp((p.scoring-78)/20,0,1);let factor=Math.exp(normal(rand)*.18)*(1+adv*.10);let eruption=0;
-  if(rand()<.025+star*.065+Math.max(0,adv)*.035){factor*=1.28+rand()*.42;eruption=1;}
-  if(rand()<.004+star*.012+Math.max(0,adv)*.010){factor*=1.30+rand()*.35;eruption=2;}
-  return{factor:clamp(factor,.48,2.45),eruption};
-}
-function primaryBox(team,opp,metrics,oppMetrics,profile,rand,configTeam=null,configOpp=null){
-  const mine=orderedLineup(team,configTeam),theirs=orderedLineup(opp,configOpp);const contexts=mine.map((x,i)=>{const d=theirs[i].player,adv=matchupAdvantage(x.player,d,x.slot),boom=explosionFactor(x.player,adv,rand);return{...x,defender:d,adv,...boom};});
-  const shotWeights=contexts.map(c=>Math.max(5,(c.player.usage*.40+c.player.scoring*.30+c.player.shooting*.10+c.player.finishing*.10+c.player.playmaking*.06+c.player.offBall*.04)-55)*c.factor*(1+c.adv*.075)*(OPTION_MULT[c.option]||1));
-  const fga=allocWithFloor(profile.fga,shotWeights,4,42);
-  const foulWeights=contexts.map(c=>Math.max(4,c.player.finishing*.42+c.player.usage*.34+c.player.scoring*.15+c.player.athleticism*.09-55)*Math.sqrt(c.factor)*(1+Math.max(-.3,c.adv)*.06)*Math.sqrt(OPTION_MULT[c.option]||1));
-  const fta=allocInteger(profile.fta,foulWeights);
-  const toWeights=contexts.map(c=>{const role=({1:1.32,2:1.16,3:1,4:.86,5:.72})[c.option]||1;const base=Math.max(1,c.player.usage*.52+(100-c.player.playmaking)*.34+c.player.scoring*.10-43);return base*role*Math.exp(normal(rand)*.48);});
-  const tos=allocWithFloor(profile.turnovers,toWeights,0,9);
-  // Low-usage players can finish clean while primary creators occasionally absorb a true turnover disaster.
-  for(let i=0;i<tos.length;i++)if(tos[i]===1&&rand()<.22){let target=-1,best=-1;for(let j=0;j<tos.length;j++)if(j!==i&&tos[j]<9&&toWeights[j]>best){best=toWeights[j];target=j;}if(target>=0){tos[i]=0;tos[target]++;}}
-  const orebWeights=contexts.map(c=>reboundDistributionWeight(c,rand,true));
-  const orebs=allocWithFloor(profile.oreb,orebWeights,0,9);
-  const edge=clamp((metrics.power-oppMetrics.power)*.00115,-.025,.025);
-  return contexts.map((c,i)=>{
-    const p=c.player,hot=normal(rand)*.022+(c.eruption?(.012+c.eruption*.009):0);const threeRate=clamp(.22+(p.shooting-p.finishing)*.0048+(p.pos==='PG'||p.pos==='SG'?.055:p.pos==='C'?-.05:0),.10,.67);
-    const threeA=clamp(Math.round(fga[i]*threeRate+normal(rand)*1.05),0,fga[i]),twoA=fga[i]-threeA;
-    const def=matchupDefense(c.defender,c.slot);const threePct=clamp(.255+(p.shooting-60)*.00325-(def-76)*.00135+edge+c.adv*.010+hot,.20,.58);const twoPct=clamp(.425+(p.finishing-60)*.0030+(p.scoring-72)*.0012-(def-76)*.00115+edge+c.adv*.012+hot,.34,.77);const ftPct=clamp(.66+(p.shooting-55)*.00265+normal(rand)*.015,.58,.95);
-    const threeM=sampleMakes(threeA,threePct,rand),twoM=sampleMakes(twoA,twoPct,rand),ftm=sampleMakes(fta[i],ftPct,rand);const pts=threeM*3+twoM*2+ftm;
-    return{player:p,slot:c.slot,option:c.option,defender:c.defender,advantage:round(c.adv,2),eruption:c.eruption,min:40,pts,fgm:threeM+twoM,fga:fga[i],threeM,threeA,ftm,fta:fta[i],oreb:orebs[i],dreb:0,reb:orebs[i],ast:0,stl:0,blk:0,to:tos[i]};
-  });
-}
-function fillSecondary(rows,oppRows,team,opp,metrics,oppMetrics,rand){
-  const oppMisses=sum(oppRows.map(r=>r.fga-r.fgm)),oppOreb=sum(oppRows.map(r=>r.oreb));const drebTotal=Math.max(0,oppMisses-oppOreb);
-  const dreb=allocInteger(drebTotal,rows.map(r=>reboundDistributionWeight(r,rand,false)));
-
-  const teamFgm=sum(rows.map(r=>r.fgm));const assistRate=clamp(.47+(average(team.map(p=>p.playmaking))-75)*.0040+(metrics.fit-75)*.0022,.36,.84);
-  const astTarget=clamp(Math.round(teamFgm*assistRate+normal(rand)*3.1),3,teamFgm);
-  const astWeights=rows.map(r=>{const base=Math.pow(Math.max(4,r.player.playmaking-45),1.48),slot=r.slot==='PG'?1.34:r.slot==='SG'?1.12:r.slot==='SF'?1:r.slot==='PF'?.90:.86;const creatorBurst=r.player.playmaking>=90&&rand()<.045?(1.55+rand()*.75):1;return base*slot*Math.exp(normal(rand)*.46)*creatorBurst;});
-  const ast=allocStochastic(astTarget,astWeights,rand,18);
-
-  const oppTO=sum(oppRows.map(r=>r.to));const stealRate=clamp(.39+(average(team.map(p=>p.perimeterDefense))-75)*.0030,.25,.68);
-  const stealTarget=clamp(Math.round(oppTO*stealRate+normal(rand)*1.45),0,Math.min(oppTO,14));
-  const stlWeights=rows.map(r=>{const base=Math.pow(Math.max(3,r.player.perimeterDefense-48),1.36),burst=r.player.perimeterDefense>=90&&rand()<.04?(1.6+rand()*.75):1;return base*Math.exp(normal(rand)*.46)*burst;});
-  const stl=allocStochastic(stealTarget,stlWeights,rand,7);
-
-  const oppTwoMisses=sum(oppRows.map(r=>(r.fga-r.threeA)-(r.fgm-r.threeM)));
-  const blockTarget=clamp(Math.round(2.5+(Math.max(...team.map(p=>p.rimDefense))-75)*.070+normal(rand)*1.75),0,Math.min(12,Math.max(0,oppTwoMisses)));
-  const blkWeights=rows.map(r=>{const slot=r.slot==='C'?1.65:r.slot==='PF'?1.27:r.slot==='SF'?.93:r.slot==='SG'?.68:.58;const base=Math.pow(Math.max(2,r.player.rimDefense-48),1.45),burst=r.player.rimDefense>=90&&rand()<.045?(1.65+rand()*.8):1;return base*slot*Math.exp(normal(rand)*.55)*burst;});
-  const blk=allocStochastic(blockTarget,blkWeights,rand,7);
-
-  rows.forEach((r,i)=>{r.dreb=dreb[i];r.reb=r.oreb+r.dreb;r.ast=ast[i];r.stl=stl[i];r.blk=blk[i];});
+function splitQuarters(total,rand){const weights=[1+normal(rand)*.12,1+normal(rand)*.12,1+normal(rand)*.12,1+normal(rand)*.12].map(v=>Math.max(.4,v));const s=sum(weights)||1,raw=weights.map(w=>total*w/s),out=raw.map(Math.floor);let left=total-sum(out);const order=raw.map((v,i)=>[v-out[i],i]).sort((a,b)=>b[0]-a[0]);for(let i=0;i<left;i++)out[order[i%4][1]]++;return out;}
+function splitSegment(total,rand){const weights=[1+normal(rand)*.16,1+normal(rand)*.16,1+normal(rand)*.16,1+normal(rand)*.16].map(v=>Math.max(.25,v));const s=sum(weights)||1,raw=weights.map(w=>total*w/s),out=raw.map(Math.floor);let left=total-sum(out);const order=raw.map((v,i)=>[v-out[i],i]).sort((a,b)=>b[0]-a[0]);for(let i=0;i<left;i++)out[order[i%4][1]]++;return out;}
+function simulateSide(team,opponent,configTeam,configOpp,rand){
+  const mine=normalizedLineupConfig(team,configTeam,opponent),theirs=normalizedLineupConfig(opponent,configOpp,team);const mineMap=new Map(mine.map(x=>[x.id,x]));
+  return naturalOrder(team).map(p=>{const row=mineMap.get(p.id),defenderRow=theirs.find(x=>x.guard===p.id),defender=playerById(defenderRow?.id)||naturalOrder(opponent)[0];const exp=expectedAgainst(p,defender,row.option);return{player:p,defender,option:row.option,pts:sampleCount(exp.ppg,rand,'pts'),reb:sampleCount(exp.rpg,rand,'reb'),ast:sampleCount(exp.apg,rand,'ast'),h2hGames:exp.h2hGames,h2hWeight:exp.h2hWeight};});
 }
 function simulateGame(teamA,teamB,seedText='',configA=null,configB=null){
-  const rand=seedText?seededRandom(seedText):Math.random;const a=teamMetrics(teamA),b=teamMetrics(teamB);const possessions=clamp(Math.round(87+normal(rand)*4.2),76,98);const lineupA=normalizedLineupConfig(teamA,configA),lineupB=normalizedLineupConfig(teamB,configB);
-  const profileA=possessionProfile(teamA,teamB,a,b,possessions,rand),profileB=possessionProfile(teamB,teamA,b,a,possessions,rand);
-  const boxA=primaryBox(teamA,teamB,a,b,profileA,rand,lineupA,lineupB),boxB=primaryBox(teamB,teamA,b,a,profileB,rand,lineupB,lineupA);fillSecondary(boxA,boxB,teamA,teamB,a,b,rand);fillSecondary(boxB,boxA,teamB,teamA,b,a,rand);
-  let scoreA=sum(boxA.map(r=>r.pts)),scoreB=sum(boxB.map(r=>r.pts));
-  if(scoreA===scoreB){const winner=rand()<.5?boxA:boxB;const row=winner[Math.floor(rand()*winner.length)];row.fta++;row.ftm++;row.pts++;if(winner===boxA)scoreA++;else scoreB++;}
-  const quartersA=splitQuarters(scoreA,rand),quartersB=splitQuarters(scoreB,rand);return{a,b,aWins:scoreA>scoreB,scoreA,scoreB,quartersA,quartersB,boxA,boxB,gameMinutes:40,possessions,profileA,profileB,lineupA,lineupB,seed:seedText||null};
+  const rand=seedText?seededRandom(seedText):Math.random,lineupA=normalizedLineupConfig(teamA,configA,teamB),lineupB=normalizedLineupConfig(teamB,configB,teamA);const boxA=simulateSide(teamA,teamB,lineupA,lineupB,rand),boxB=simulateSide(teamB,teamA,lineupB,lineupA,rand);let scoreA=sum(boxA.map(r=>r.pts)),scoreB=sum(boxB.map(r=>r.pts));
+  if(scoreA===scoreB){const rows=rand()<.5?boxA:boxB,who=rows[Math.floor(rand()*rows.length)];who.pts++;if(rows===boxA)scoreA++;else scoreB++;}
+  const quartersA=splitQuarters(scoreA,rand),quartersB=splitQuarters(scoreB,rand),segmentsA=quartersA.flatMap(q=>splitSegment(q,rand)),segmentsB=quartersB.flatMap(q=>splitSegment(q,rand));
+  return{aWins:scoreA>scoreB,scoreA,scoreB,quartersA,quartersB,segmentsA,segmentsB,boxA,boxB,lineupA,lineupB,gameMinutes:40,seed:seedText||null};
 }
-function rosterHtml(team,config=null){return orderedLineup(team,config).map(({player:p,slot,option})=>`<div class="match-player"><span class="matchup-slot">${slot}</span><strong>${escapeHtml(p.name)}</strong><span>${p.pos} · $${p.price} · #${option} option · ${escapeHtml(p.archetype)}</span></div>`).join('');}
-function totalRow(rows){return{fgm:sum(rows.map(r=>r.fgm)),fga:sum(rows.map(r=>r.fga)),threeM:sum(rows.map(r=>r.threeM)),threeA:sum(rows.map(r=>r.threeA)),ftm:sum(rows.map(r=>r.ftm)),fta:sum(rows.map(r=>r.fta)),oreb:sum(rows.map(r=>r.oreb)),reb:sum(rows.map(r=>r.reb)),ast:sum(rows.map(r=>r.ast)),stl:sum(rows.map(r=>r.stl)),blk:sum(rows.map(r=>r.blk)),to:sum(rows.map(r=>r.to)),pts:sum(rows.map(r=>r.pts))};}
-function boxTable(label,rows){const t=totalRow(rows);return`<article class="box-score-card"><h3>${escapeHtml(label)}</h3><table class="box-score"><thead><tr><th>POS</th><th>OPT</th><th>PLAYER</th><th>MIN</th><th>FG</th><th>3PT</th><th>FT</th><th>ORB</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>TO</th><th>PTS</th></tr></thead><tbody>${rows.map(r=>`<tr><td><strong>${r.slot}</strong></td><td>#${r.option||3}</td><td><strong>${escapeHtml(r.player.name)}</strong><br><small>${r.player.pos} · vs ${escapeHtml(r.defender.name)}</small></td><td>40</td><td>${r.fgm}-${r.fga}</td><td>${r.threeM}-${r.threeA}</td><td>${r.ftm}-${r.fta}</td><td>${r.oreb}</td><td>${r.reb}</td><td>${r.ast}</td><td>${r.stl}</td><td>${r.blk}</td><td>${r.to}</td><td><strong>${r.pts}</strong></td></tr>`).join('')}<tr><td></td><td></td><td>TEAM</td><td>200</td><td>${t.fgm}-${t.fga}</td><td>${t.threeM}-${t.threeA}</td><td>${t.ftm}-${t.fta}</td><td>${t.oreb}</td><td>${t.reb}</td><td>${t.ast}</td><td>${t.stl}</td><td>${t.blk}</td><td>${t.to}</td><td>${t.pts}</td></tr></tbody></table><div class="box-note">Rows are ordered PG → SG → SF → PF → C to show the direct matchup. OPT shows each team's chosen offensive priority; #1 gets the strongest shot-volume preference. FGA differences are driven by the shared possession count, turnovers, offensive rebounds, and free throws. Every player logs 40 minutes; stamina and injuries are not simulated.</div></article>`;}
-function gameStory(result,labelA='YOU',labelB='CPU'){
-  const ta=totalRow(result.boxA),tb=totalRow(result.boxB),all=[...result.boxA.map(r=>({...r,side:labelA})),...result.boxB.map(r=>({...r,side:labelB}))];const top=[...all].sort((x,y)=>y.pts-x.pts)[0];const notes=[];
-  if(top)notes.push(`<strong>${escapeHtml(top.player.name)}</strong> led the game with ${top.pts} points on ${top.fgm}-${top.fga} shooting against ${escapeHtml(top.defender.name)}.`);
-  const fgaGap=ta.fga-tb.fga;if(Math.abs(fgaGap)>=3){const leader=fgaGap>0?labelA:labelB,a=fgaGap>0?ta:tb,b=fgaGap>0?tb:ta;notes.push(`<strong>${escapeHtml(leader)}</strong> created ${Math.abs(fgaGap)} more field-goal attempts (${a.oreb} ORB, ${a.to} TO vs ${b.oreb} ORB, ${b.to} TO).`);}
-  const cold=[...all].filter(r=>r.fga>=12).sort((x,y)=>(x.fgm/x.fga)-(y.fgm/y.fga))[0];if(cold&&(cold.fgm/cold.fga)<.36)notes.push(`<strong>${escapeHtml(cold.defender.name)}</strong> helped hold ${escapeHtml(cold.player.name)} to ${cold.fgm}-${cold.fga} from the field in their direct ${cold.slot} matchup.`);
-  return notes.slice(0,3).map(n=>`<div class="story-note">${n}</div>`).join('');
+function rosterHtml(team,config,opponent){const cfg=normalizedLineupConfig(team,config,opponent),byId=new Map(cfg.map(x=>[x.id,x]));return naturalOrder(team).map(p=>`<div class="match-player"><strong>${escapeHtml(p.name)}</strong><span>${p.pos} · $${p.price} · OFF #${byId.get(p.id)?.option||3}</span></div>`).join('');}
+function boxTable(label,rows){return`<article class="box-score-card"><h3>${escapeHtml(label)}</h3><table class="box-score"><thead><tr><th>PLAYER</th><th>VS</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>DATA</th></tr></thead><tbody>${rows.map(r=>`<tr><td><strong>${escapeHtml(r.player.name)}</strong><br><small>${r.player.pos} · OFF #${r.option}</small></td><td>${escapeHtml(r.defender.name)}</td><td>40</td><td><strong>${r.pts}</strong></td><td>${r.reb}</td><td>${r.ast}</td><td>${r.h2hGames>=3?`H2H ${r.h2hGames}G`:'BASE'}</td></tr>`).join('')}</tbody></table></article>`;}
+function renderLineScore(result,labelA='YOU',labelB='CPU',completedQuarters=4,liveA=result.scoreA,liveB=result.scoreB){
+  const a=result.quartersA.map((q,i)=>i<completedQuarters?q:'—'),b=result.quartersB.map((q,i)=>i<completedQuarters?q:'—');$('line-score-wrap').innerHTML=`<table class="line-score"><thead><tr><th>TEAM</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>SCORE</th></tr></thead><tbody><tr><td>${escapeHtml(labelA)}</td>${a.map(q=>`<td>${q}</td>`).join('')}<td><strong>${liveA}</strong></td></tr><tr><td>${escapeHtml(labelB)}</td>${b.map(q=>`<td>${q}</td>`).join('')}<td><strong>${liveB}</strong></td></tr></tbody></table>`;}
+function matchupSummary(teamA,teamB,configA,configB){const a=normalizedLineupConfig(teamA,configA,teamB),b=normalizedLineupConfig(teamB,configB,teamA);const rowA=new Map(a.map(x=>[x.id,x])),rowB=new Map(b.map(x=>[x.id,x]));const your=naturalOrder(teamA).map(p=>{const g=playerById(rowA.get(p.id)?.guard);return`<div class="matchup-pair"><span>${escapeHtml(p.name)}</span><em>→</em><span>${escapeHtml(g?.name||'—')}</span></div>`;}).join('');const theirs=naturalOrder(teamB).map(p=>{const g=playerById(rowB.get(p.id)?.guard);return`<div class="matchup-pair opponent-assignment"><span>${escapeHtml(p.name)}</span><em>→</em><span>${escapeHtml(g?.name||'—')}</span></div>`;}).join('');return your+theirs;}
+function renderGame(result,teamA,teamB,labelA='YOU',labelB='CPU'){$('matchup-strip').innerHTML=matchupSummary(teamA,teamB,result.lineupA,result.lineupB);renderLineScore(result,labelA,labelB,4,result.scoreA,result.scoreB);$('box-score-shell').innerHTML=boxTable(labelA,result.boxA)+boxTable(labelB,result.boxB);}
+function stopGameTimer(){if(state.gameTimer){clearInterval(state.gameTimer);state.gameTimer=null;}}
+function bindPendingControls(){const p=state.pendingBattle;if(!p||p.locked)return;qsa('[data-battle-guard]').forEach(el=>el.onchange=()=>{setConfigValue(p.configA,el.dataset.battleGuard,'guard',el.value);renderPendingControls();});qsa('[data-battle-option]').forEach(el=>el.onchange=()=>{setConfigValue(p.configA,el.dataset.battleOption,'option',Number(el.value));renderPendingControls();});}
+function renderPendingControls(){const p=state.pendingBattle;if(!p)return;$('matchup-strip').innerHTML=matchupControlHtml(p.teamA,p.teamB,p.configA,Boolean(p.locked),'battle');bindPendingControls();}
+function prepareBattle(teamA,teamB,{type='quick',title='5v5 matchup',opponentLabel='CPU',seed='',configA=null,configB=null,resolvedResult=null,locked=false,autoStart=false,scroll=true}={}){
+  stopGameTimer();const a=normalizedLineupConfig(teamA,configA,teamB),b=normalizedLineupConfig(teamB,configB,teamA);state.pendingBattle={teamA,teamB,type,title,opponentLabel,seed,configA:a,configB:b,resolvedResult,locked};state.currentOpponent=teamB;state.currentBattle=null;
+  $('matchup-section').classList.remove('hidden');$('matchup-kicker').textContent=type==='gauntlet'?`GAUNTLET · ROUND ${state.gauntletRound}`:'5V5 · 40 MINUTES';$('matchup-title').textContent=title;$('your-match-roster').innerHTML=rosterHtml(teamA,a,teamB);$('opponent-match-roster').innerHTML=rosterHtml(teamB,b,teamA);$('opponent-label').textContent=opponentLabel;$('final-score').textContent='0–0';$('game-clock').textContent='READY';$('line-score-wrap').innerHTML='';$('box-score-shell').innerHTML='';$('result-card').classList.add('hidden');renderPendingControls();const btn=$('simulate-game');btn.disabled=false;btn.textContent=resolvedResult?'Watch game':'Simulate game';if(scroll)$('matchup-section').scrollIntoView({behavior:'smooth',block:'start'});if(autoStart)setTimeout(startPendingSimulation,250);
 }
-function renderGame(result,teamA,teamB,labelA='YOU',labelB='CPU'){
-  $('matchup-strip').innerHTML=matchupPairs(teamA,teamB,result.lineupA,result.lineupB).map(m=>`<div class="matchup-pair"><strong>${m.slot}</strong><span>${escapeHtml(m.a.name)} <small>#${m.aOption}</small></span><em>vs</em><span>${escapeHtml(m.b.name)} <small>#${m.bOption}</small></span></div>`).join('');
-  $('game-story').innerHTML=gameStory(result,labelA,labelB);
-  $('line-score-wrap').innerHTML=`<table class="line-score"><thead><tr><th>TEAM</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>FINAL</th></tr></thead><tbody><tr><td>${escapeHtml(labelA)}</td>${result.quartersA.map(q=>`<td>${q}</td>`).join('')}<td><strong>${result.scoreA}</strong></td></tr><tr><td>${escapeHtml(labelB)}</td>${result.quartersB.map(q=>`<td>${q}</td>`).join('')}<td><strong>${result.scoreB}</strong></td></tr></tbody></table>`;
-  $('box-score-shell').innerHTML=boxTable(labelA,result.boxA)+boxTable(labelB,result.boxB);
-}
-function showBattle(teamA,teamB,result,{type='quick',title='5v5 matchup',opponentLabel='CPU',scroll=true}={}){
-  state.currentOpponent=teamB;state.currentBattle={type,result,teamA,teamB};$('matchup-section').classList.remove('hidden');$('matchup-kicker').textContent=type==='gauntlet'?`GAUNTLET · ROUND ${state.gauntletRound}`:'5V5 · 40 MINUTES';$('matchup-title').textContent=title;
-  $('your-match-roster').innerHTML=rosterHtml(teamA,result.lineupA);$('opponent-match-roster').innerHTML=rosterHtml(teamB,result.lineupB);$('opponent-label').textContent=opponentLabel;$('your-power').textContent=result.a.power;$('opponent-power').textContent=result.b.power;$('final-score').textContent=`${result.scoreA}–${result.scoreB}`;
-  renderGame(result,teamA,teamB,'YOU',opponentLabel);renderResult();if(scroll)$('matchup-section').scrollIntoView({behavior:'smooth',block:'start'});
+function startPendingSimulation(){const p=state.pendingBattle;if(!p||state.gameTimer)return;const result=p.resolvedResult||simulateGame(p.teamA,p.teamB,p.seed,p.configA,p.configB);result.lineupA=normalizedLineupConfig(p.teamA,result.lineupA||p.configA,p.teamB);result.lineupB=normalizedLineupConfig(p.teamB,result.lineupB||p.configB,p.teamA);state.currentBattle={type:p.type,result,teamA:p.teamA,teamB:p.teamB,opponentLabel:p.opponentLabel,processed:false};$('simulate-game').disabled=true;$('matchup-strip').innerHTML=matchupSummary(p.teamA,p.teamB,result.lineupA,result.lineupB);$('box-score-shell').innerHTML='';let tick=0,liveA=0,liveB=0;$('game-clock').textContent='Q1 · 10:00';renderLineScore(result,'YOU',p.opponentLabel,0,0,0);
+  const step=()=>{if(tick>=16){stopGameTimer();$('game-clock').textContent='FINAL';$('final-score').textContent=`${result.scoreA}–${result.scoreB}`;renderGame(result,p.teamA,p.teamB,'YOU',p.opponentLabel);renderResult();return;}liveA+=result.segmentsA[tick]||0;liveB+=result.segmentsB[tick]||0;tick++;const q=Math.min(4,Math.floor((tick-1)/4)+1),within=tick%4,remaining=within===0?0:10-within*2.5,completed=Math.floor(tick/4);$('final-score').textContent=`${liveA}–${liveB}`;$('game-clock').textContent=completed===4?'Q4 · 0:00':within===0?`END Q${q}`:`Q${q} · ${remaining.toFixed(remaining%1?1:0)}:00`;renderLineScore(result,'YOU',p.opponentLabel,completed,liveA,liveB);};
+  state.gameTimer=setInterval(step,1000);step();
 }
 function renderResult(){
-  const {result,type}=state.currentBattle,won=result.aWins;$('result-card').classList.remove('hidden');$('result-title').textContent=won?'Win.':'Loss.';$('result-kicker').textContent=won?'WIN':'LOSS';
-  $('comparison-grid').innerHTML=`<div><span>FIT</span><strong>${result.a.fit} vs ${result.b.fit}</strong></div><div><span>TALENT</span><strong>${result.a.talent} vs ${result.b.talent}</strong></div><div><span>VERSATILITY</span><strong>${result.a.versatility} vs ${result.b.versatility}</strong></div>`;
+  if(!state.currentBattle)return;const battle=state.currentBattle,{result,type}=battle,won=result.aWins;$('result-card').classList.remove('hidden');$('result-title').textContent=won?'WIN':'LOSS';$('result-kicker').textContent='FINAL';
+  if(battle.processed)return;battle.processed=true;
   if(type==='quick'){won?state.quickWins++:state.quickLosses++;saveLocal();$('result-next').textContent='Back to builder';$('result-rematch').classList.remove('hidden');}
-  else if(type==='gauntlet'){
-    state.gauntletTotals.for+=result.scoreA;state.gauntletTotals.against+=result.scoreB;
-    if(won){state.gauntletCleared=state.gauntletRound;if(!state.officialDaily){state.bestRound=Math.max(state.bestRound,state.gauntletRound);saveLocal();}if(state.gauntletRound===10){state.gauntletActive=false;$('result-next').textContent='Gauntlet cleared';finalizeGauntlet();}else $('result-next').textContent=`Continue to Round ${state.gauntletRound+1}`;}
-    else{state.gauntletFailedRound=state.gauntletRound;state.gauntletActive=false;if(!state.officialDaily){state.bestRound=Math.max(state.bestRound,state.gauntletRound-1);saveLocal();}$('result-next').textContent='Back to builder';finalizeGauntlet();}
-    $('result-rematch').classList.add('hidden');renderGauntletMap();
-  }else{$('result-next').textContent='Back to builder';$('result-rematch').classList.add('hidden');}
-  renderTeam();
+  else if(type==='gauntlet'){state.gauntletTotals.for+=result.scoreA;state.gauntletTotals.against+=result.scoreB;if(won){state.gauntletCleared=state.gauntletRound;if(!state.officialDaily){state.bestRound=Math.max(state.bestRound,state.gauntletRound);saveLocal();}if(state.gauntletRound===10){state.gauntletActive=false;$('result-next').textContent='Gauntlet cleared';finalizeGauntlet();}else $('result-next').textContent=`Round ${state.gauntletRound+1}`;}else{state.gauntletFailedRound=state.gauntletRound;state.gauntletActive=false;if(!state.officialDaily){state.bestRound=Math.max(state.bestRound,state.gauntletRound-1);saveLocal();}$('result-next').textContent='Back to builder';finalizeGauntlet();}$('result-rematch').classList.add('hidden');renderGauntletMap();}
+  else{$('result-next').textContent='Back to builder';$('result-rematch').classList.add('hidden');}renderTeam();
 }
 
 function buildOpponentFromPrices(prices,excludeIds=[],seed=''){
@@ -331,7 +236,7 @@ function randomBotTeam(excludeIds=[],seed=''){
   }
   return best?.team||shuffle(pool,rand).slice(0,5);
 }
-function playBot(){if(state.selected.length!==5)return toast('Build a five-player team first.');ensureBuilderConfig();const opp=randomBotTeam(ids(state.selected));const result=simulateGame(state.selected,opp,'',state.lineupConfig,null);showBattle(state.selected,opp,result,{type:'quick',title:'Your five vs. a CPU lineup',opponentLabel:'CPU'});}
+function playBot(){if(state.selected.length!==5)return toast('Build a five-player team first.');const opp=randomBotTeam(ids(state.selected));prepareBattle(state.selected,opp,{type:'quick',title:'Your five vs. CPU',opponentLabel:'CPU',seed:`bot|${Date.now()}|${ids(state.selected).join(',')}`});}
 function gauntletOpponent(round){const seed=state.boardType==='daily'?`cg-gauntlet|${state.selectedDate}|${state.mode}|${round}`:'';return buildOpponentFromPrices(GAUNTLET[round-1],ids(state.gauntletTeam),seed);}
 async function startGauntlet(){
   if(state.selected.length!==5)return toast('Build a five-player team first.');
@@ -339,10 +244,10 @@ async function startGauntlet(){
   if(state.boardType==='daily'&&isToday()&&state.user&&!state.dailyAttemptUsed){
     const ok=await reserveDailyRun();if(!ok)return;state.officialDaily=true;
   }else if(state.boardType==='daily'&&isToday()&&!state.user&&!localDailyUsed()){markLocalDailyUsed();}
-  ensureBuilderConfig();state.gauntletActive=true;state.gauntletTeam=[...state.selected];state.gauntletConfig=normalizedLineupConfig(state.gauntletTeam,state.lineupConfig);state.gauntletRound=1;state.gauntletCleared=0;state.gauntletFailedRound=null;state.gauntletTotals={for:0,against:0};renderGauntletMap();playGauntletRound();
+  state.gauntletActive=true;state.gauntletTeam=[...state.selected];state.gauntletConfig=[];state.gauntletRound=1;state.gauntletCleared=0;state.gauntletFailedRound=null;state.gauntletTotals={for:0,against:0};renderGauntletMap();playGauntletRound();
 }
 function playGauntletRound(){
-  const opp=gauntletOpponent(state.gauntletRound);const seed=state.boardType==='daily'?`cg-game|${state.selectedDate}|${state.mode}|${state.gauntletRound}|${ids(state.gauntletTeam).slice().sort().join(',')}`:'';const result=simulateGame(state.gauntletTeam,opp,seed,state.gauntletConfig,null);showBattle(state.gauntletTeam,opp,result,{type:'gauntlet',title:`Gauntlet Round ${state.gauntletRound} of 10`,opponentLabel:`ROUND ${state.gauntletRound}`});
+  const opp=gauntletOpponent(state.gauntletRound),seed=state.boardType==='daily'?`cg-game|${state.selectedDate}|${state.mode}|${state.gauntletRound}|${ids(state.gauntletTeam).slice().sort().join(',')}`:`cg-practice|${Date.now()}|${state.gauntletRound}`;prepareBattle(state.gauntletTeam,opp,{type:'gauntlet',title:`Gauntlet Round ${state.gauntletRound} of 10`,opponentLabel:`ROUND ${state.gauntletRound}`,seed});
 }
 async function finalizeGauntlet(){
   await recordHallOfFame();
@@ -374,7 +279,7 @@ async function initOnline(){
   updateOnlineStatus();await checkDailyAttempt();await refreshChallengeCount();await loadHallOfFame();db.auth.onAuthStateChange(async(_,session)=>{state.user=session?.user||null;state.profile=null;if(state.user){const{data:p}=await db.from('profiles').select('id,username').eq('id',state.user.id).maybeSingle();state.profile=p||null;}updateOnlineStatus();checkDailyAttempt();refreshChallengeCount();loadHallOfFame();});
 }
 function updateOnlineStatus(){const el=$('online-status');if(!ONLINE_READY){el.textContent='Online draft setup needed';el.className='online-status offline';}else if(!state.user){el.textContent='Log in for real-player drafts';el.className='online-status';}else{el.textContent=`Online as ${state.profile?.username||'player'}`;el.className='online-status online';}}
-function requireOnline(){if(!ONLINE_READY){toast('Online Cash Grab is not connected.','Run the Cash Grab v6 Supabase migration.');return false;}if(!state.user){toast('Log in first.','Use your HoopLoop account to play real-player drafts or record a Daily score.');return false;}return true;}
+function requireOnline(){if(!ONLINE_READY){toast('Online Cash Grab is not connected.','Install the existing Cash Grab v5 backend.');return false;}if(!state.user){toast('Log in first.','Use your HoopLoop account to play real-player drafts or record a Daily score.');return false;}return true;}
 async function checkDailyAttempt(){
   state.dailyAttemptUsed=localDailyUsed();
   if(db&&state.user&&state.boardType==='daily'&&isToday()){
@@ -430,23 +335,21 @@ async function tickDraftTimer(){
 }
 function startDraftTimer(){stopDraftTimer();state.draftTimer=setInterval(tickDraftTimer,500);tickDraftTimer();}
 async function makeOnlineDraftPick(player){const d=state.draft?.row;if(!d||d.status!=='drafting')return;const sides=onlineDraftSides(d);if(!sides.yourTurn)return toast('Wait for your turn.');if(!canDraftPick(player,'you'))return toast('That pick would make it impossible to finish under $15.');const{data,error}=await db.rpc('make_cash_grab_draft_pick',{p_draft_id:d.id,p_player_id:player.id});if(error)return toast('Pick failed',error.message);state.draft.row=data;renderDraft();}
-function draftLineupControlsHtml(team,config){const cfg=normalizedLineupConfig(team,config);return orderedLineup(team,cfg).map(({player:p,slot,option})=>`<div class="draft-lineup-control-row"><div class="lineup-control-player"><strong>${escapeHtml(p.name)}</strong><span>$${p.price} · natural ${p.pos} · ${escapeHtml(p.archetype)}</span></div><label>Position<select data-draft-slot="${p.id}">${SLOT_LABELS.map(x=>`<option value="${x}" ${x===slot?'selected':''}>${x}</option>`).join('')}</select></label><label>Offense<select data-draft-option="${p.id}">${[1,2,3,4,5].map(x=>`<option value="${x}" ${x===option?'selected':''}>${x}${x===1?'st':x===2?'nd':x===3?'rd':'th'}</option>`).join('')}</select></label></div>`).join('');}
+function draftLineupControlsHtml(team,opponent,config,locked=false){return matchupControlHtml(team,opponent,config,locked,'draft');}
 function renderDraftLineupSetup(){
-  const d=state.draft,section=$('draft-lineup-setup');if(!d||(d.kind==='online'&&d.row.status==='finished')){section.classList.add('hidden');return;}
-  let team=[],locked=false,status='';
-  if(d.kind==='cpu'){team=d.you;if(team.length!==5){section.classList.add('hidden');return;}d.localConfig=normalizedLineupConfig(team,d.localConfig);status='Set your matchups and shot hierarchy, then play.';}
-  else{const sides=onlineDraftSides(d.row);team=sides.youPicks.map(x=>playerById(x.id||x)).filter(Boolean);if(team.length!==5){section.classList.add('hidden');return;}const server=Array.isArray(sides.yourLineup)?sides.yourLineup:null;locked=validLineupConfig(team,server);d.localConfig=normalizedLineupConfig(team,locked?server:d.localConfig);status=locked?(d.row.status==='ready'?'Both lineups are locked. Simulating…':'Your lineup is locked. Waiting for your opponent…'):'Set your matchups and offensive hierarchy, then lock your lineup.';}
-  section.classList.remove('hidden');$('draft-lineup-controls').innerHTML=draftLineupControlsHtml(team,d.localConfig);$('draft-lineup-status').textContent=status;const btn=$('submit-draft-lineup');btn.disabled=locked;btn.textContent=d.kind==='cpu'?'Play 40-minute game':locked?'Lineup locked':'Lock lineup';
-  qsa('[data-draft-slot]').forEach(el=>{el.disabled=locked;el.onchange=()=>{setConfigValue(d.localConfig,el.dataset.draftSlot,'slot',el.value);renderDraftLineupSetup();};});qsa('[data-draft-option]').forEach(el=>{el.disabled=locked;el.onchange=()=>{setConfigValue(d.localConfig,el.dataset.draftOption,'option',Number(el.value));renderDraftLineupSetup();};});
+  const d=state.draft,section=$('draft-lineup-setup');if(!d||(d.kind==='online'&&d.row.status==='finished')){section.classList.add('hidden');return;}let team=[],opponent=[],locked=false,status='';
+  if(d.kind==='cpu'){team=d.you;opponent=d.opp;if(team.length!==5||opponent.length!==5){section.classList.add('hidden');return;}d.localConfig=normalizedLineupConfig(team,d.localConfig,opponent);status='Set matchups. Set offense order.';}
+  else{const sides=onlineDraftSides(d.row);team=sides.youPicks.map(x=>playerById(x.id||x)).filter(Boolean);opponent=sides.oppPicks.map(x=>playerById(x.id||x)).filter(Boolean);if(team.length!==5||opponent.length!==5){section.classList.add('hidden');return;}const server=Array.isArray(sides.yourLineup)?sides.yourLineup:null;locked=validLineupConfig(team,server,opponent);d.localConfig=normalizedLineupConfig(team,locked?server:d.localConfig,opponent);status=locked?(d.row.status==='ready'?'Both locked.':'Locked. Waiting…'):'Set matchups. Set offense order.';}
+  section.classList.remove('hidden');$('draft-lineup-controls').innerHTML=draftLineupControlsHtml(team,opponent,d.localConfig,locked);$('draft-lineup-status').textContent=status;const btn=$('submit-draft-lineup');btn.disabled=locked;btn.textContent=d.kind==='cpu'?'Play game':locked?'Locked':'Lock lineup';
+  qsa('[data-draft-guard]').forEach(el=>{el.onchange=()=>{setConfigValue(d.localConfig,el.dataset.draftGuard,'guard',el.value);renderDraftLineupSetup();};});qsa('[data-draft-option]').forEach(el=>{el.onchange=()=>{setConfigValue(d.localConfig,el.dataset.draftOption,'option',Number(el.value));renderDraftLineupSetup();};});
 }
 async function submitDraftLineup(){
-  const d=state.draft;if(!d)return;if(d.kind==='cpu')return finishCpuDraft();const sides=onlineDraftSides(d.row),team=sides.youPicks.map(x=>playerById(x.id||x)).filter(Boolean);if(!validLineupConfig(team,d.localConfig))return toast('Finish your lineup setup first.');
-  const{data,error}=await db.rpc('submit_cash_grab_draft_lineup',{p_draft_id:d.row.id,p_lineup:d.localConfig});if(error)return toast('Lineup could not be locked',error.message);d.row=data;renderDraft();if(data.status==='ready')finalizeOnlineDraftIfNeeded();
+  const d=state.draft;if(!d)return;if(d.kind==='cpu')return finishCpuDraft();const sides=onlineDraftSides(d.row),team=sides.youPicks.map(x=>playerById(x.id||x)).filter(Boolean),opponent=sides.oppPicks.map(x=>playerById(x.id||x)).filter(Boolean);if(!validLineupConfig(team,d.localConfig,opponent))return toast('Finish your lineup setup first.');const{data,error}=await db.rpc('submit_cash_grab_draft_lineup',{p_draft_id:d.row.id,p_lineup:d.localConfig});if(error)return toast('Lineup could not be locked',error.message);d.row=data;renderDraft();if(data.status==='ready')finalizeOnlineDraftIfNeeded();
 }
-async function finalizeOnlineDraftIfNeeded(){const d=state.draft?.row;if(!d||d.status!=='ready')return;const host=(d.host_picks||[]).map(x=>playerById(x.id||x)).filter(Boolean),opp=(d.opponent_picks||[]).map(x=>playerById(x.id||x)).filter(Boolean);if(host.length!==5||opp.length!==5||!validLineupConfig(host,d.host_lineup)||!validLineupConfig(opp,d.opponent_lineup))return;const result=simulateGame(host,opp,`draft|${d.id}|${d.resolution_seed||d.id}`,d.host_lineup,d.opponent_lineup);const payload=serializeResult(result);const{data,error}=await db.rpc('finalize_cash_grab_draft',{p_draft_id:d.id,p_host_score:result.scoreA,p_opponent_score:result.scoreB,p_result:payload});if(!error&&data){state.draft.row=data;showFinishedOnlineDraft(data);}}
-function serializeResult(r){return{scoreA:r.scoreA,scoreB:r.scoreB,quartersA:r.quartersA,quartersB:r.quartersB,lineupA:r.lineupA,lineupB:r.lineupB,boxA:r.boxA.map(x=>({...x,player:x.player.id,defender:x.defender?.id||null})),boxB:r.boxB.map(x=>({...x,player:x.player.id,defender:x.defender?.id||null})),a:r.a,b:r.b};}
-function hydrateResult(raw,teamA,teamB){const lineupA=normalizedLineupConfig(teamA,raw.lineupA),lineupB=normalizedLineupConfig(teamB,raw.lineupB),oa=orderedLineup(teamA,lineupA),ob=orderedLineup(teamB,lineupB);const ha=(raw.boxA||[]).map((x,i)=>({...x,player:playerById(x.player)||oa[i]?.player,slot:x.slot||oa[i]?.slot||SLOT_LABELS[i],option:x.option||oa[i]?.option||3,defender:playerById(x.defender)||ob[i]?.player}));const hb=(raw.boxB||[]).map((x,i)=>({...x,player:playerById(x.player)||ob[i]?.player,slot:x.slot||ob[i]?.slot||SLOT_LABELS[i],option:x.option||ob[i]?.option||3,defender:playerById(x.defender)||oa[i]?.player}));return{scoreA:raw.scoreA,scoreB:raw.scoreB,quartersA:raw.quartersA,quartersB:raw.quartersB,boxA:ha,boxB:hb,lineupA,lineupB,a:raw.a||teamMetrics(teamA),b:raw.b||teamMetrics(teamB),aWins:raw.scoreA>raw.scoreB};}
-function showFinishedOnlineDraft(d){const sides=onlineDraftSides(d),host=(d.host_picks||[]).map(x=>playerById(x.id||x)).filter(Boolean),opp=(d.opponent_picks||[]).map(x=>playerById(x.id||x)).filter(Boolean);if(host.length!==5||opp.length!==5||!d.result)return;stopDraftTimer();const raw=d.result,result=hydrateResult(raw,host,opp);const you=sides.host?host:opp,them=sides.host?opp:host;if(!sides.host){const swapped={...result,scoreA:result.scoreB,scoreB:result.scoreA,quartersA:result.quartersB,quartersB:result.quartersA,boxA:result.boxB,boxB:result.boxA,lineupA:result.lineupB,lineupB:result.lineupA,a:result.b,b:result.a,aWins:result.scoreB>result.scoreA};showBattle(you,them,swapped,{type:'draft',title:'Snake Draft Battle',opponentLabel:'OPPONENT'});}else showBattle(you,them,result,{type:'draft',title:'Snake Draft Battle',opponentLabel:'OPPONENT'});}
+async function finalizeOnlineDraftIfNeeded(){const d=state.draft?.row;if(!d||d.status!=='ready')return;const host=(d.host_picks||[]).map(x=>playerById(x.id||x)).filter(Boolean),opp=(d.opponent_picks||[]).map(x=>playerById(x.id||x)).filter(Boolean);if(host.length!==5||opp.length!==5||!validLineupConfig(host,d.host_lineup,opp)||!validLineupConfig(opp,d.opponent_lineup,host))return;const result=simulateGame(host,opp,`draft|${d.id}|${d.resolution_seed||d.id}`,d.host_lineup,d.opponent_lineup),payload=serializeResult(result);const{data,error}=await db.rpc('finalize_cash_grab_draft',{p_draft_id:d.id,p_host_score:result.scoreA,p_opponent_score:result.scoreB,p_result:payload});if(!error&&data){state.draft.row=data;showFinishedOnlineDraft(data);}}
+function serializeResult(r){return{scoreA:r.scoreA,scoreB:r.scoreB,quartersA:r.quartersA,quartersB:r.quartersB,segmentsA:r.segmentsA,segmentsB:r.segmentsB,lineupA:r.lineupA,lineupB:r.lineupB,boxA:r.boxA.map(x=>({...x,player:x.player.id,defender:x.defender?.id||null})),boxB:r.boxB.map(x=>({...x,player:x.player.id,defender:x.defender?.id||null}))};}
+function hydrateResult(raw,teamA,teamB){const lineupA=normalizedLineupConfig(teamA,raw.lineupA,teamB),lineupB=normalizedLineupConfig(teamB,raw.lineupB,teamA),boxA=(raw.boxA||[]).map(x=>({...x,player:playerById(x.player),defender:playerById(x.defender)})).filter(x=>x.player&&x.defender),boxB=(raw.boxB||[]).map(x=>({...x,player:playerById(x.player),defender:playerById(x.defender)})).filter(x=>x.player&&x.defender);return{scoreA:raw.scoreA,scoreB:raw.scoreB,quartersA:raw.quartersA,quartersB:raw.quartersB,segmentsA:raw.segmentsA||raw.quartersA.flatMap(q=>[0,0,0,q]),segmentsB:raw.segmentsB||raw.quartersB.flatMap(q=>[0,0,0,q]),boxA,boxB,lineupA,lineupB,aWins:raw.scoreA>raw.scoreB};}
+function showFinishedOnlineDraft(d){const sides=onlineDraftSides(d),host=(d.host_picks||[]).map(x=>playerById(x.id||x)).filter(Boolean),opp=(d.opponent_picks||[]).map(x=>playerById(x.id||x)).filter(Boolean);if(host.length!==5||opp.length!==5||!d.result)return;stopDraftTimer();const result=hydrateResult(d.result,host,opp);if(!sides.host){const swapped={...result,scoreA:result.scoreB,scoreB:result.scoreA,quartersA:result.quartersB,quartersB:result.quartersA,segmentsA:result.segmentsB,segmentsB:result.segmentsA,boxA:result.boxB,boxB:result.boxA,lineupA:result.lineupB,lineupB:result.lineupA,aWins:result.scoreB>result.scoreA};prepareBattle(opp,host,{type:'draft',title:'Snake Draft Battle',opponentLabel:'OPPONENT',configA:swapped.lineupA,configB:swapped.lineupB,resolvedResult:swapped,locked:true});}else prepareBattle(host,opp,{type:'draft',title:'Snake Draft Battle',opponentLabel:'OPPONENT',configA:result.lineupA,configB:result.lineupB,resolvedResult:result,locked:true});}
 
 function startCpuDraft(){stopDraftTimer();state.draft={kind:'cpu',board:[...state.board],first:Math.random()<.5?0:1,pickNumber:0,you:[],opp:[],localConfig:null};$('draft-section').classList.remove('hidden');renderDraft();$('draft-section').scrollIntoView({behavior:'smooth',block:'start'});runCpuTurns();}
 function draftOwner(d,index=d.pickNumber){return SNAKE[index]===0?d.first:1-d.first;}
@@ -455,23 +358,23 @@ function allocationOptions(slots,budget,counts){const out=[];function walk(price
 function jointDraftFeasible(aPicks,bPicks,remainingPlayers){const aSlots=5-aPicks.length,bSlots=5-bPicks.length;if(aSlots<0||bSlots<0)return false;const aBudget=15-usedBudget(aPicks),bBudget=15-usedBudget(bPicks);if(aBudget<0||bBudget<0)return false;const counts=priceCounts(remainingPlayers),aOpts=allocationOptions(aSlots,aBudget,counts),bOpts=allocationOptions(bSlots,bBudget,counts);for(const a of aOpts)for(const b of bOpts){let ok=true;for(let price=1;price<=5;price++)if((a[price]||0)+(b[price]||0)>(counts[price]||0)){ok=false;break;}if(ok)return true;}return false;}
 function draftCurrentPicks(side){const d=state.draft;if(d.kind==='cpu')return side==='you'?d.you:d.opp;const s=onlineDraftSides(d.row);return side==='you'?s.youPicks.map(x=>playerById(x.id||x)).filter(Boolean):s.oppPicks.map(x=>playerById(x.id||x)).filter(Boolean);}
 function canDraftPick(player,side='you'){const d=state.draft;if(!d)return false;const your=draftCurrentPicks(side),other=draftCurrentPicks(side==='you'?'opp':'you');const used=new Set([...your,...other].map(p=>p.id));if(used.has(player.id)||your.length>=5||usedBudget(your)+player.price>15)return false;const next=[...your,player],remaining=d.board.filter(p=>!used.has(p.id)&&p.id!==player.id);return jointDraftFeasible(next,other,remaining);}
-function cpuPickCandidate(){const d=state.draft,legal=d.board.filter(p=>canDraftPick(p,'opp'));if(!legal.length)return null;return legal.map(p=>{const m=teamMetrics([...d.opp,p]);const priceValue=playerTalent(p)/(p.price+.65);return{p,score:m.power*.82+playerTalent(p)*.13+priceValue*.05+Math.random()*2.5};}).sort((a,b)=>b.score-a.score)[0].p;}
+function cpuPickCandidate(){const d=state.draft,legal=d.board.filter(p=>canDraftPick(p,'opp'));if(!legal.length)return null;return legal.map(p=>({p,score:productionValue(p)/(p.price+.75)+Math.random()*2.2})).sort((a,b)=>b.score-a.score)[0].p;}
 function runCpuTurns(){const d=state.draft;if(!d||d.kind!=='cpu'||d.pickNumber>=10)return;if(draftOwner(d)===1){const p=cpuPickCandidate();if(!p)return toast('CPU draft could not find a legal pick.');d.opp.push(p);d.pickNumber++;renderDraft();if(d.pickNumber>=10)return;setTimeout(runCpuTurns,260);}}
 function makeCpuDraftPick(player){const d=state.draft;if(!d||d.kind!=='cpu'||draftOwner(d)!==0)return;if(!canDraftPick(player,'you'))return toast('That pick would make it impossible to finish five players under $15.');d.you.push(player);d.pickNumber++;renderDraft();if(d.pickNumber>=10)return;runCpuTurns();}
-function finishCpuDraft(){const d=state.draft;if(!d||d.you.length!==5||d.opp.length!==5)return;d.localConfig=normalizedLineupConfig(d.you,d.localConfig);const oppConfig=autoLineupConfig(d.opp),result=simulateGame(d.you,d.opp,`cpu-draft|${Date.now()}|${ids(d.you).join(',')}`,d.localConfig,oppConfig);showBattle(d.you,d.opp,result,{type:'draft',title:'Snake Draft vs. CPU',opponentLabel:'CPU'});}
+function finishCpuDraft(){const d=state.draft;if(!d||d.you.length!==5||d.opp.length!==5)return;d.localConfig=normalizedLineupConfig(d.you,d.localConfig,d.opp);const oppConfig=autoLineupConfig(d.opp,d.you),result=simulateGame(d.you,d.opp,`cpu-draft|${Date.now()}|${ids(d.you).join(',')}`,d.localConfig,oppConfig);prepareBattle(d.you,d.opp,{type:'draft',title:'Snake Draft vs. CPU',opponentLabel:'CPU',configA:d.localConfig,configB:oppConfig,resolvedResult:result,locked:true,autoStart:true});}
 function renderDraft(){
   const d=state.draft;if(!d)return;let you=[],opp=[],yourBudget=15,oppBudget=15,yourTurn=false,pickNumber=0,status='drafting',oppName='CPU',allPicked=[];
   if(d.kind==='cpu'){you=d.you;opp=d.opp;yourBudget=15-usedBudget(you);oppBudget=15-usedBudget(opp);yourTurn=d.pickNumber<10&&draftOwner(d)===0;pickNumber=d.pickNumber;status=pickNumber>=10?'configuring':'drafting';allPicked=[...you,...opp].map(p=>p.id);oppName='CPU';}
   else{const row=d.row,s=onlineDraftSides(row);you=s.youPicks.map(x=>playerById(x.id||x)).filter(Boolean);opp=s.oppPicks.map(x=>playerById(x.id||x)).filter(Boolean);yourBudget=s.yourBudget;oppBudget=s.oppBudget;yourTurn=row.status==='drafting'&&s.yourTurn;pickNumber=row.pick_number;status=row.status;allPicked=[...(row.host_picks||[]),...(row.opponent_picks||[])].map(x=>x.id||x);oppName='OPPONENT';}
   $('draft-your-budget').textContent=`$${yourBudget}`;$('draft-opp-budget').textContent=`$${oppBudget}`;$('draft-your-picks').textContent=`${you.length} / 5`;$('draft-opp-picks').textContent=`${opp.length} / 5`;$('draft-pick-label').textContent=pickNumber<10?`PICK ${pickNumber+1}`:'DRAFT COMPLETE';$('draft-turn-label').textContent=status==='finished'?'FINAL':status==='configuring'||status==='ready'?'SET LINEUPS':yourTurn?'YOUR PICK':'OPPONENT PICK';$('draft-opponent-name').textContent=oppName;
   $('draft-your-roster').innerHTML=you.length?you.map(p=>`<div class="draft-pick"><strong>${escapeHtml(p.name)}</strong><span>$${p.price} · ${p.pos}</span></div>`).join(''):'<div class="draft-pick"><span>No picks yet</span></div>';$('draft-opp-roster').innerHTML=opp.length?opp.map(p=>`<div class="draft-pick"><strong>${escapeHtml(p.name)}</strong><span>$${p.price} · ${p.pos}</span></div>`).join(''):'<div class="draft-pick"><span>No picks yet</span></div>';
-  $('draft-status').textContent=status==='drafting'?(d.kind==='cpu'?(yourTurn?'Choose any affordable player.':'CPU is making its pick…'):(yourTurn?'Choose any affordable player. You have 60 seconds.':'Stay here—the board updates automatically when your opponent picks.')):(status==='configuring'||status==='ready'?'Draft complete. Set your matchup positions and offensive options.':'Draft complete.');
-  const drafting=status==='drafting'&&pickNumber<10;$('draft-board').classList.toggle('hidden',!drafting);$('draft-board').innerHTML=drafting?[1,2,3,4,5].map(price=>`<section class="draft-price-column"><h4>$${price}</h4>${d.board.filter(p=>p.price===price).map(p=>{const picked=allPicked.includes(p.id);const legal=yourTurn&&!picked&&canDraftPick(p,'you');return`<button class="draft-player${picked?' picked':''}${yourTurn?' your-turn':''}" data-draft-player="${p.id}" ${!legal?'disabled':''}><strong>${escapeHtml(p.name)}</strong><span>${p.group} · ${p.pos} · ${escapeHtml(p.archetype)}</span></button>`;}).join('')}</section>`).join(''):'';
+  $('draft-status').textContent=status==='drafting'?(d.kind==='cpu'?(yourTurn?'Choose any affordable player.':'CPU is making its pick…'):(yourTurn?'Choose any affordable player. You have 60 seconds.':'Stay here—the board updates automatically when your opponent picks.')):(status==='configuring'||status==='ready'?'Draft complete. Set matchups and offense order.':'Draft complete.');
+  const drafting=status==='drafting'&&pickNumber<10;$('draft-board').classList.toggle('hidden',!drafting);$('draft-board').innerHTML=drafting?[1,2,3,4,5].map(price=>`<section class="draft-price-column"><h4>$${price}</h4>${d.board.filter(p=>p.price===price).map(p=>{const picked=allPicked.includes(p.id);const legal=yourTurn&&!picked&&canDraftPick(p,'you');return`<button class="draft-player${picked?' picked':''}${yourTurn?' your-turn':''}" data-draft-player="${p.id}" ${!legal?'disabled':''}><strong>${escapeHtml(p.name)}</strong><span>${p.group} · ${p.pos}</span></button>`;}).join('')}</section>`).join(''):'';
   qsa('[data-draft-player]').forEach(b=>b.onclick=()=>{const p=playerById(b.dataset.draftPlayer);d.kind==='cpu'?makeCpuDraftPick(p):makeOnlineDraftPick(p);});renderDraftLineupSetup();if(d.kind==='online')tickDraftTimer();else $('draft-clock').classList.add('hidden');
 }
 function leaveDraft(){stopOnlineChannel();state.draft=null;$('draft-section').classList.add('hidden');$('draft-lineup-setup').classList.add('hidden');$('builder').scrollIntoView({behavior:'smooth'});}
 
-function openHow(){openModal(`<span class="overline">CASH GRAB RULES</span><h2>Five players. Forty minutes.</h2><ul class="modal-list"><li><strong>$15 virtual budget</strong><br>Build five players. You may finish under budget, never over.</li><li><strong>5v5, 40 minutes</strong><br>There are no substitutes, stamina penalties, or injuries. Every player logs 40 minutes.</li><li><strong>Set your lineup</strong><br>Assign PG, SG, SF, PF, and C to control direct defensive matchups, then rank your 1st through 5th offensive options to control shot preference.</li><li><strong>50% Fit · 25% Talent · 25% Versatility</strong><br>Fit is the largest team-strength factor. Natural-position duplication is only a small fit consideration; complementary skills, matchup assignments, offensive hierarchy, and game variance matter much more.</li><li><strong>Daily</strong><br>One official Gauntlet attempt per logged-in account. Past boards stay playable as practice.</li><li><strong>Live Snake Draft Battles</strong><br>First pick is random: P1, P2, P2, P1, P1, P2, P2, P1, P1, P2. Online picks have a 60-second clock; a timeout assigns an available $1 player automatically.</li></ul>`);}
+function openHow(){openModal(`<span class="overline">CASH GRAB</span><h2>Five players. $15.</h2><ul class="modal-list"><li>Set who each player guards.</li><li>Rank offense #1 through #5.</li><li>Simulate four 10-minute quarters.</li><li>Current uses real-player baselines. All-Time uses real peak seasons. H2H samples are used when available.</li></ul>`);}
 function openModal(html){$('modal-content').innerHTML=html;$('modal-backdrop').classList.remove('hidden');}
 function closeModal(){$('modal-backdrop').classList.add('hidden');}
 function toast(title,message=''){const el=document.createElement('div');el.className='toast';el.innerHTML=`<strong>${escapeHtml(title)}</strong>${message?`<span>${escapeHtml(message)}</span>`:''}`;$('toast-region').appendChild(el);setTimeout(()=>el.remove(),4200);}
@@ -480,9 +383,9 @@ function bind(){
   $('jump-board').onclick=()=>$('builder').scrollIntoView({behavior:'smooth'});$('how-button').onclick=openHow;$('modal-close').onclick=closeModal;$('modal-backdrop').onclick=e=>{if(e.target===$('modal-backdrop'))closeModal();};
   qsa('[data-mode]').forEach(b=>b.onclick=()=>{state.mode=b.dataset.mode;makeBoard();});qsa('[data-board-type]').forEach(b=>b.onclick=()=>{state.boardType=b.dataset.boardType;makeBoard();});
   $('prev-day').onclick=()=>{state.selectedDate=shiftDate(state.selectedDate,-1);if(state.selectedDate<LAUNCH_DATE)state.selectedDate=LAUNCH_DATE;makeBoard();};$('next-day').onclick=()=>{if(state.selectedDate<chicagoDate()){state.selectedDate=shiftDate(state.selectedDate,1);makeBoard();}};$('daily-date').onchange=e=>{let d=e.target.value||chicagoDate();if(d<LAUNCH_DATE)d=LAUNCH_DATE;if(d>chicagoDate())d=chicagoDate();state.selectedDate=d;makeBoard();};
-  $('clear-team').onclick=()=>{state.selected=[];state.gauntletActive=false;renderAll();};$('shuffle-board').onclick=()=>{state.boardNonce++;makeBoard();};$('bot-match').onclick=playBot;$('start-gauntlet').onclick=startGauntlet;$('daily-leaderboard').onclick=openDailyLeaderboard;
+  $('clear-team').onclick=()=>{state.selected=[];state.lineupConfig=[];state.gauntletActive=false;state.pendingBattle=null;stopGameTimer();renderAll();};$('shuffle-board').onclick=()=>{state.boardNonce++;makeBoard();};$('bot-match').onclick=playBot;$('start-gauntlet').onclick=startGauntlet;$('daily-leaderboard').onclick=openDailyLeaderboard;
   $('cpu-draft').onclick=startCpuDraft;$('invite-friend').onclick=openFriendDraft;$('random-player').onclick=findRandomDraft;$('challenges-button').onclick=openDraftBattles;$('leave-draft').onclick=leaveDraft;$('submit-draft-lineup').onclick=submitDraftLineup;
-  $('back-to-builder').onclick=()=>$('builder').scrollIntoView({behavior:'smooth'});$('result-next').onclick=nextResultAction;$('result-rematch').onclick=playBot;
+  $('simulate-game').onclick=startPendingSimulation;$('back-to-builder').onclick=()=>{stopGameTimer();$('builder').scrollIntoView({behavior:'smooth'});};$('result-next').onclick=nextResultAction;$('result-rematch').onclick=playBot;
 }
 async function init(){loadLocal();state.selectedDate=chicagoDate();bind();makeBoard();renderHallOfFame();await initOnline();}
 document.addEventListener('DOMContentLoaded',init);

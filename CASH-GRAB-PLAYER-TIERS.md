@@ -1,4 +1,4 @@
-# Cash Grab v3 player tiers
+# Cash Grab v7 player price tiers
 
 Current prices use the user-approved Current pool and should represent current ability. All-Time prices use the user-approved list and the simulator treats every player as a peak version. No player was added to a dollar tier without the user supplying them.
 

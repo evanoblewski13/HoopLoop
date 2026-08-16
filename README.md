@@ -1,9 +1,14 @@
-# HoopLoop Platform 17 — Stats Race v3
+# HoopLoop Platform 19 — Cash Grab v7
 
-Accuracy-first update adding independent country scoring, flexible team aliases, All-NBA/ROTY fields, three current-player career highs, and Untimed Practice.
+Cash Grab v7 replaces the old synthetic team-rating simulation with a transparent real-data model.
 
-Start with `PLATFORM-17-UPDATE-GUIDE.md`, then run `verify.html` after deployment.
+- 192 Current players
+- 230 All-Time players
+- 422 real player baselines
+- 33,124 real shared-game H2H samples
+- manual defensive assignments
+- four-quarter live simulation
+- no Fit / Talent / Versatility model
+- no new Supabase SQL
 
-
-## Platform 18 / Stats Race v4
-No new SQL is required on top of a working Stats Race v3 backend. See `PLATFORM-18-UPDATE-GUIDE.md`.
+See `PLATFORM-19-UPDATE-GUIDE.md` for installation and `CASH-GRAB-V7-DATA-NOTES.md` for the data methodology.
