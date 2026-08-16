@@ -7,7 +7,7 @@
   <meta name="description" content="Cash Grab by HoopLoop — build a five-player basketball lineup with a $15 virtual roster budget, then test it in a 40-minute 5v5 game." />
   <title>Cash Grab — HoopLoop</title>
   <script src="theme.js?v=9.0.0"></script>
-  <link rel="stylesheet" href="cash-grab.css?v=7.1.0" />
+  <link rel="stylesheet" href="cash-grab.css?v=7.2.0" />
 </head>
 <body>
   <div class="page-noise" aria-hidden="true"></div>
@@ -24,7 +24,7 @@
       <div class="hero-copy">
         <div class="game-pill"><span></span> HoopLoop Game 03</div>
         <h1>Spend <em>$15.</em><br />Build five.</h1>
-        <p>Build five under $15. Set the defense. Play 40 minutes.</p>
+        <p>Build five under $15. Set the defensive matchups. Play 40 minutes.</p>
         <div class="hero-actions"><button class="primary-button" id="jump-board" type="button">Build a team <span>↘</span></button><button class="text-button" id="how-button" type="button">How it works</button></div>
       </div>
       <aside class="hero-preview"><span class="preview-label">THE CAP</span><strong>$15</strong><p>Five players. $15.</p><div class="mini-prices"><span>$1</span><span>$2</span><span>$3</span><span>$4</span><span>$5</span></div></aside>
@@ -57,7 +57,7 @@
 
       <section class="battle-select" id="battle-select">
         <div class="battle-card">
-          <span class="overline">5V5 · 40 MINUTES</span><h3>Bot Game</h3><p>Set defense. Play.</p><button class="primary-button" id="bot-match" type="button">Play a bot</button><div class="record-line" id="quick-record">Record: 0–0</div>
+          <span class="overline">5V5 · 40 MINUTES</span><h3>Bot Game</h3><p>Set matchups. Play.</p><button class="primary-button" id="bot-match" type="button">Play a bot</button><div class="record-line" id="quick-record">Record: 0–0</div>
         </div>
         <div class="battle-card gauntlet-card">
           <span class="overline">TEN ROUNDS</span><h3 id="gauntlet-heading">Daily Gauntlet</h3><p id="gauntlet-copy">One official attempt today. Furthest round is your Daily score.</p><button class="primary-button" id="start-gauntlet" type="button">Start Gauntlet</button><button class="secondary-button inverse-button" id="daily-leaderboard" type="button">Daily leaderboard</button><div class="record-line" id="gauntlet-best">Best: Not started</div>
@@ -69,7 +69,7 @@
     </section>
 
     <section class="section hidden" id="matchup-section">
-      <div class="section-heading compact-heading"><div><span class="overline" id="matchup-kicker">5V5 · 40 MINUTES</span><h2 id="matchup-title">Game setup</h2></div><button class="secondary-button" id="back-to-builder" type="button">Back to builder</button></div>
+      <div class="section-heading compact-heading"><div><span class="overline" id="matchup-kicker">5V5 · 40 MINUTES</span><h2 id="matchup-title">Your five vs. their five</h2></div><button class="secondary-button" id="back-to-builder" type="button">Back to builder</button></div>
       <div class="matchup-board"><article class="match-team you-team"><div class="match-team-heading"><span>YOU</span></div><div id="your-match-roster" class="match-roster"></div></article><div class="versus-block"><span id="game-clock">READY</span><strong id="final-score">0–0</strong><button class="primary-button game-sim-button" id="simulate-game" type="button">Simulate game</button></div><article class="match-team"><div class="match-team-heading"><span id="opponent-label">CPU</span></div><div id="opponent-match-roster" class="match-roster"></div></article></div>
       <div class="matchup-strip" id="matchup-strip"></div><div class="line-score-wrap" id="line-score-wrap"></div>
       <div class="box-score-shell" id="box-score-shell"></div>
@@ -81,7 +81,7 @@
       <div class="draft-scoreboard"><div><span>YOU</span><strong id="draft-your-budget">$15</strong><small id="draft-your-picks">0 / 5</small></div><div class="draft-turn"><span id="draft-pick-label">PICK 1</span><strong id="draft-turn-label">—</strong><div class="draft-clock hidden" id="draft-clock" aria-live="polite"><span>YOUR CLOCK</span><strong id="draft-clock-value">60s</strong></div></div><div><span id="draft-opponent-name">OPPONENT</span><strong id="draft-opp-budget">$15</strong><small id="draft-opp-picks">0 / 5</small></div></div>
       <div class="draft-rosters"><div><h3>Your picks</h3><div id="draft-your-roster" class="draft-roster"></div></div><div><h3>Opponent picks</h3><div id="draft-opp-roster" class="draft-roster"></div></div></div>
       <div class="draft-board" id="draft-board"></div>
-      <section class="draft-lineup-setup hidden" id="draft-lineup-setup"><div class="draft-lineup-heading"><span class="overline">SET DEFENSE</span><h3>Defense + offense.</h3></div><div id="draft-lineup-controls" class="draft-lineup-controls"></div><button class="primary-button" id="submit-draft-lineup" type="button">Lock lineup</button><p class="draft-lineup-status" id="draft-lineup-status"></p></section>
+      <section class="draft-lineup-setup hidden" id="draft-lineup-setup"><div class="draft-lineup-heading"><span class="overline">SET MATCHUPS</span><h3>Defense + offense.</h3></div><div id="draft-lineup-controls" class="draft-lineup-controls"></div><button class="primary-button" id="submit-draft-lineup" type="button">Lock lineup</button><p class="draft-lineup-status" id="draft-lineup-status"></p></section>
     </section>
 
 
@@ -90,9 +90,9 @@
     <section class="section gauntlet-map-section" id="gauntlet-map-section"><div class="section-heading"><div><span class="overline">THE LADDER</span><h2>Gauntlet</h2><p>✓ cleared · × eliminated</p></div></div><div class="gauntlet-map" id="gauntlet-map"></div></section>
   </main>
 
-  <footer><a class="brand footer-brand" href="index.html"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a><p>Cash Grab uses a virtual roster budget only—no wagering or real-money play.</p><span>Cash Grab v7.1 · HoopLoop Platform 20</span><span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span></footer>
+  <footer><a class="brand footer-brand" href="index.html"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a><p>Cash Grab uses a virtual roster budget only—no wagering or real-money play.</p><span>Cash Grab v7.0 · HoopLoop Platform 19</span><span class="footer-disclaimer">Unofficial fan project. Not affiliated with the NBA.</span></footer>
 
   <div class="modal-backdrop hidden" id="modal-backdrop"><section class="modal" role="dialog" aria-modal="true"><button class="modal-close" id="modal-close" type="button">×</button><div id="modal-content"></div></section></div><div class="toast-region" id="toast-region" aria-live="polite"></div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=11.0.0"></script><script src="cash-grab-data.js?v=7.1.0"></script><script src="cash-grab-real-data.js?v=7.1.0"></script><script src="cash-grab.js?v=7.1.0"></script><script src="theme-account-sync.js?v=11.0.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=11.0.0"></script><script src="cash-grab-data.js?v=7.2.0"></script><script src="cash-grab-real-data.js?v=7.2.0"></script><script src="cash-grab.js?v=7.2.0"></script><script src="theme-account-sync.js?v=11.0.0"></script>
 </body>
 </html>

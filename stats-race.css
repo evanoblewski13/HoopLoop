@@ -6,3 +6,12 @@
 
 /* Stats Race v3 */
 .practice-time-switch{display:inline-flex;background:#eeeae2;border-radius:10px;padding:4px;margin-top:14px}.practice-time-switch button{border:0;background:transparent;padding:9px 12px;border-radius:7px;font-weight:900;color:#666;cursor:pointer}.practice-time-switch button.active{background:#111;color:#fff}.clock-card.untimed strong{font-size:54px}.clock-card.untimed{background:#242424}.stats-fields{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:1100px){.stats-fields{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:760px){.stats-fields{grid-template-columns:1fr 1fr}}@media(max-width:460px){.stats-fields{grid-template-columns:1fr}}
+
+/* Stats Race v4.1 — online answer comparison */
+.score-breakdown.race-compare .score-row{grid-template-columns:minmax(125px,.75fr) minmax(125px,1fr) minmax(125px,1fr) minmax(145px,1fr) 72px 72px}
+.score-row .opp-guess{font-size:12px;color:#666}
+.score-row .opp-earned{font-size:18px;font-weight:950;text-align:right}
+.score-row.race-header{background:#111;color:#fff;font-size:10px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
+.score-row.race-header .guess,.score-row.race-header .opp-guess,.score-row.race-header .answer{color:#ddd}
+.score-row.race-header .earned,.score-row.race-header .opp-earned{font-size:10px;color:#fff}
+@media(max-width:900px){.score-breakdown.race-compare{overflow-x:auto}.score-breakdown.race-compare .score-row{min-width:850px}}

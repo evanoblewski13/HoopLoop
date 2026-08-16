@@ -1,8 +1,8 @@
 'use strict';
-// Cash Grab v7.1 — full box scores + quarter-by-quarter presentation
+// Cash Grab v7.2 — recent-form Current mode + clean stat sheets
 
 const DATA = window.HOOPLOOP_CASH_GRAB_DATA || { current: [], allTime: [] };
-const REAL = window.HOOPLOOP_CASH_GRAB_REAL_DATA || { meta:{}, profiles:{}, h2h:{} };
+const REAL = window.HOOPLOOP_CASH_GRAB_REAL_DATA || { meta:{}, profiles:{}, currentRecentProfiles:{}, h2h:{}, h2hRecent:{} };
 const CONFIG = window.HOOPLOOP_CONFIG || {};
 const $ = id => document.getElementById(id);
 const qsa = selector => [...document.querySelectorAll(selector)];
@@ -151,7 +151,7 @@ const REB_ROLE={1:1.03,2:1.01,3:1.00,4:.99,5:.97};
 const TOV_ROLE={1:1.16,2:1.08,3:1.00,4:.93,5:.87};
 const GAME_PACE=1.04;
 const QUARTER_DELAY=1400;
-function realProfile(p){return REAL.profiles?.[p?.id]||null;}
+function realProfile(p){return (p?.era==='current'?REAL.currentRecentProfiles?.[p?.id]:null)||REAL.profiles?.[p?.id]||null;}
 function productionValue(p){const r=realProfile(p);return r?(Number(r.ppg)||0)+(Number(r.rpg)||0)+(Number(r.apg)||0):0;}
 function naturalOrder(team){return [...team].sort((a,b)=>(POS_RANK[a.pos]??2)-(POS_RANK[b.pos]??2)||productionValue(b)-productionValue(a)||a.name.localeCompare(b.name));}
 function autoLineupConfig(team,opponent=[]){
@@ -172,12 +172,12 @@ function matchupControlHtml(team,opponent,config,locked=false,prefix='battle'){
   return naturalOrder(team).map(p=>{const row=rows.get(p.id);return`<div class="lineup-control-row"><div class="lineup-control-player"><strong>${escapeHtml(p.name)}</strong><span>${p.pos} · $${p.price}</span></div><label>DEFEND<select data-${prefix}-guard="${p.id}" ${locked?'disabled':''}>${naturalOrder(opponent).map(o=>`<option value="${o.id}" ${o.id===row.guard?'selected':''}>${escapeHtml(o.name)} · ${o.pos}</option>`).join('')}</select></label><label>OFFENSE<select data-${prefix}-option="${p.id}" ${locked?'disabled':''}>${[1,2,3,4,5].map(x=>`<option value="${x}" ${x===row.option?'selected':''}>#${x}</option>`).join('')}</select></label></div>`;}).join('');
 }
 function normalizeKey(name=''){return String(name).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');}
-function h2hSample(offender,defender){const raw=REAL.h2h?.[`${normalizeKey(offender?.name)}|${normalizeKey(defender?.name)}`];if(!Array.isArray(raw)||raw.length<4)return null;return{gp:Number(raw[0])||0,ppg:Number(raw[1])||0,rpg:Number(raw[2])||0,apg:Number(raw[3])||0};}
+function h2hSample(offender,defender){const key=`${normalizeKey(offender?.name)}|${normalizeKey(defender?.name)}`,recent=offender?.era==='current'?REAL.h2hRecent?.[key]:null,raw=recent||REAL.h2h?.[key];if(!Array.isArray(raw)||raw.length<4)return null;return{gp:Number(raw[0])||0,ppg:Number(raw[1])||0,rpg:Number(raw[2])||0,apg:Number(raw[3])||0,effectiveGp:Number(raw[4])||Number(raw[0])||0,recent:Boolean(recent),lastSeason:Number(raw[5])||null};}
 function expectedAgainst(offender,defender,option=3){
   const base=realProfile(offender)||{ppg:0,rpg:0,apg:0};const sample=h2hSample(offender,defender);const basePpg=Math.max(.1,Number(base.ppg)||0);let ppg=basePpg,rpg=Number(base.rpg)||0,apg=Number(base.apg)||0,weight=0;
-  if(sample&&sample.gp>=3){weight=Math.min(.60,sample.gp/(sample.gp+15));ppg=ppg*(1-weight)+sample.ppg*weight;rpg=rpg*(1-weight)+sample.rpg*weight;apg=apg*(1-weight)+sample.apg*weight;}
+  if(sample&&sample.gp>=2){const sampleSize=sample.recent?sample.effectiveGp:sample.gp,cap=sample.recent?.52:.60,den=sample.recent?7:15;weight=Math.min(cap,sampleSize/(sampleSize+den));if(weight>.015){ppg=ppg*(1-weight)+sample.ppg*weight;rpg=rpg*(1-weight)+sample.rpg*weight;apg=apg*(1-weight)+sample.apg*weight;}}
   const matchRatio=clamp(ppg/basePpg,.72,1.32);
-  return{ppg:ppg*(POINT_ROLE[option]||1),rpg:rpg*(REB_ROLE[option]||1),apg:apg*(AST_ROLE[option]||1),matchRatio,h2hGames:sample?.gp||0,h2hWeight:weight};
+  return{ppg:ppg*(POINT_ROLE[option]||1),rpg:rpg*(REB_ROLE[option]||1),apg:apg*(AST_ROLE[option]||1),matchRatio,h2hGames:sample?.gp||0,h2hWeight:weight,h2hRecent:sample?.recent||false};
 }
 function sampleCount(mean,rand,kind='count'){
   const base=Math.max(0,mean);const sd=kind==='reb'?Math.max(1.4,base*.30):kind==='ast'?Math.max(1.2,base*.32):kind==='stl'||kind==='blk'?Math.max(.65,Math.sqrt(base+.2)*.72):kind==='tov'?Math.max(.8,Math.sqrt(base+.4)*.85):Math.max(.75,Math.sqrt(base+.3)*.78);

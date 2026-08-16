@@ -1,3 +1,7 @@
-# HoopLoop Platform 20 — Cash Grab v7.1
+# HoopLoop Platform 21
 
-Cash Grab keeps the v7 real-data/H2H engine and restores a full game box score. Games reveal one quarter at a time. No new SQL is required.
+Small cross-game polish release.
+
+- Cash Grab v7.2: clean box-score rows, accent matchup labels, recent-form Current baselines, recency-weighted Current H2H.
+- Stats Race v4.1: completed online races show both players' typed answers field-by-field.
+- One additive Stats Race SQL migration is required.
