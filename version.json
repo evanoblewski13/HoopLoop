@@ -1,9 +1,9 @@
 {
-  "platform": 22,
-  "version": "22.0.0",
+  "platform": 23,
+  "version": "23.0.0",
   "released": "2026-08-16",
-  "packPullPlay": "1.0.0",
+  "packPullPlay": "2.0.0",
   "cashGrab": "7.2.0",
   "statsRace": "4.1.0",
-  "notes": "Adds Pack, Pull, Play and moves Friends out of the shared game navigation."
+  "notes": "Pack, Pull, Play v2 adds 0-3 boosts, team-tenure player versions, wider pack variance, bench-order minutes, and simulated season player stats."
 }

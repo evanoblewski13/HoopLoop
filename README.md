@@ -1,23 +1,19 @@
-# HoopLoop Platform 22
+# HoopLoop Platform 23 — Pack, Pull, Play v2
 
-Platform 22 adds **Pack, Pull, Play v1** and cleans the shared HoopLoop navigation.
+This update upgrades Pack, Pull, Play into a much wider replayable roster-builder:
 
-Highlights:
-- 12-card mystery roster: 5 starters, 5 rotation bench, 2 reserves
-- user chooses 3 boosted slots before opening
-- 5 choices per pull, open in any order
-- no duplicate real players across card versions
-- 534 current identities + 40 real peak-season variants + 3 explicit team-era variants = 577 card versions
-- G / G / F / F / C starter legality
-- post-pull slot swapping
-- offense order + manual defensive assignments
-- 48-minute, 240-player-minute rotations
-- one-click 82-game season with the requested record labels
-- five-team local history
-- CPU single game
-- Friend / Random five-minute build rooms
-- synchronized best-of-seven series: both players click Simulate for each game
-- Higher or Lower removed from navigation
-- Friends removed from the game nav; the existing Account/Profile Friends control remains the visible entry point
+- choose 0–3 boosts
+- 1,249 card versions
+- real team-tenure historical versions
+- lower / wider normal-pack luck
+- boost color follows the selected player
+- position-free bench with G-G-F-F-C starter rules
+- role-based starter and bench minutes
+- simulated season player stats
+- History records boost count and season record
+- `Perfect Season` for 82–0
 
-See `PLATFORM-22-UPDATE-GUIDE.md` before installing.
+## Backend
+No new SQL is required when PPP v1 is already installed. The existing `supabase/pack-pull-play-v1.sql` backend remains compatible with the richer roster JSON.
+
+See `PLATFORM-23-UPDATE-GUIDE.md` and `PLATFORM-23-TEST-CHECKLIST.md` before publishing.
