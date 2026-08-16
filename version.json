@@ -1,14 +1,14 @@
 {
-  "platform": "19",
-  "cashGrab": "7.0.0",
+  "platform": "20",
+  "cashGrab": "7.1.0",
   "cashGrabBackend": "5",
   "statsRace": "4.0.0",
   "statsRaceBackend": "3",
   "released": "2026-08-16",
   "notes": [
-    "Cash Grab real-data engine",
-    "manual defensive matchups",
-    "live quarter simulation",
+    "full Cash Grab box scores",
+    "quarter-by-quarter game presentation",
+    "defensive assignment setup",
     "no new SQL"
   ]
 }
