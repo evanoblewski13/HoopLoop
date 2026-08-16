@@ -1,13 +1,9 @@
 {
-  "platform": "21",
-  "cashGrab": "7.2.0",
-  "cashGrabBackend": "5",
-  "statsRace": "4.1.0",
-  "statsRaceBackend": "4.1",
+  "platform": 22,
+  "version": "22.0.0",
   "released": "2026-08-16",
-  "notes": [
-    "Cash Grab center-row highlight removed and matchup header accent added",
-    "Current Cash Grab uses recent-form baselines and recency-weighted H2H",
-    "Stats Race online races store and display opponent answers"
-  ]
+  "packPullPlay": "1.0.0",
+  "cashGrab": "7.2.0",
+  "statsRace": "4.1.0",
+  "notes": "Adds Pack, Pull, Play and moves Friends out of the shared game navigation."
 }
