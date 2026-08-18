@@ -1,12 +1,11 @@
-# Pack, Pull, Play v3 design notes
+# PPP v3.1 design notes
 
-This update reduces visual noise on player cards.
+## Card hierarchy
+1. Player name
+2. Team name
+3. Time period
+4. Position · Playstyle
 
-## Card face
-- Player photo
-- Player name
-- Team / season label
-- Playstyle
+Starter slot labels are simply G / G / F / F / C.
 
-## Intent
-The simulator can remain stat-driven under the hood, but the visible card should tell a simple, believable basketball story.
+The visible card avoids raw stat clutter; statistics remain under the hood for simulation.

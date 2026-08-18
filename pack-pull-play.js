@@ -15,7 +15,7 @@ const BENCH_MINUTES=[21,19,15,11,9];
 const STARTER_MINUTES={1:36,2:35,3:33,4:31,5:30};
 let state={slots:[],boostedSlots:new Set(),boostedCards:new Set(),boostLocked:false,pendingPulls:{},roster:{},swap:null,offense:{},history:loadHistory(),mode:null,opponent:null,defense:{},online:null,onlineTimer:null,series:null};
 function makeSlots(){return [
- ...START_GROUPS.map((g,i)=>({id:'s'+i,label:['G1','G2','F1','F2','C'][i],group:g,starter:true,rotation:true,index:i})),
+ ...START_GROUPS.map((g,i)=>({id:'s'+i,label:['G','G','F','F','C'][i],group:g,starter:true,rotation:true,index:i})),
  ...['6TH MAN','7TH MAN','8TH MAN','9TH MAN','10TH MAN','RESERVE 1','RESERVE 2'].map((label,i)=>({id:'b'+i,label,group:'ANY',starter:false,rotation:i<5,index:i+5}))
 ]}
 function resetBuilder(seed=Date.now()){
@@ -31,8 +31,8 @@ function renderRoster(){
  $('starter-slots').innerHTML='';$('bench-slots').innerHTML='';
  for(const s of state.slots){
   const c=state.roster[s.id],boost=slotIsBoosted(s,c),el=document.createElement('button');el.type='button';el.className='roster-slot'+(boost?' boosted':'')+(state.swap===s.id?' selected-swap':'');
-  const slotText=s.starter?`${s.label} · ${s.group}`:s.label;
-  el.innerHTML=`<div class="slot-top"><span>${slotText}</span><span class="boost-mark">${boost?'BOOST':''}</span></div>`+(c?`<div class="player-card-mini"><img src="${c.headshot||''}" alt="" onerror="this.style.visibility='hidden'"><strong>${c.name}</strong><small>${c.versionLabel}<br>${c.pos||'—'} · ${c.playstyle||'NBA Role'}</small></div>`:`<div class="mystery-mark">?</div>`);
+  const slotText=s.label;
+  el.innerHTML=`<div class="slot-top"><span>${slotText}</span><span class="boost-mark">${boost?'BOOST':''}</span></div>`+(c?`<div class="player-card-mini"><img src="${c.headshot||c.photoFallback||''}" data-fallback="${c.photoFallback||''}" alt="${c.name}" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback}else{this.classList.add('photo-failed')}"><strong>${c.name}</strong><small class="card-team">${c.team}</small><small class="card-years">${c.season}</small><small class="card-role">${c.pos||'—'} · ${c.playstyle||'NBA Role'}</small></div>`:`<div class="mystery-mark">?</div>`);
   el.onclick=()=>slotClick(s);(s.starter?$('starter-slots'):$('bench-slots')).appendChild(el);
  }
  if(Object.keys(state.roster).length===12)renderLineupTools();
@@ -73,7 +73,7 @@ function openPull(s){
  const opts=ids.map(id=>byId.get(id)).filter(Boolean).filter(c=>!used.has(String(c.baseId)));
  $('pull-title').textContent=`${s.label} · choose one`;$('pull-overline').textContent=boosted?'BOOSTED PULL':'PULL';$('pull-modal').querySelector('.modal-card').classList.toggle('boosted-modal',boosted);
  $('pull-options').innerHTML='';
- for(const c of opts){const b=document.createElement('button');b.type='button';b.className='pull-option';b.innerHTML=`<img src="${c.headshot||''}" alt="" onerror="this.style.visibility='hidden'"><strong>${c.name}</strong><div class="version">${c.versionLabel}</div><div class="stats">${c.pos||'—'} · ${c.playstyle||'NBA Role'}</div>`;b.onclick=()=>{state.roster[s.id]=c;if(boosted)state.boostedCards.add(c.id);delete state.pendingPulls[s.id];$('pull-modal').classList.add('hidden');renderRoster();if(Object.keys(state.roster).length===12){$('build-status').textContent='Roster complete. Arrange the rotation and set your offense order.';$('save-team').disabled=false}};$('pull-options').appendChild(b)}
+ for(const c of opts){const b=document.createElement('button');b.type='button';b.className='pull-option';b.innerHTML=`<img src="${c.headshot||c.photoFallback||''}" data-fallback="${c.photoFallback||''}" alt="${c.name}" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback}else{this.classList.add('photo-failed')}"><strong>${c.name}</strong><div class="card-team">${c.team}</div><div class="card-years">${c.season}</div><div class="stats">${c.pos||'—'} · ${c.playstyle||'NBA Role'}</div>`;b.onclick=()=>{state.roster[s.id]=c;if(boosted)state.boostedCards.add(c.id);delete state.pendingPulls[s.id];$('pull-modal').classList.add('hidden');renderRoster();if(Object.keys(state.roster).length===12){$('build-status').textContent='Roster complete. Arrange the rotation and set your offense order.';$('save-team').disabled=false}};$('pull-options').appendChild(b)}
  $('pull-modal').classList.remove('hidden');
 }
 function normalizeOffense(){
@@ -94,10 +94,10 @@ function loadPayload(p){
  if(!p||!Array.isArray(p.cards)||p.cards.length!==12)return false;const migratedIds=p.cards.map(id=>legacyCardMap[id]||id),loaded=migratedIds.map(id=>byId.get(id));if(loaded.some(x=>!x)){toast('One or more cards from this older save are no longer in the pool.');return false}p={...p,cards:migratedIds};
  state.slots=(p.slots&&p.slots.length===12)?p.slots:makeSlots();state.roster={};state.slots.forEach((s,i)=>state.roster[s.id]=loaded[i]);state.boostLocked=true;state.boostedSlots=new Set();state.boostedCards=new Set(p.boostedCards||[]);state.offense=p.offense||{};state.pendingPulls={};normalizeOffense();renderRoster();$('save-team').disabled=false;return true;
 }
-function h2h(card,defender){if(!defender)return null;const key=[slug(card.name),slug(defender.name)].sort().join('|');const recent=card.version==='Modern'?REAL.h2hRecent?.[key]:null,raw=recent||REAL.h2h?.[key];if(!Array.isArray(raw)||raw.length<4)return null;return{gp:Number(raw[0])||0,ppg:Number(raw[1])||0,rpg:Number(raw[2])||0,apg:Number(raw[3])||0,effective:Number(raw[4])||Number(raw[0])||0,recent:Boolean(recent)}}
+function h2h(card,defender){if(!defender)return null;const key=[slug(card.name),slug(defender.name)].sort().join('|');const recent=card.recentCard?REAL.h2hRecent?.[key]:null,raw=recent||REAL.h2h?.[key];if(!Array.isArray(raw)||raw.length<4)return null;return{gp:Number(raw[0])||0,ppg:Number(raw[1])||0,rpg:Number(raw[2])||0,apg:Number(raw[3])||0,effective:Number(raw[4])||Number(raw[0])||0,recent:Boolean(recent)}}
 function playerLine(card,min,opt=3,defender=null,r=null){
  r=r||Math.random;const s=card.stats||{},ref=Number(s.mpg)>8?Number(s.mpg):24,scale=clamp(min/ref,.2,1.35),usage=[0,1.14,1.07,1,.94,.89][opt]||1;let p=Number(s.ppg)||0,reb=Number(s.rpg)||0,ast=Number(s.apg)||0;const sample=h2h(card,defender);
- if(sample&&sample.gp>=2){const rawW=(sample.recent?sample.effective:sample.gp)/((sample.recent?sample.effective:sample.gp)+(sample.recent?8:18)),cap=card.version==='Modern'?.40:.24,w=Math.min(cap,rawW);p=p*(1-w)+sample.ppg*w;reb=reb*(1-w)+sample.rpg*w;ast=ast*(1-w)+sample.apg*w}
+ if(sample&&sample.gp>=2){const rawW=(sample.recent?sample.effective:sample.gp)/((sample.recent?sample.effective:sample.gp)+(sample.recent?8:18)),cap=card.recentCard?.40:.24,w=Math.min(cap,rawW);p=p*(1-w)+sample.ppg*w;reb=reb*(1-w)+sample.rpg*w;ast=ast*(1-w)+sample.apg*w}
  const vol=.86+r()*.30,pts=Math.max(0,Math.round(p*scale*usage*vol)),rr=Math.max(0,Math.round(reb*scale*(.88+r()*.24))),aa=Math.max(0,Math.round(ast*scale*(.87+r()*.26)));return{name:card.name,version:card.versionLabel,min,pts,reb:rr,ast:aa};
 }
 function defaultPlan(roster){const starters=roster.slots.filter(s=>s.starter),defense={};starters.forEach((s,i)=>defense[s.id]=starters[i].id);return{offense:roster.offense||{},defense}}

@@ -2,3 +2,13 @@
 /* PPP v2 additions */
 .season-boost-note{display:inline-flex;align-items:center;justify-content:center;border:1px solid #4b4b4b;border-radius:999px;padding:7px 12px;font-size:.78rem;font-weight:900;color:#ddd;margin-top:2px}.season-report{margin:26px 0 22px;text-align:left;background:#fff;color:#111;border-radius:16px;padding:14px}.season-report-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:8px}.season-report-head span{font-size:.76rem;color:#777}.season-report td:first-child small,.box-team td:first-child small{display:block;color:#888;font-size:.67rem;margin-top:2px;max-width:220px;overflow:hidden;text-overflow:ellipsis}.roster-slot.boosted .player-card-mini strong{color:var(--boost)}
 @media(max-width:600px){.season-report-head{align-items:flex-start;flex-direction:column}.season-card{padding:24px 16px}.season-card>strong{font-size:4.6rem}}
+
+/* PPP v3.1 card hierarchy */
+.player-card-mini .card-team,.player-card-mini .card-years,.player-card-mini .card-role{display:block;text-align:center;margin-top:2px;line-height:1.2}
+.player-card-mini .card-team{font-weight:900;color:#333;font-size:.72rem;margin-top:5px}
+.player-card-mini .card-years{color:#777;font-size:.68rem}
+.player-card-mini .card-role{color:#555;font-size:.69rem}
+.pull-option .card-team{font-weight:900;font-size:.78rem;margin-top:7px;color:#222}
+.pull-option .card-years{font-size:.72rem;color:#777;margin-top:2px}
+.pull-option .stats{margin-top:7px;font-weight:800;color:#555}
+.pull-option img.photo-failed,.player-card-mini img.photo-failed{visibility:visible;background:linear-gradient(135deg,#e5e5e5,#fafafa);object-fit:contain}

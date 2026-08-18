@@ -1,9 +1,9 @@
 {
-  "platform": 24,
-  "version": "24.0.0",
+  "platform": 25,
+  "version": "25.0.1",
   "released": "2026-08-17",
-  "packPullPlay": "3.0.0",
+  "packPullPlay": "3.1.1",
   "cashGrab": "7.2.0",
   "statsRace": "4.1.0",
-  "notes": "Pack, Pull, Play v3 curates the pool, removes most pre-1990 fringe players, de-emphasizes generic Current cards, and surfaces playstyles on every card."
+  "notes": "Corrected Platform 25 rebuild: all PPP team stints use Basketball-Reference player-season data through 2025-26, fixing the accidental 2023 cutoff."
 }
