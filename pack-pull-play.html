@@ -9,7 +9,7 @@
   <script src="theme.js?v=9.0.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
-  <link rel="stylesheet" href="pack-pull-play.css?v=2.0.0" />
+  <link rel="stylesheet" href="pack-pull-play.css?v=3.0.0" />
 </head>
 <body>
   <div class="page-noise" aria-hidden="true"></div>
@@ -26,10 +26,10 @@
       <div class="hero-copy">
         <div class="game-pill"><span></span> HoopLoop Game 05</div>
         <h1>Pack.<br><em>Pull. Play.</em></h1>
-        <p>Build twelve. Choose zero to three boosted spots. Pull five options from real NBA player and team-era versions. Then take your team into a season or a best-of-seven.</p>
+        <p>Build twelve. Choose zero to three boosted spots. Pull five options from curated NBA team-era versions. Each card shows a photo, team-season identity, and playstyle. Then take your team into a season or a best-of-seven.</p>
         <div class="hero-actions"><button class="primary-button" id="jump-builder" type="button">Open your pack <span>↘</span></button><button class="text-button" id="open-history-top" type="button">Team history</button></div>
       </div>
-      <aside class="hero-preview"><span class="preview-label">YOUR ROSTER</span><strong>12</strong><p>5 starters · 5 rotation bench · 2 reserves</p><div class="preview-chips"><span>0–3 BOOSTS</span><span>1,249 CARDS</span><span>82 GAMES</span></div></aside>
+      <aside class="hero-preview"><span class="preview-label">YOUR ROSTER</span><strong>12</strong><p>5 starters · 5 rotation bench · 2 reserves</p><div class="preview-chips"><span>0–3 BOOSTS</span><span>1,101 CARDS</span><span>82 GAMES</span></div></aside>
     </section>
 
     <section class="section mode-section" id="builder-section">
@@ -57,7 +57,7 @@
     <section class="section play-section" id="play-section">
       <div class="section-heading"><div><span class="overline">PLAY</span><h2>Choose the run</h2><p>Every mode starts from the roster you pulled.</p></div></div>
       <div class="mode-grid">
-        <button class="mode-card" data-mode="season" type="button"><span>82</span><strong>Season</strong><small>Drop your roster into the 2025–26 NBA and get one final record.</small></button>
+        <button class="mode-card" data-mode="season" type="button"><span>82</span><strong>Season</strong><small>Drop your roster into the 2025–26 NBA and get one final record plus a simulated role report.</small></button>
         <button class="mode-card" data-mode="cpu" type="button"><span>CPU</span><strong>Single Game</strong><small>Generate another Pack, Pull, Play roster and play one 48-minute game.</small></button>
         <button class="mode-card" data-mode="friend" type="button"><span>1V1</span><strong>Friend Series</strong><small>Five-minute team build. First to four wins.</small></button>
         <button class="mode-card" data-mode="random" type="button"><span>?</span><strong>Random Series</strong><small>Match online, build separately, then play a best-of-seven.</small></button>
@@ -80,7 +80,7 @@
     </section>
 
     <section class="section hidden" id="season-result">
-      <div class="season-card"><span class="overline">SEASON COMPLETE</span><strong id="season-record">0–0</strong><h2 id="season-label">Season</h2><p id="season-copy"></p><div class="season-boost-note" id="season-boost-note">0 boosts used</div><div class="season-meter"><span id="season-meter-fill"></span></div><div class="season-report"><div class="season-report-head"><strong>SIMULATED TEAM STATS</strong><span>Adjusted for your rotation and offensive roles.</span></div><div class="table-scroll"><table><thead><tr><th>PLAYER</th><th>MIN</th><th>PPG</th><th>RPG</th><th>APG</th></tr></thead><tbody id="season-stats-body"></tbody></table></div></div><button class="primary-button" id="season-new-team" type="button">Build another team</button></div>
+      <div class="season-card"><span class="overline">SEASON COMPLETE</span><strong id="season-record">0–0</strong><h2 id="season-label">Season</h2><p id="season-copy"></p><div class="season-boost-note" id="season-boost-note">0 boosts used</div><div class="season-meter"><span id="season-meter-fill"></span></div><div class="season-report"><div class="season-report-head"><strong>SIMULATED ROLE OUTPUT</strong><span>Built from each card’s real team-era profile, then adjusted for your rotation and offensive roles.</span></div><div class="table-scroll"><table><thead><tr><th>PLAYER</th><th>MIN</th><th>PPG</th><th>RPG</th><th>APG</th></tr></thead><tbody id="season-stats-body"></tbody></table></div></div><button class="primary-button" id="season-new-team" type="button">Build another team</button></div>
     </section>
 
     <section class="section history-section" id="history-section">
@@ -92,8 +92,8 @@
   <div class="modal hidden" id="pull-modal" role="dialog" aria-modal="true" aria-labelledby="pull-title"><div class="modal-card pull-modal-card"><div class="modal-head"><div><span class="overline" id="pull-overline">PULL</span><h2 id="pull-title">Choose one</h2></div><button class="modal-close" id="close-pull" type="button">×</button></div><div class="pull-options" id="pull-options"></div></div></div>
 
   <script src="cash-grab-real-data.js?v=7.2.0"></script>
-  <script src="pack-pull-play-data.js?v=2.0.0"></script>
+  <script src="pack-pull-play-data.js?v=3.0.0"></script>
   <script src="theme-account-sync.js?v=9.0.0"></script>
-  <script src="pack-pull-play.js?v=2.0.0"></script>
+  <script src="pack-pull-play.js?v=3.0.0"></script>
 </body>
 </html>
