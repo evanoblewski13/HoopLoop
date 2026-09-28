@@ -1,5 +1,5 @@
-# HoopLoop Platform 26
+# HoopLoop Platform 27
 
-Platform 26 is the first full cohesion pass. It keeps the working games and backends, but gives HoopLoop one shared visual language: original tiled logo, calm gradients, simple game cards, game-name-first pages, reduced copy, consistent navigation, and light/dark display modes.
+Platform 27 is the second cohesion pass. It turns `index.html` into a true standalone HoopLoop hub, moves Name Rush to `name-rush.html`, adds direct game-to-game navigation, removes Leaderboard from primary navigation, tightens dark mode, and introduces a subtle arcade/pixel UI identity.
 
-See `PLATFORM-26-UPDATE-GUIDE.md` and `HOOPLOOP-DESIGN-SYSTEM.md`.
+No new SQL is required.

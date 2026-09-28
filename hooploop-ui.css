@@ -1,5 +1,5 @@
 
-/* HoopLoop Platform 26 — shared cohesion layer */
+/* HoopLoop Platform 27 — Arcade Cohesion layer */
 :root{
   --hl-accent:var(--accent,var(--orange,#ff5a1f));
   --hl-accent-rgb:var(--accent-rgb,255,90,31);
@@ -166,3 +166,136 @@ footer p{margin:0!important;}
   .hl-game-page .hero h1,.hl-home .hero#play h1{font-size:3.4rem!important;}
   .hl-game-page .hero-preview{display:none!important;}
 }
+
+
+/* =========================================================
+   PLATFORM 27 — ARCADE COHESION PASS
+   Clean shell + subtle pixel/arcade personality.
+   ========================================================= */
+:root{
+  --hl-bg:#f4f4f2;--hl-bg-2:#ebecea;--hl-surface:rgba(255,255,255,.74);--hl-surface-solid:#fbfbfa;--hl-surface-soft:#edeeeb;
+  --hl-text:#161719;--hl-muted:#70747a;--hl-line:rgba(22,23,25,.13);--hl-line-strong:rgba(22,23,25,.24);
+  --hl-pixel:rgba(22,23,25,.055);--hl-panel-dark:#17191c;--hl-panel-dark-2:#202328;
+}
+html[data-hl-mode="dark"]{
+  --hl-bg:#0f1114;--hl-bg-2:#15181c;--hl-surface:rgba(23,26,30,.82);--hl-surface-solid:#181b1f;--hl-surface-soft:#20242a;
+  --hl-text:#f2f3f1;--hl-muted:#a5abb4;--hl-line:rgba(255,255,255,.105);--hl-line-strong:rgba(255,255,255,.19);
+  --hl-pixel:rgba(255,255,255,.045);--hl-panel-dark:#0b0d10;--hl-panel-dark-2:#171a1f;
+  --paper:var(--hl-bg);--ink:var(--hl-text);--muted:var(--hl-muted);--line:var(--hl-line);--white:var(--hl-surface-solid);
+}
+body{
+  background:
+    radial-gradient(1000px 560px at 8% -12%,rgba(var(--hl-accent-rgb),.10),transparent 64%),
+    radial-gradient(900px 560px at 100% 18%,rgba(var(--hl-accent-rgb),.055),transparent 68%),
+    linear-gradient(145deg,var(--hl-bg),var(--hl-bg-2))!important;
+}
+body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.45;background-image:linear-gradient(var(--hl-pixel) 1px,transparent 1px),linear-gradient(90deg,var(--hl-pixel) 1px,transparent 1px);background-size:32px 32px;mask-image:linear-gradient(to bottom,rgba(0,0,0,.6),transparent 72%)}
+.site-header,.sim-header{min-height:66px!important;background:color-mix(in srgb,var(--hl-bg) 88%,transparent)!important;}
+.desktop-nav,.sim-platform-nav{justify-content:flex-start!important;gap:20px!important;overflow-x:auto!important;scrollbar-width:none!important;}
+.desktop-nav::-webkit-scrollbar,.sim-platform-nav::-webkit-scrollbar{display:none!important;}
+.desktop-nav a,.sim-platform-nav a{white-space:nowrap!important;font-size:.73rem!important;padding-inline:2px!important;}
+.hl-home-header{grid-template-columns:auto 1fr auto!important;}
+.hl-home-nav-note{justify-self:center;color:var(--hl-muted);font:800 .64rem/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.18em;}
+
+/* TRUE HOMEPAGE */
+.hl-home-only main{min-height:calc(100vh - 120px);}
+.hl-home-only .hl-home-hero{padding:clamp(64px,9vw,110px) 24px 34px;}
+.hl-home-kicker{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px;color:var(--hl-muted);font:850 .64rem/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em;}
+.hl-home-kicker span{width:7px;height:7px;background:var(--hl-accent);box-shadow:8px 0 0 color-mix(in srgb,var(--hl-accent) 38%,transparent);}
+.hl-home-only .hl-home-logo span{width:clamp(48px,6.8vw,82px);height:clamp(48px,6.8vw,82px);border-radius:5px;background:color-mix(in srgb,var(--hl-surface-solid) 82%,transparent);box-shadow:inset 0 -4px 0 color-mix(in srgb,var(--hl-text) 7%,transparent);}
+.hl-home-only .hl-home-hero>p{font-size:.94rem;letter-spacing:0;font-weight:650;}
+.hl-home-pixels{display:flex;justify-content:center;gap:5px;margin:20px auto 0;}
+.hl-home-pixels i{width:5px;height:5px;background:var(--hl-line-strong);}
+.hl-home-pixels i:nth-child(3),.hl-home-pixels i:nth-child(4){background:var(--hl-accent);}
+.hl-home-only .hl-home-games{padding-bottom:56px;}
+.hl-home-section-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:16px;}
+.hl-home-section-head h1{margin:5px 0 0;font-size:clamp(1.9rem,3.4vw,3rem);letter-spacing:-.05em;line-height:1;}
+.hl-pixel-label,.hl-home-count{color:var(--hl-muted);font:850 .64rem/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.14em;}
+.hl-home-only .hl-game-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+.hl-arcade-card{min-height:206px!important;padding:18px!important;border-radius:14px!important;display:grid!important;grid-template-columns:1fr auto!important;grid-template-rows:auto 1fr auto!important;gap:14px!important;box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--hl-text) 5%,transparent)!important;}
+.hl-arcade-card::before{content:"";position:absolute;right:12px;top:12px;width:4px;height:4px;background:var(--hl-accent);box-shadow:7px 0 0 color-mix(in srgb,var(--hl-accent) 35%,transparent),0 7px 0 color-mix(in srgb,var(--hl-accent) 35%,transparent);opacity:.65;}
+.hl-arcade-card:hover{transform:translateY(-3px)!important;border-color:color-mix(in srgb,var(--hl-accent) 48%,var(--hl-line))!important;box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--hl-accent) 38%,transparent),0 14px 34px rgba(0,0,0,.06)!important;}
+.hl-card-meta{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;color:var(--hl-muted);font:850 .62rem/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;}
+.hl-card-meta span{color:var(--hl-accent);}
+.hl-card-meta small{font:inherit;color:var(--hl-muted);}
+.hl-arcade-card .hl-game-card__icon{align-self:center;width:50px;height:50px;border-radius:11px;}
+.hl-card-copy{grid-column:1/-1;align-self:end;}
+.hl-card-copy h2{margin:0!important;font-size:clamp(1.45rem,2.15vw,2rem)!important;}
+.hl-card-copy p{margin:7px 0 0;color:var(--hl-muted);font-size:.81rem;line-height:1.35;max-width:31ch;}
+.hl-arcade-card .hl-game-card__arrow{position:absolute;right:18px;bottom:18px;width:29px;height:29px;border-radius:7px;color:var(--hl-text);font-size:.9rem;}
+.hl-home-footer{max-width:1280px;margin:0 auto;padding:18px 24px 28px;border-top:1px solid var(--hl-line);display:flex;justify-content:space-between;gap:18px;color:var(--hl-muted);font:700 .62rem/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;}
+
+/* GAME PAGES: title first, then gameplay quickly */
+.hl-game-page .hero{padding:34px clamp(18px,4vw,52px) 28px!important;grid-template-columns:minmax(0,1fr) minmax(210px,280px)!important;gap:24px!important;border-bottom:1px solid var(--hl-line)!important;}
+.hl-game-page .hero h1{font-size:clamp(2.9rem,5.6vw,5.4rem)!important;margin-bottom:8px!important;}
+.hl-game-page .hero p{font-size:.92rem!important;line-height:1.45!important;}
+.hl-game-page .hero-actions{margin-top:16px!important;}
+.hl-game-page .hero-preview{padding:16px!important;border-radius:13px!important;}
+.hl-game-page .hero-preview>strong{font-size:clamp(2.2rem,4vw,3.8rem)!important;}
+.hl-game-page .preview-chips{margin-top:9px!important;}
+.hl-game-page .preview-chips span,.hl-game-page .mini-prices span{font:800 .58rem/1 ui-monospace,SFMono-Regular,Menlo,monospace!important;letter-spacing:.08em!important;border-radius:5px!important;}
+.hl-game-page .section{padding-top:34px!important;}
+.hl-game-page .section-heading h2{font-size:clamp(1.9rem,3vw,3rem)!important;text-transform:none!important;letter-spacing:-.04em!important;}
+.hl-game-page .overline,.hl-game-page .game-pill{font-family:ui-monospace,SFMono-Regular,Menlo,monospace!important;}
+
+/* Subtle arcade treatment on controls, without retro cosplay */
+.mode-switch,.segmented{border-radius:9px!important;border:1px solid var(--hl-line)!important;background:var(--hl-surface-soft)!important;padding:3px!important;}
+.mode-switch button,.segmented button{border-radius:6px!important;}
+.mode-switch button.active,.segmented button.active{background:var(--hl-surface-solid)!important;box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--hl-accent) 45%,transparent)!important;}
+.primary-button{border-radius:8px!important;box-shadow:inset 0 -3px 0 rgba(0,0,0,.16)!important;}
+.secondary-button,.ghost-button{border-radius:8px!important;}
+
+/* DARK MODE: force the old beige/paper surfaces into one coherent palette. */
+html[data-hl-mode="dark"] body{color:var(--hl-text)!important;}
+html[data-hl-mode="dark"] :where(
+  #scout-form,.mode-switch,.segmented,.score-breakdown,.summary-card,.score-row,.modal,.modal-card,
+  .leader-row,.friend-row,.invite-row,.practice-config-card,.practice-record-card,.daily-meta-card,.archive-card,
+  .decision-board,.results-panel,.player-grid,.player-card,.price-column,.selected-slot,.match-player,.gauntlet-round,
+  .draft-board,.hof-list,.pull-option,.season-report,.quarter-cell,.box-team,.history-card,.online-box,.matchup-grid label,
+  .roster-slot,.choice,.date-button,.stat-card,.result-row,.game-screen,.account-card,.race-card,.landing-card
+){background:var(--hl-surface-solid)!important;color:var(--hl-text)!important;border-color:var(--hl-line)!important;}
+html[data-hl-mode="dark"] :where(.mode-card,.battle-card,.panel,.dossier-card,.results-shell,.scout-shell){background:var(--hl-surface)!important;color:var(--hl-text)!important;border-color:var(--hl-line)!important;}
+html[data-hl-mode="dark"] :where(.field input,.field select,input,select,textarea){background:#111419!important;color:var(--hl-text)!important;border-color:var(--hl-line-strong)!important;}
+html[data-hl-mode="dark"] :where(.section-heading p,.mode-card p,.mode-card small,.panel-note,.helper-copy,.status-line,.field small,.modal-note,.history-card small,.season-report-head span,.player-card-mini small){color:var(--hl-muted)!important;}
+html[data-hl-mode="dark"] :where(.score-row.partial,.score-row.zero){background:var(--hl-surface-soft)!important;}
+html[data-hl-mode="dark"] :where(#scout-form,.dossier-grid,.fields-grid){color:var(--hl-text)!important;}
+html[data-hl-mode="dark"] .modal-backdrop{background:rgba(0,0,0,.72)!important;}
+html[data-hl-mode="dark"] .modal-close{background:var(--hl-surface-soft)!important;color:var(--hl-text)!important;}
+html[data-hl-mode="dark"] :where(th,td){border-color:var(--hl-line)!important;}
+html[data-hl-mode="dark"] :where(.section,.game-shell,.lineup-tools,.season-card,.game-scoreboard,.scout-topbar,.results-hero){border-color:var(--hl-line)!important;}
+
+/* Name Rush was formerly the homepage: make it behave like a normal game page. */
+.hl-name-rush-page .hero#play{max-width:1440px;margin:0 auto;border-top:0!important;padding-top:34px!important;}
+.hl-name-rush-page .account-section,.hl-name-rush-page .coming-soon-section{display:block!important;}
+
+@media(max-width:1180px){
+  .desktop-nav,.sim-platform-nav{justify-content:flex-start!important;gap:16px!important;}
+  .site-header{grid-template-columns:auto minmax(0,1fr) auto!important;gap:16px!important;}
+}
+@media(max-width:900px){
+  .desktop-nav,.sim-platform-nav{display:flex!important;grid-column:1/-1;order:3;width:100%;padding-top:4px;border-top:1px solid var(--hl-line);}
+  .site-header,.sim-header{display:grid!important;height:auto!important;grid-template-columns:auto 1fr auto!important;}
+  .hl-home-nav-note{display:none;}
+  .hl-home-only .hl-game-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .hl-game-page .hero{grid-template-columns:1fr!important;}
+  .hl-game-page .hero-preview{display:none!important;}
+}
+@media(max-width:620px){
+  .hl-home-only .hl-game-grid{grid-template-columns:1fr;}
+  .hl-home-section-head{align-items:flex-start;}
+  .hl-home-count{display:none;}
+  .hl-arcade-card{min-height:180px!important;}
+  .hl-home-footer{flex-direction:column;}
+  .desktop-nav a,.sim-platform-nav a{font-size:.68rem!important;}
+}
+
+
+/* Platform 27 dark-surface audit: explicit legacy light surfaces */
+html[data-hl-mode="dark"] :where(
+  .initials span,.hint-reveal,
+  .mode-switch button.active,.mode-card,#scout-form,.dossier-card,.summary-card,.score-breakdown,.score-row.partial,.modal,.pool-strip,
+  .price-column,.player-card,.team-dock,.selected-slot,.battle-card,.match-team,.match-player,.gauntlet-round,.modal-list li,.gauntlet-step,.daily-date-controls input,.daily-status,.line-score,.box-score-card,.box-score-card h3,.draft-scoreboard>div,.draft-rosters>div,.draft-player,.leaderboard-row,.matchup-pair,.hof-section,.hof-card,.hof-empty,.matchup-strip,
+  .brand span,.account-control,.roster-slot,.online-box,.matchup-grid label,.quarter-cell,.box-team,.history-card,.pull-option,.season-report
+){background:var(--hl-surface-solid)!important;color:var(--hl-text)!important;border-color:var(--hl-line)!important;}
+html[data-hl-mode="dark"] .secondary-button{background:var(--hl-surface-solid)!important;color:var(--hl-text)!important;border-color:var(--hl-line)!important;}
+html[data-hl-mode="dark"] .field input,html[data-hl-mode="dark"] .field select{background:#101318!important;color:var(--hl-text)!important;}

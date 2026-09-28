@@ -9,22 +9,14 @@
 <title>Start, Bench, Cut — HoopLoop</title>
 <script src="theme.js?v=9.0.0"></script>
 <link href="sbc.css?v=9.0.0" rel="stylesheet"/>
-<script>try{const m=localStorage.getItem('hooploop_display_mode');document.documentElement.dataset.hlMode=(m==='light'||m==='dark')?m:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){}</script><link href="hooploop-ui.css?v=26.0.0" rel="stylesheet"/></head>
+<script>try{const m=localStorage.getItem('hooploop_display_mode');document.documentElement.dataset.hlMode=(m==='light'||m==='dark')?m:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){}</script><link href="hooploop-ui.css?v=27.0.0" rel="stylesheet"/></head>
 <body class="hl-game-page">
 <div aria-hidden="true" class="page-noise"></div>
 <div class="setup-banner hidden" id="setup-banner" role="status">
 <strong>Online voting is not connected.</strong>
 <span>You can still generate and play matchups. Add the Supabase values to your existing <code>config.js</code> and run <code>supabase/sbc-v8.sql</code> to save Daily votes.</span>
 </div>
-<header class="site-header">
-<a aria-label="HoopLoop home" class="brand" href="index.html">
-<span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span>
-</a>
-<nav aria-label="HoopLoop games" class="desktop-nav"><a class="active" href="index.html#games">Games</a><a href="index.html#leaderboard">Leaderboard</a></nav>
-<div class="hl-header-actions"><button aria-label="Toggle light or dark mode" class="hl-theme-toggle" data-hl-theme-toggle="" type="button">◐</button><button class="account-control" id="account-button" type="button">
-<span aria-hidden="true" class="account-dot"></span>
-<span id="account-label">Log in</span>
-</button></div></header>
+<header class="site-header"><a aria-label="HoopLoop home" class="brand" href="index.html"><span>H</span><span>O</span><span>O</span><span>P</span><span>L</span><span>O</span><span>O</span><span>P</span></a><nav aria-label="HoopLoop games" class="desktop-nav"><a href="name-rush.html">Name Rush</a><a href="stats-race.html">Stats Race</a><a href="pack-pull-play.html">Pack, Pull, Play</a><a href="cash-grab.html">Cash Grab</a><a class="active" href="start-bench-cut.html">Start, Bench, Cut</a><a href="hooploopsim.html">HoopLoopSim</a></nav><div class="hl-header-actions"><button aria-label="Toggle light or dark mode" class="hl-theme-toggle" data-hl-theme-toggle="" type="button">◐</button><a class="account-control" href="name-rush.html?open=account"><span class="account-dot"></span><span>Account</span></a></div></header>
 <main>
 <section class="hero" id="daily">
 <div class="hero-copy">
@@ -189,5 +181,5 @@
 <script src="config.js?v=9.0.0"></script>
 <script src="sbc-player-data.js?v=9.0.0"></script>
 <script src="sbc.js?v=9.0.0"></script>
-<script src="hooploop-ui.js?v=26.0.0"></script></body>
+<script src="hooploop-ui.js?v=27.0.0"></script></body>
 </html>

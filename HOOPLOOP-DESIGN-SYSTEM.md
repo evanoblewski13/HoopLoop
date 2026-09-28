@@ -1,28 +1,18 @@
-# HoopLoop Platform 26 — Design System
+# HoopLoop Design System — Platform 27
 
 ## North star
-Clean. Fast. Basketball games. No marketing wall between the user and play.
+Clean basketball arcade. Fast enough to understand in seconds; distinctive enough not to feel like a generic template.
 
-## Brand
-- Keep the original tiled HOOPLOOP logo.
-- No real-player photography in the platform shell.
-- No decorative hoops, basketballs, arena scenes, or court art in page backgrounds.
-- Backgrounds use calm neutral gradients.
+## Rules
+- Homepage is a hub only. It never doubles as a game page.
+- The original tiled HoopLoop logo remains the core brand mark.
+- No decorative basketball photography or fake basketball art.
+- Basketball identity comes from game mechanics, icons, terminology, and subtle arcade/pixel UI details.
+- Game-to-game navigation remains visible while playing.
+- Leaderboards are contextual result/comparison tools, not a primary navigation destination.
+- Light and dark mode are equally supported. Beige/paper surfaces may not leak into dark mode.
+- Accent colors personalize controls; they do not repaint the entire interface.
+- Copy should explain only what is necessary to play.
 
-## Structure
-- Homepage: logo first, then six game cards.
-- Game pages: game name is the largest text.
-- One short instruction line under the title.
-- Rules/help moves behind a button instead of occupying the page.
-- Friends remains part of the account experience, not the main navigation.
-
-## Navigation
-Games · Leaderboard · Account
-
-## Themes
-- Light and dark display modes.
-- Existing user accent color remains the interactive accent.
-- Display mode is stored locally and follows system preference on first visit.
-
-## Shared UI
-`hooploop-ui.css` and `hooploop-ui.js` provide the cross-game shell so future games inherit the same header, colors, typography, spacing, surfaces, and theme toggle.
+## Arcade layer
+Use tiny monospace labels, square status pixels, game numbers, crisp borders, and restrained pressed/hover states. Avoid neon overload, fake CRT effects, giant pixel fonts, or retro cosplay.
