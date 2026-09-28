@@ -1,9 +1,10 @@
 {
-  "platform": 25,
-  "version": "25.0.1",
-  "released": "2026-08-17",
+  "platform": 26,
+  "version": "26.0.0",
+  "released": "2026-09-28",
   "packPullPlay": "3.1.1",
   "cashGrab": "7.2.0",
   "statsRace": "4.1.0",
-  "notes": "Corrected Platform 25 rebuild: all PPP team stints use Basketball-Reference player-season data through 2025-26, fixing the accidental 2023 cutoff."
+  "uiSystem": "1.0.0",
+  "notes": "Full HoopLoop cohesion pass: shared UI layer, clean homepage game hub, game-name-first heroes, light/dark display mode, simplified navigation and copy."
 }
